@@ -1,0 +1,1459 @@
+import 'dart:async';
+import 'dart:developer' as developer;
+import 'dart:math' as math;
+
+import 'package:flutter/material.dart';
+import 'package:flutter_compass/flutter_compass.dart';
+import 'package:flutter_map/plugin_api.dart';
+import 'package:flutter_vibrate/flutter_vibrate.dart';
+import 'package:latlong2/latlong.dart';
+import 'package:location/location.dart';
+import 'package:oko/map.dart';
+import 'package:positioned_tap_detector_2/positioned_tap_detector_2.dart';
+import 'package:vector_tile_renderer/vector_tile_renderer.dart' hide Theme;
+
+import 'package:oko/storage.dart';
+import 'package:oko/dialogs/add_point.dart';
+import 'package:oko/dialogs/edit_point.dart';
+import 'package:oko/dialogs/pairing.dart';
+import 'package:oko/communication.dart' as comm;
+import 'package:oko/utils.dart';
+import 'package:oko/data.dart' as data;
+import 'package:oko/i18n.dart';
+import 'package:oko/point_list.dart';
+import 'package:vector_map_tiles/vector_map_tiles.dart';
+
+import 'dialogs/edit_point.dart';
+
+enum PointLogType { currentLocation, crosshair }
+
+class Target {
+  final data.Point? _point;
+
+  static final Target _none = Target._(null);
+
+  Target._(this._point);
+  Target(data.Point p) : _point = p;
+
+  static Target none() {
+    return _none;
+  }
+
+  data.Point get point => _point!;
+  bool get isSet => _point != null;
+  LatLng get coords => _point!.coords;
+
+  bool isSamePoint(data.Point p) {
+    return identical(_point, p);
+  }
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is Target &&
+          runtimeType == other.runtimeType &&
+          _point == other._point;
+
+  @override
+  int get hashCode => _point.hashCode;
+}
+
+class MainWidget extends StatefulWidget {
+  const MainWidget({Key? key}) : super(key: key);
+
+  @override
+  MainWidgetState createState() => MainWidgetState();
+}
+
+class MainWidgetState extends State<MainWidget> {
+  final GlobalKey<ScaffoldState> scaffoldKey = GlobalKey<ScaffoldState>();
+
+  // constants
+  static const double fallbackMinZoom = 1;
+  static const double fallbackMaxZoom = 18;
+  static const Color myGlobalPoiColor = Colors.blue;
+  static const Color otherGlobalPoiColor = Colors.green;
+  static final Color myLocalPoiColor = Colors.blue.withAlpha(128);
+  static final Color otherLocalPoiColor = Colors.green.withAlpha(128);
+  static const Color myGlobalEditedPoiColor = Colors.blueGrey;
+  static const Color otherGlobalEditedPoiColor = Colors.teal;
+  static final Color myGlobalDeletedPoiColor = Colors.black.withAlpha(128);
+  static final Color otherGlobalDeletedPoiColor = Colors.black.withAlpha(128);
+  static const Color extraGeometryColor = Colors.deepPurple;
+
+  // location and map
+  final Location location = Location();
+  final MapControllerImpl mapController = MapControllerImpl();
+
+  // handling flags and values
+  bool mapReady = false;
+  double progressValue = -1;
+  bool pinging = false;
+  bool serverAvailable = false;
+  StreamSubscription<LocationData>? locationSubscription;
+  StreamSubscription<CompassEvent>? compassSubscription;
+  bool viewLockedToLocation = false;
+  LatLng? currentLocation;
+  double? currentHeading;
+  Target infoTarget = Target.none();
+  Target navigationTarget = Target.none();
+  bool poiListExpanded = false;
+
+  // settings
+  Storage? storage;
+
+  // hardware
+  bool canVibrate = false;
+
+  Future<dynamic>? initResult;
+
+  @override
+  void initState() {
+    super.initState();
+    initResult = init();
+  }
+
+  Future<bool> init() async {
+    canVibrate = await Vibrate.canVibrate;
+    try {
+      storage = await Storage.getInstance();
+    } catch(e) {
+      developer.log(e.toString());
+      notify('Error while getting storage: ${e.toString()}', true);
+    }
+    return true;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return FutureBuilder(
+        future: initResult,
+        initialData: false,
+        builder: (BuildContext context, AsyncSnapshot<dynamic> snapshot) {
+          if (snapshot.data == true) {
+            return createUi(context);
+          }
+          return Container(
+            child: const Center(
+              child: Image(
+                image: AssetImage('assets/splash.png'),
+                width: 320.0,
+                height: 147.0,
+              ),
+            ),
+            decoration:
+                BoxDecoration(color: Theme.of(context).colorScheme.primary),
+          );
+        });
+  }
+
+  Widget createUi(BuildContext context) {
+    return Scaffold(
+      key: scaffoldKey,
+      primary: true,
+      appBar: createAppBar(context),
+      drawer: createDrawer(context),
+      body: createBody(context),
+      //floatingActionButton: createZoomControls(context),
+      //floatingActionButtonLocation: FloatingActionButtonLocation.endTop,
+      bottomNavigationBar: createBottomBar(context),
+    );
+  }
+
+  AppBar createAppBar(BuildContext context) {
+    return AppBar(
+      title: Text(I18N.of(context).appTitle),
+      centerTitle: true,
+      primary: true,
+      backgroundColor: Theme.of(context).colorScheme.primary,
+      foregroundColor: Theme.of(context).colorScheme.onPrimary,
+      bottom: PreferredSize(
+        preferredSize: const Size(double.infinity, 6.0),
+        child: progressValue == -1
+            ? Container(height: 6.0)
+            : LinearProgressIndicator(
+                value: progressValue,
+              ),
+      ),
+    );
+  }
+
+  Widget createDrawer(BuildContext context) {
+    return Drawer(
+      backgroundColor: null,
+      child: ListView(
+        children: <Widget>[
+          // pairing
+          ListTile(
+            title: Text(I18N.of(context).drawerPaired),
+            trailing: storage?.serverSettings == null
+                ? const Icon(
+                    Icons.clear,
+                    color: Colors.red,
+                  )
+                : const Icon(
+                    Icons.done,
+                    color: Colors.green,
+                  ),
+            onTap: onPair,
+          ),
+          // pinging
+          ListTile(
+            title: Text(I18N.of(context).drawerServerAvailable),
+            enabled: storage?.serverSettings != null,
+            trailing: storage?.serverSettings != null && pinging
+                ? const SizedBox(
+                    child: CircularProgressIndicator(
+                        value: null, strokeWidth: 2.5),
+                    height: 16,
+                    width: 16,
+                  )
+                : (storage?.serverSettings != null && serverAvailable
+                    ? const Icon(
+                        Icons.done,
+                        color: Colors.green,
+                      )
+                    : const Icon(
+                        Icons.clear,
+                        color: Colors.red,
+                      )),
+            onTap: onPing,
+          ),
+          // offline map switch
+          SwitchListTile(
+              title: Text(I18N.of(context).useOfflineMap),
+              subtitle: storage?.serverSettings?.mapPackSize == null
+                  ? null
+                  : Text(I18N
+                      .of(context)
+                      .mapSizeWarning(storage!.serverSettings!.mapPackSize)),
+              value: storage?.mapState?.usingOffline ?? false,
+              onChanged: storage?.serverSettings == null ? null : onUseOffline,
+              secondary: const Icon(Icons.download_for_offline)),
+          // syncing
+          ListTile(
+            title: Text(I18N.of(context).sync),
+            leading: const Icon(Icons.sync),
+            enabled: storage?.serverSettings != null,
+            onTap: onSync,
+            onLongPress: () {
+              showDialog(
+                  context: context,
+                  builder: (BuildContext context) {
+                    return SimpleDialog(
+                      children: <Widget>[
+                        ListTile(
+                          title: Text(I18N.of(context).download),
+                          leading: const Icon(Icons.cloud_download),
+                          enabled: storage?.serverSettings != null,
+                          onTap: () {
+                            Navigator.of(context).pop();
+                            onDownload(true, context);
+                          },
+                        ),
+                        ListTile(
+                          title: Text(I18N.of(context).upload),
+                          leading: const Icon(Icons.cloud_upload),
+                          enabled: storage?.serverSettings != null,
+                          onTap: () {
+                            Navigator.of(context).pop();
+                            onUpload();
+                          },
+                        ),
+                      ],
+                    );
+                  });
+            },
+          ),
+          // log on location
+          ListTile(
+            title: Text(I18N.of(context).logPoiCurrentLocation),
+            leading: const Icon(Icons.add_location_alt_outlined),
+            trailing: const Icon(Icons.my_location),
+            onTap: () => onLogPoi(PointLogType.currentLocation),
+            enabled: storage?.serverSettings != null && currentLocation != null,
+          ),
+          // log on crosshair
+          ListTile(
+            title: Text(I18N.of(context).logPoiCrosshair),
+            leading: const Icon(Icons.add_location_alt_outlined),
+            trailing: const Icon(Icons.add),
+            onTap: () => onLogPoi(PointLogType.crosshair),
+            enabled: storage?.serverSettings != null,
+          ),
+          // point list
+          ListTile(
+            title: Text(I18N.of(context).poiListTitle),
+            leading: const Icon(Icons.place),
+            trailing: const Icon(Icons.arrow_forward),
+            onTap: onPointListTap,
+            enabled: storage?.serverSettings != null,
+          ),
+          // user list
+          ListTile(
+            title: Text(I18N.of(context).userListTitle),
+            subtitle: Text(I18N.of(context).infoOnly),
+            leading: const Icon(Icons.people),
+            trailing: const Icon(Icons.arrow_forward),
+            onTap: onUserListTap,
+            enabled: storage?.serverSettings != null,
+          )
+        ],
+      ),
+    );
+  }
+
+  Widget createBody(BuildContext context) {
+    const xline = Divider(
+      color: Color(0xffdd0000),
+      thickness: 2,
+    );
+    return Stack(
+      children: <Widget>[
+        createMap(context),
+        if (navigationTarget.isSet && currentLocation != null)
+          Container(
+            child: createInfoContentDistance(context),
+            alignment: Alignment.bottomCenter,
+            constraints: const BoxConstraints.expand(),
+          ),
+        if (infoTarget.isSet)
+          Container(
+            child: createInfoContentFull(context),
+            alignment: Alignment.bottomCenter,
+            constraints: const BoxConstraints.expand(),
+          ),
+        Container(
+            alignment: Alignment.center,
+            child: SizedBox(
+              width: MediaQuery.of(context).size.width * 0.5,
+              child: xline,
+            )),
+        Container(
+            alignment: Alignment.center,
+            child: RotatedBox(
+              quarterTurns: 1,
+              child: SizedBox(
+                width: MediaQuery.of(context).size.width * 0.5,
+                child: xline,
+              ),
+            )),
+        Container(
+          child: createMapControls(context),
+          alignment: Alignment.topRight,
+          padding: const EdgeInsets.all(8.0),
+        )
+      ],
+    );
+  }
+
+  Widget createMap(BuildContext context) {
+    return FlutterMap(
+      options: MapOptions(
+          center: storage?.mapState?.center ??
+              storage?.serverSettings?.defaultCenter,
+          zoom: storage?.mapState?.zoom.toDouble() ??
+              (storage?.serverSettings?.minZoom.toDouble()) ??
+              fallbackMinZoom,
+          maxZoom: storage?.mapState?.zoomMax?.toDouble() ?? fallbackMaxZoom,
+          minZoom:
+              storage?.serverSettings?.minZoom.toDouble() ?? fallbackMinZoom,
+          nePanBoundary: storage?.mapState?.neBound,
+          swPanBoundary: storage?.mapState?.swBound,
+          onPositionChanged: onMapPositionChanged,
+          onTap: onMapTap,
+          enableMultiFingerGestureRace: true,
+          pinchZoomThreshold: 0.2,
+          rotationThreshold: 2,
+          plugins: [VectorMapTilesPlugin()],
+          onMapCreated: (MapController mapController) {
+            Future.microtask(() {
+              setState(() {
+                mapReady = true;
+              });
+            });
+          }),
+      mapController: mapController,
+      children: [
+        if (storage?.serverSettings != null)
+          VectorTileLayerWidget(
+              options: VectorTileLayerOptions(
+                  tileProviders: TileProviders({
+                    'openmaptiles': MemoryCacheVectorTileProvider(
+                        delegate: NetworkVectorTileProvider(
+                            urlTemplate:
+                                '${storage!.serverSettings!.serverAddress}${storage!.serverSettings!.tilePathTemplate}',
+                            maximumZoom: 14),
+                        maxSizeBytes: 1024 * 1024 * 5)
+                  }),
+                  theme: ThemeReader().read(mapThemeData()),
+                  backgroundTheme: ThemeReader().readAsBackground(
+                      mapThemeData(),
+                      layerPredicate: defaultBackgroundLayerPredicate)))
+      ],
+      layers: [
+        // limits
+        PolylineLayerOptions(
+            polylines: storage?.mapState?.hasPanLimits ?? false
+                ? <Polyline>[
+                    Polyline(points: <LatLng>[
+                      LatLng(storage!.mapState!.swBound!.latitude,
+                          storage!.mapState!.swBound!.longitude),
+                      LatLng(storage!.mapState!.swBound!.latitude,
+                          storage!.mapState!.neBound!.longitude),
+                      LatLng(storage!.mapState!.neBound!.latitude,
+                          storage!.mapState!.neBound!.longitude),
+                      LatLng(storage!.mapState!.neBound!.latitude,
+                          storage!.mapState!.swBound!.longitude),
+                    ], strokeWidth: 5, color: Colors.red),
+                  ]
+                : []),
+        // line to target
+        if (currentLocation != null && navigationTarget.isSet)
+          PolylineLayerOptions(polylines: <Polyline>[
+            Polyline(points: <LatLng>[
+              currentLocation!,
+              navigationTarget.coords,
+            ], strokeWidth: 5, color: Colors.blue),
+          ]),
+        // current location
+        if (currentLocation != null)
+          MarkerLayerOptions(markers: [
+            Marker(
+                height: 40,
+                width: 40,
+                anchorPos: AnchorPos.align(AnchorAlign.center),
+                point: currentLocation!,
+                builder: (context) {
+                  if (currentHeading != null && locationSubscription != null) {
+                    return Transform.rotate(
+                      angle: currentHeading!,
+                      child: Icon(
+                        Icons.navigation,
+                        color: Theme.of(context).primaryColorLight,
+                        size: 40,
+                      ),
+                    );
+                  }
+                  return Icon(
+                    Icons.my_location,
+                    color: locationSubscription == null
+                        ? Theme.of(context).disabledColor
+                        : Theme.of(context).primaryColorLight,
+                    size: 40,
+                  );
+                })
+          ]),
+        // extra geometry
+        GroupLayerOptions(group: createGeometry()),
+        // POIs
+        MarkerLayerOptions(markers: createMarkers()),
+      ],
+    );
+  }
+
+  List<Marker> createMarkers() {
+    if (storage == null) {
+      return [];
+    }
+    return storage!.features.whereType<data.Point>().map((data.Point point) {
+      var baseSize = 35.0;
+      var width = baseSize * (infoTarget.isSamePoint(point) ? 1.5 : 1);
+      var height = baseSize * (infoTarget.isSamePoint(point) ? 1.5 : 1);
+      Color color = getPoiColor(point, storage!.serverSettings!.id);
+      return Marker(
+        point: point.coords,
+        anchorPos: AnchorPos.exactly(Anchor(
+            width * point.category.xAlign, height * point.category.yAlign)),
+        width: width,
+        height: height,
+        builder: (context) => GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onTap: () => onPointTap(point),
+            onLongPress: () => onPointLongPress(point),
+            child: Icon(
+              point.category.iconData,
+              size: baseSize * (infoTarget.isSamePoint(point) ? 1.5 : 1),
+              color: color,
+            )),
+      );
+    }).toList();
+  }
+
+  List<LayerOptions> createGeometry() {
+    if (storage == null) {
+      return [];
+    }
+    return [
+      PolylineLayerOptions(
+          polylines: storage!.features
+              .whereType<data.LineString>()
+              .map((data.LineString ls) =>
+                  Polyline(points: ls.coords, color: extraGeometryColor))
+              .toList(growable: false)),
+      /*PolygonLayerOptions(
+          polygons: grp.polygons
+              .map((p) => Polygon(
+                    points: p.boundary,
+                    holePointsList: p.holes,
+                    color: extraGeometryColor,
+                  ))
+              .toList(growable: false))*/
+    ];
+  }
+
+  Widget createInfoContentDistance(BuildContext context) {
+    NavigationData nav = NavigationData.compute(
+        currentLocation!, navigationTarget.coords, currentHeading);
+    return Card(
+        child: InkWell(
+      child: Container(
+          padding: const EdgeInsets.all(8.0),
+          child: Text(
+            'd: ${nav.distanceM.toStringAsFixed(2)} m  '
+            'b: ${nav.bearingDeg.toStringAsFixed(2)}°  '
+            'rb: ${nav.relativeBearingDeg == null ? '-' : nav.relativeBearingDeg!.toStringAsFixed(2)}°',
+            textAlign: TextAlign.center,
+          )),
+      onTap: onInfoDistanceTap,
+    ));
+  }
+
+  Widget createInfoContentFull(BuildContext context) {
+    bool isNavigating = navigationTarget.isSet &&
+        currentLocation != null &&
+        navigationTarget == infoTarget;
+    String distStr = '', brgStr = '', relBrgStr = '';
+    if (isNavigating) {
+      NavigationData nav = NavigationData.compute(
+          currentLocation!, navigationTarget.coords, currentHeading);
+      distStr = '${I18N.of(context).distance}: ${nav.distanceM} m';
+      brgStr =
+          '${I18N.of(context).bearing}: ${nav.bearingDeg.toStringAsFixed(1)}°';
+      relBrgStr =
+          '${I18N.of(context).relativeBearing}: ${nav.relativeBearingDeg == null ? '-' : nav.relativeBearingDeg!.toStringAsFixed(1)}°';
+    }
+    return Dismissible(
+        key: const Key('fullInfoDismissible'),
+        onDismissed: (DismissDirection dd) {
+          setState(() {
+            infoTarget = Target.none();
+          });
+        },
+        resizeDuration: null,
+        child: Card(
+            child: Container(
+                padding: const EdgeInsets.only(top: 16.0, bottom: 8.0),
+                child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.only(
+                            top: 0.0, left: 16.0, right: 16.0, bottom: 4.0),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: <Widget>[
+                            Text(
+                                '${infoTarget.point.name} (${storage?.users[infoTarget.point.ownerId]})',
+                                style: Theme.of(context).textTheme.headline6),
+                            Text(
+                                [
+                                  formatCoords(infoTarget.coords, false),
+                                  '${I18N.of(context).category}: ${I18N.of(context).categories(infoTarget.point.category)}'
+                                ].join(' '),
+                                style: Theme.of(context).textTheme.caption),
+                            if (isNavigating)
+                              Text('$distStr $brgStr $relBrgStr',
+                                  style: Theme.of(context).textTheme.caption),
+                          ],
+                        ),
+                      ),
+                      if (infoTarget.point.description?.isNotEmpty ?? false)
+                        Container(
+                            padding: const EdgeInsets.only(
+                                left: 16.0, right: 16.0, bottom: 4.0),
+                            child: Text(infoTarget.point.description!)),
+                      ButtonBar(
+                        alignment: MainAxisAlignment.spaceEvenly,
+                        buttonHeight: 0,
+                        buttonPadding: EdgeInsets.zero,
+                        layoutBehavior: ButtonBarLayoutBehavior.padded,
+                        mainAxisSize: MainAxisSize.min,
+                        children: <Widget>[
+                          IconButton(
+                            icon: navigationTarget == infoTarget
+                                ? const Icon(Icons.navigation)
+                                : const Icon(Icons.navigation_outlined),
+                            tooltip: navigationTarget == infoTarget
+                                ? I18N.of(context).stopNavigationButton
+                                : I18N.of(context).navigateToButton,
+                            onPressed: currentLocation == null
+                                ? null
+                                : () => onInfoNavigate(infoTarget),
+                          ),
+                          IconButton(
+                              icon: const Icon(Icons.center_focus_strong),
+                              tooltip: I18N.of(context).centerViewInfoButton,
+                              onPressed: () => onCenterView(infoTarget)),
+                          if (infoTarget.point.ownerId != 0)
+                            if (infoTarget.point.deleted)
+                              IconButton(
+                                icon: const Icon(Icons.restore_from_trash),
+                                tooltip: I18N.of(context).undeleteButton,
+                                onPressed: () =>
+                                    onUndeletePoint(infoTarget.point),
+                              )
+                            else
+                              IconButton(
+                                icon: const Icon(Icons.delete),
+                                tooltip: I18N.of(context).deleteButton,
+                                onPressed: () =>
+                                    onDeletePoint(infoTarget.point),
+                              ),
+                          if (infoTarget.point.ownerId != 0)
+                            IconButton(
+                                icon: const Icon(Icons.edit),
+                                tooltip: I18N.of(context).edit,
+                                onPressed: () => onEditPoint(infoTarget.point)),
+                          if (infoTarget.point.ownerId != 0 &&
+                              infoTarget.point.isEdited())
+                            IconButton(
+                                icon: const Icon(Icons.restore),
+                                tooltip: I18N.of(context).revert,
+                                onPressed: () => onRevertPoi(infoTarget.point))
+                        ],
+                      ),
+                    ]))));
+  }
+
+  Widget createMapControls(BuildContext context) {
+    return Column(
+      mainAxisAlignment: MainAxisAlignment.start,
+      crossAxisAlignment: CrossAxisAlignment.end,
+      mainAxisSize: MainAxisSize.min,
+      children: <Widget>[
+        FloatingActionButton(
+          heroTag: 'fab-zoom-in',
+          tooltip: I18N.of(context).zoomIn,
+          elevation: 0,
+          child: const Icon(
+            Icons.zoom_in,
+            size: 30,
+          ),
+          backgroundColor: !mapReady ||
+                  mapController.zoom >=
+                      (storage?.mapState?.zoomMax ?? fallbackMaxZoom)
+              ? Theme.of(context).disabledColor
+              : null,
+          onPressed: !mapReady ||
+                  mapController.zoom >=
+                      (storage?.mapState?.zoomMax ?? fallbackMaxZoom)
+              ? null
+              : () => onZoom(1),
+        ),
+        Container(
+          padding: const EdgeInsets.only(top: 6),
+          child: FloatingActionButton(
+            heroTag: 'fab-zoom-out',
+            tooltip: I18N.of(context).zoomOut,
+            elevation: 0,
+            child: const Icon(
+              Icons.zoom_out,
+              size: 30,
+            ),
+            backgroundColor: !mapReady ||
+                    mapController.zoom <=
+                        (storage?.serverSettings?.minZoom ?? fallbackMinZoom)
+                ? Theme.of(context).disabledColor
+                : null,
+            onPressed: !mapReady ||
+                    mapController.zoom <=
+                        (storage?.serverSettings?.minZoom ?? fallbackMinZoom)
+                ? null
+                : () => onZoom(-1),
+          ),
+        ),
+        Container(
+          padding: const EdgeInsets.only(top: 6),
+          child: FloatingActionButton(
+            heroTag: 'fab-reset-rotation',
+            tooltip: I18N.of(context).resetRotation,
+            elevation: 0,
+            child: const Icon(
+              Icons.explore,
+              size: 30,
+            ),
+            backgroundColor: !mapReady || mapController.rotation == 0.0
+                ? Theme.of(context).disabledColor
+                : null,
+            onPressed: () {
+              if (mapReady) {
+                setState(() {
+                  mapController.rotate(0);
+                });
+              }
+            },
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget createBottomBar(BuildContext context) {
+    return BottomAppBar(
+      color: Theme.of(context).colorScheme.primary,
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: <Widget>[
+          Expanded(
+            flex: 0,
+            child: Table(
+              defaultColumnWidth: const IntrinsicColumnWidth(),
+              children: <TableRow>[
+                TableRow(children: <Widget>[
+                  Container(),
+                  Container(
+                      padding: const EdgeInsets.symmetric(
+                          vertical: 1, horizontal: 4),
+                      alignment: Alignment.center,
+                      child: Text(
+                        'GPS',
+                        style: Theme.of(context)
+                            .primaryTextTheme
+                            .bodyText2!
+                            .apply(fontFamily: 'monospace'),
+                      )),
+                  Container(
+                    padding:
+                        const EdgeInsets.symmetric(vertical: 1, horizontal: 4),
+                    alignment: Alignment.center,
+                    child: Text(
+                      'TGT',
+                      style: Theme.of(context)
+                          .primaryTextTheme
+                          .bodyText2!
+                          .apply(fontFamily: 'monospace'),
+                    ),
+                  )
+                ]),
+                TableRow(children: <Widget>[
+                  Container(
+                    padding:
+                        const EdgeInsets.symmetric(vertical: 1, horizontal: 4),
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      'Lat',
+                      style: Theme.of(context)
+                          .primaryTextTheme
+                          .bodyText2!
+                          .apply(fontFamily: 'monospace'),
+                    ),
+                  ),
+                  Container(
+                    padding:
+                        const EdgeInsets.symmetric(vertical: 1, horizontal: 4),
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      currentLocation == null
+                          ? '-'
+                          : currentLocation!.latitude.toStringAsPrecision(8),
+                      style: Theme.of(context)
+                          .primaryTextTheme
+                          .bodyText2!
+                          .apply(fontFamily: 'monospace'),
+                    ),
+                  ),
+                  Container(
+                    padding:
+                        const EdgeInsets.symmetric(vertical: 1, horizontal: 4),
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      !mapReady
+                          ? '-'
+                          : mapController.center.latitude
+                              .toStringAsPrecision(8),
+                      style: Theme.of(context)
+                          .primaryTextTheme
+                          .bodyText2!
+                          .apply(fontFamily: 'monospace'),
+                    ),
+                  ),
+                ]),
+                TableRow(children: <Widget>[
+                  Container(
+                    padding:
+                        const EdgeInsets.symmetric(vertical: 1, horizontal: 4),
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      'Lng',
+                      style: Theme.of(context)
+                          .primaryTextTheme
+                          .bodyText2!
+                          .apply(fontFamily: 'monospace'),
+                    ),
+                  ),
+                  Container(
+                    padding:
+                        const EdgeInsets.symmetric(vertical: 1, horizontal: 4),
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      currentLocation == null
+                          ? '-'
+                          : currentLocation!.longitude.toStringAsPrecision(8),
+                      style: Theme.of(context)
+                          .primaryTextTheme
+                          .bodyText2!
+                          .apply(fontFamily: 'monospace'),
+                    ),
+                  ),
+                  Container(
+                    padding:
+                        const EdgeInsets.symmetric(vertical: 1, horizontal: 4),
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      !mapReady
+                          ? '-'
+                          : mapController.center.longitude
+                              .toStringAsPrecision(8),
+                      style: Theme.of(context)
+                          .primaryTextTheme
+                          .bodyText2!
+                          .apply(fontFamily: 'monospace'),
+                    ),
+                  ),
+                ])
+              ],
+            ),
+          ),
+          Expanded(
+            flex: 0,
+            child: Row(
+              children: <Widget>[
+                IconButton(
+                  tooltip: I18N.of(context).locationContinuousButtonTooltip,
+                  icon: Icon(locationSubscription == null
+                      ? Icons.location_off
+                      : Icons.location_on),
+                  iconSize: 30.0,
+                  color: null,
+                  onPressed: onToggleLocationContinuous,
+                ),
+                IconButton(
+                  tooltip: I18N.of(context).lockViewToLocationButtonTooltip,
+                  icon: Icon(viewLockedToLocation
+                      ? Icons.gps_fixed
+                      : Icons.gps_not_fixed),
+                  iconSize: 30.0,
+                  color: currentLocation == null ? null : null,
+                  onPressed:
+                      currentLocation == null ? null : onLockViewToLocation,
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void setLocation() {
+    location.getLocation().then((LocationData loc) {
+      developer.log('One-time location: ${loc.latitude} ${loc.longitude}');
+      setState(() {
+        currentLocation = LatLng(loc.latitude!, loc.longitude!);
+        onCurrentLocation();
+      });
+    });
+  }
+
+  void onLockViewToLocation() {
+    setState(() {
+      viewLockedToLocation = true;
+      mapController.move(currentLocation!, mapController.zoom);
+    });
+  }
+
+  void onZoom(int amount) {
+    developer.log(
+        'min zoom: ${(storage?.serverSettings?.minZoom ?? fallbackMinZoom)}');
+    developer
+        .log('max zoom: ${(storage?.mapState?.zoomMax ?? fallbackMaxZoom)}');
+    if (!mapReady) {
+      return;
+    }
+    developer.log('zoom before: ${mapController.zoom}');
+    if (mapReady) {
+      setState(() {
+        mapController.move(mapController.center, mapController.zoom + amount);
+      });
+    }
+    developer.log('zoom after: ${mapController.zoom}');
+  }
+
+  void onMapPositionChanged(MapPosition position, bool hasGesture) {
+    if (storage?.mapState != null) {
+      storage!.setMapState(storage!.mapState!.from(
+          center: mapController.center, zoom: mapController.zoom.round()));
+    }
+    if (mapReady && mapController.center != currentLocation) {
+      setState(() {
+        viewLockedToLocation = false;
+      });
+    }
+  }
+
+  void onToggleLocationContinuous() {
+    if (locationSubscription == null) {
+      locationSubscription =
+          location.onLocationChanged.listen((LocationData loc) {
+        //developer.log('Continuous location: ${loc.latitude} ${loc.longitude}');
+        setState(() {
+          currentLocation = LatLng(loc.latitude!, loc.longitude!);
+          onCurrentLocation();
+        });
+      });
+      compassSubscription = FlutterCompass.events!.listen((CompassEvent evt) {
+        setState(() {
+          currentHeading = math.pi * evt.heading! / 180.0;
+        });
+      });
+      developer.log('Compass subscription: $compassSubscription');
+    } else {
+      locationSubscription!.cancel();
+      setState(() {
+        locationSubscription = null;
+      });
+      compassSubscription!.cancel();
+      compassSubscription = null;
+    }
+  }
+
+  void onCurrentLocation() {
+    developer.log('onCurrentLocation');
+    if (viewLockedToLocation) {
+      mapController.move(currentLocation!, mapController.zoom);
+    }
+  }
+
+  void onPair() async {
+    data.ServerSettings? settings = await showDialog<data.ServerSettings>(
+      context: context,
+      builder: (BuildContext context) {
+        return PairingDialog(
+          scaffoldKey: scaffoldKey,
+        );
+      },
+    );
+    if (settings == null) {
+      developer.log('no settings');
+    } else {
+      developer.log(settings.toString());
+      await storage?.setServerSettings(settings);
+      await storage?.setMapState(data.MapState(
+          false,
+          storage!.serverSettings!.defaultCenter,
+          storage!.serverSettings!.minZoom,
+          null,
+          null,
+          null));
+      setState(() {});
+      mapController.move(storage!.serverSettings!.defaultCenter,
+          storage!.serverSettings!.minZoom.toDouble());
+    }
+    Navigator.of(context).pop();
+    startPinging();
+  }
+
+  void onPing() {
+    setState(() {
+      pinging = true;
+      comm.ping(storage!.serverSettings!.serverAddress).then((bool pong) {
+        setState(() {
+          pinging = false;
+          serverAvailable = pong;
+        });
+      });
+    });
+  }
+
+  void startPinging() {
+    if (storage?.serverSettings == null) {
+      developer.log('No settings, cannot start pinging.');
+      return;
+    }
+    onPing();
+    Future.doWhile(() {
+      if (storage?.serverSettings == null) {
+        return Future.delayed(
+            const Duration(seconds: 5), () => Future.value(true));
+      }
+      return Future.delayed(const Duration(seconds: 5), () {
+        onPing();
+        return true;
+      });
+    });
+  }
+
+  void onUseOffline(bool use) async {
+    developer.log('onUseOffline');
+    Navigator.of(context).pop();
+    notify('not implemented (yet)', true);
+    /*
+    Navigator.of(context).pop();
+    // download
+    var res = await comm.downloadMap(storage!.serverSettings!.serverAddress,
+        storage!.serverSettings!.tilePackPath);
+    var received = 0;
+    var stream = res.dataStream.map(res.contentLength != null
+        ? (chunk) {
+            received += chunk.length;
+            developer.log('Received $received of ${chunk.length} bytes.');
+            setState(() {
+              progressValue = received / res.contentLength!;
+            });
+            return chunk;
+          }
+        : (chunk) {
+            received += chunk.length;
+            developer.log('Received $received bytes.');
+            return chunk;
+          });
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      content: Text(I18N.of(context).downloadingMapSnackBar),
+      duration: const Duration(seconds: 3),
+    ));
+    await saveTilePackRaw(stream);
+
+    // unpack
+    setState(() {
+      progressValue = 0;
+    });
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      content: Text(I18N.of(context).unpackingMapSnackBar),
+      duration: Duration(seconds: 3),
+    ));
+    await unpackTilePack((int n, int total) {
+      var p = n.toDouble() / total.toDouble();
+      setState(() {
+        progressValue = p;
+      });
+    });
+
+    // get and focus on map center
+    var mapLimits = await getMapLimits();
+    if (mapLimits != null) {
+      mapController.fitBounds(mapLimits.latLngBounds);
+      if (mapController.zoom < mapLimits.zoom.min) {
+        mapController.move(mapController.center, mapLimits.zoom.min.toDouble());
+      } else if (mapController.zoom > mapLimits.zoom.max) {
+        mapController.move(mapController.center, mapLimits.zoom.max.toDouble());
+      }
+      setState(() {
+        this.mapLimits = mapLimits;
+      });
+    }
+
+    // done
+    setState(() {
+      progressValue = -1;
+    });
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      content: Text(I18N.of(context).doneMapSnackBar),
+      duration: const Duration(seconds: 3),
+    ));
+    */
+  }
+
+  void onDownload(bool only, [BuildContext? ctx]) async {
+    developer.log('onDownload');
+    if (only) {
+      bool? confirm = await showDialog<bool>(
+          context: ctx!,
+          builder: (context) =>
+          AlertDialog(
+            title: Text(I18N
+                .of(context)
+                .downloadConfirm),
+            content: SingleChildScrollView(
+              child: Text(I18N
+                  .of(context)
+                  .downloadConfirmDetail),
+            ),
+            actionsAlignment: MainAxisAlignment.center,
+            actions: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: [
+                  MaterialButton(
+                    child: Text(I18N
+                        .of(context)
+                        .dialogConfirm),
+                    color: Theme.of(context).colorScheme.primary,
+                    onPressed: () {
+                      Navigator.of(context).pop(true)
+                    },
+                  ),
+                  MaterialButton(
+                    child: Text(I18N
+                        .of(context)
+                        .dialogCancel),
+                    color: Theme.of(context).colorScheme.primary,
+                    onPressed: () {
+                      Navigator.of(context).pop(false)
+                    },
+                  )
+                ],
+              )
+            ],
+          ));
+      if (confirm != true) {
+        return;
+      }
+    }
+    late comm.Data data;
+    try {
+      data = await comm.downloadData(storage!.serverSettings!.serverAddress);
+    } on comm.CommException catch (e) {
+      await commErrorDialog(e, context);
+      return;
+    }
+    await storage!.setUsers(data.users);
+    await storage!.setFeatures(data.features);
+    setState(() {
+      infoTarget = Target.none();
+    });
+    if (only) {
+      Navigator.of(context).pop();
+      notify(I18N.of(context).downloaded, false);
+    }
+  }
+
+  void upload() async {
+    var created = storage!.features
+        .where((data.Feature f) => f.isLocal)
+        .toList(growable: false);
+    var edited = storage!.features
+        .where((data.Feature f) => f.isEdited())
+        .toList(growable: false);
+    var deleted = storage!.features
+        .where((data.Feature f) => f.deleted)
+        .toList(growable: false);
+    await comm.uploadData(
+        storage!.serverSettings!.serverAddress, created, edited, deleted);
+  }
+
+  void onUpload() async {
+    developer.log('onUpload');
+    try {
+      upload();
+    } on comm.CommException catch (e) {
+      await commErrorDialog(e, context);
+      return;
+    }
+    setState(() {
+      infoTarget = Target.none();
+    });
+  }
+
+  void onSync() async {
+    developer.log('onSync');
+    try {
+      upload();
+    } on comm.CommException catch (e) {
+      await commErrorDialog(e, context);
+      return;
+    }
+    onDownload(false);
+  }
+
+  void onLogPoi(PointLogType type) async {
+    developer.log('Log poi $type');
+    LatLng loc = mapController.center;
+    if (type == PointLogType.currentLocation && currentLocation != null) {
+      loc = currentLocation!;
+    }
+    Map<String, String>? info = await showDialog<Map<String, String>>(
+        context: context,
+        builder: (BuildContext context) {
+          return AddPointDialog(location: loc);
+        });
+    if (info == null) {
+      return;
+    }
+    Navigator.pop(context);
+    var localId = await storage!.nextLocalId();
+    var point = data.Point.origSame(
+        localId,
+        storage!.serverSettings!.id,
+        info['name']!,
+        info['description']!,
+        loc,
+        data.PointCategory.fromNameString(info['category']),
+        false);
+    await storage!.upsertFeature(point);
+    setState(() {});
+  }
+
+  void onEditPoint(data.Point point) async {
+    developer.log('Edit poi $point');
+    data.Point? replacement = await showDialog<data.Point>(
+        context: context,
+        builder: (BuildContext context) {
+          return EditPointDialog(
+              point: point,
+              targetLocation: storage!.mapState!.center,
+              users: storage!.users);
+        });
+    if (replacement == null) {
+      return;
+    }
+    await storage!.upsertFeature(replacement);
+    setState(() {});
+    if (infoTarget.isSamePoint(point)) {
+      setState(() {
+        infoTarget = Target(storage!.featuresMap[point.id]! as data.Point);
+      });
+    }
+  }
+
+  void onMapTap(TapPosition tapPosition, LatLng coords) {
+    developer.log('onMapTap: $coords');
+    setState(() {
+      infoTarget = Target.none();
+    });
+  }
+
+  void onPointListTap() async {
+    if (storage == null) {
+      notify('No storage!', true);
+      Navigator.of(context).pop();
+    }
+    Map<int, String>? users = Map.of(storage!.users);
+    if (storage!.serverSettings != null &&
+        !users.containsKey(storage!.serverSettings!.id)) {
+      users[storage!.serverSettings!.id] = storage!.serverSettings!.name;
+    }
+    data.Point? selected = await Navigator.of(context).push(
+        MaterialPageRoute<data.Point>(
+            builder: (context) => PointList(
+                storage!.features
+                    .whereType<data.Point>()
+                    .toList(growable: false),
+                storage!.serverSettings!.id,
+                users)));
+    if (selected == null) {
+      return;
+    }
+    setState(() {
+      infoTarget = Target(selected);
+    });
+    Navigator.of(context).pop();
+  }
+
+  void onUserListTap() {
+    if (storage == null) {
+      notify('No storage!', true);
+      Navigator.of(context).pop();
+    }
+    Map<int, String>? users = Map.of(storage!.users);
+    if (storage!.serverSettings != null &&
+        !users.containsKey(storage!.serverSettings!.id)) {
+      users[storage!.serverSettings!.id] = storage!.serverSettings!.name;
+    }
+    showDialog(
+        context: context,
+        builder: (context) => SimpleDialog(
+              title: Text(I18N.of(context).userListTitle),
+              children: [
+                ListView(
+                  scrollDirection: Axis.vertical,
+                  shrinkWrap: true,
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+                  children: users.entries
+                      .map((e) => Text(
+                          '\u2022 ${e.value}${e.key == storage!.serverSettings?.id ? ' (${I18N.of(context).me})' : ''}'))
+                      .toList(growable: false)
+                    ..sort((Text a, Text b) => -a.data!.compareTo(b.data!)),
+                ),
+                MaterialButton(
+                    child: Text(I18N.of(context).ok),
+                    onPressed: () => Navigator.of(context).pop())
+              ],
+            ));
+  }
+
+  void onPointTap(data.Point point) {
+    developer.log('Poi ${point.name} tap.');
+    setState(() {
+      if (infoTarget.isSamePoint(point)) {
+        infoTarget = Target.none();
+      } else {
+        infoTarget = Target(point);
+      }
+    });
+  }
+
+  void onPointLongPress(data.Point point) {
+    developer.log('Poi ${point.name} long press.');
+    toggleNavigation(Target(point));
+  }
+
+  void onInfoNavigate(Target t) {
+    developer.log('onInfoNavigate: ${t.point.name}');
+    toggleNavigation(t);
+  }
+
+  void onInfoDistanceTap() {
+    developer.log('onInfoDistanceTap');
+    setState(() {
+      infoTarget = navigationTarget;
+    });
+  }
+
+  void onDeletePoint(data.Point toDelete) async {
+    if (toDelete.isLocal) {
+      bool confirmed = await pointDataConfirm(
+          (context) => I18N.of(context).aboutToDeleteLocalPoi, toDelete);
+      if (!confirmed) {
+        return;
+      }
+      await storage!.removeFeature(toDelete.id);
+    } else {
+      var replacement = toDelete.copy();
+      replacement.deleted = true;
+      await storage!.upsertFeature(replacement);
+    }
+    data.Feature? r = storage!.featuresMap[toDelete.id];
+    if (infoTarget.isSamePoint(toDelete)) {
+      if (r != null) {
+        assert(r.isPoint());
+        infoTarget = Target(r.asPoint());
+      } else {
+        infoTarget = Target.none();
+      }
+    }
+    if (navigationTarget.isSamePoint(toDelete)) {
+      if (r != null) {
+        assert(r.isPoint());
+        navigationTarget = Target(r.asPoint());
+      } else {
+        navigationTarget = Target.none();
+      }
+    }
+    setState(() {});
+  }
+
+  void onUndeletePoint(data.Point toUndelete) async {
+    var replacement = toUndelete.copy();
+    replacement.deleted = false;
+    await storage!.upsertFeature(replacement);
+    data.Feature? r = storage!.featuresMap[toUndelete.id];
+    if (infoTarget.isSamePoint(toUndelete)) {
+      assert(r != null && r.isPoint());
+      infoTarget = Target(r!.asPoint());
+    }
+    if (navigationTarget.isSamePoint(toUndelete)) {
+      assert(r != null && r.isPoint());
+      navigationTarget = Target(r!.asPoint());
+    }
+    setState(() {});
+  }
+
+  void onRevertPoi(data.Point toRevert) async {
+    bool confirmed = await pointDataConfirm(
+        (context) => I18N.of(context).aboutToRevertGlobalPoi, toRevert);
+    if (!confirmed) {
+      return;
+    }
+    var replacement = toRevert.copy();
+    replacement.revert();
+    await storage!.upsertFeature(replacement);
+    if (infoTarget.isSamePoint(toRevert)) {
+      data.Feature? r = storage!.featuresMap[toRevert.id];
+      assert(r != null && r.isPoint());
+      infoTarget = Target(r!.asPoint());
+    }
+    setState(() {});
+  }
+
+  Future<bool> pointDataConfirm(
+      String Function(BuildContext) question, data.Point point) async {
+    return await showDialog(
+        context: context,
+        builder: (BuildContext context) {
+          return AlertDialog(
+            title: Text(question(context)),
+            content: SingleChildScrollView(
+            child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  ListTile(
+                    title: Text(point.name),
+                    subtitle: Text(I18N.of(context).nameLabel),
+                  ),
+                  ListTile(
+                      title: Text(storage?.users[point.ownerId] ??
+                          '<unknown ID: ${point.ownerId}>'),
+                      subtitle: Text(I18N.of(context).owner)),
+                  ListTile(
+                    title: Text(formatCoords(point.coords, true)),
+                    subtitle: Text(I18N.of(context).position),
+                  ),
+                  if (point.description?.isNotEmpty ?? false)
+                    ListTile(
+                      title: Text(point.description!),
+                      subtitle: Text(I18N.of(context).descriptionLabel),
+                    ),
+                  ListTile(
+                      title: Text(I18N.of(context).categories(point.category)),
+                      subtitle: Text(I18N.of(context).category),
+                      trailing: Icon(point.category.iconData))
+                ],
+              )
+            ),
+            actionsAlignment: MainAxisAlignment.center,
+            actions: <Widget>[
+              MaterialButton(
+                child: Text(I18N.of(context).yes.toUpperCase()),
+                color: Theme.of(context).colorScheme.primary,
+                onPressed: () => Navigator.of(context).pop(true),
+              ),
+              MaterialButton(
+                child: Text(I18N.of(context).no.toUpperCase()),
+                color: Theme.of(context).colorScheme.primary,
+                onPressed: () => Navigator.of(context).pop(false),
+              )
+            ],
+          );
+        });
+  }
+
+  void onCenterView(Target t) {
+    mapController.move(t.coords, mapController.zoom);
+  }
+
+  void toggleNavigation(Target t) {
+    setState(() {
+      if (navigationTarget == t) {
+        navigationTarget = Target.none();
+      } else {
+        navigationTarget = t;
+      }
+    });
+  }
+
+  void notify(String msg, bool error, [int seconds = 5]) {
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      content: Text(msg, style: TextStyle(color: error ? Theme.of(context).colorScheme.onError : Theme.of(context).colorScheme.onSurface)),
+      backgroundColor: error ? Theme.of(context).colorScheme.error : Theme.of(context).colorScheme.surface,
+        duration: Duration(seconds: seconds),
+    ));
+    if (canVibrate) {
+      Vibrate.feedback(error ? FeedbackType.warning : FeedbackType.success);
+    }
+  }
+}
