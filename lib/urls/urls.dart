@@ -1,9 +1,8 @@
 import 'package:oko/urls/stub.dart'
-  // ignore: uri_does_not_exist
-  if (dart.library.io) 'package:oko/urls/mobile.dart'
-  // ignore: uri_does_not_exist
-  if (dart.library.html) 'package:oko/urls/web.dart';
-
+    // ignore: uri_does_not_exist
+    if (dart.library.io) 'package:oko/urls/mobile.dart'
+    // ignore: uri_does_not_exist
+    if (dart.library.html) 'package:oko/urls/web.dart';
 
 abstract class UriCreator {
   Uri handshakeUri(String serverAddress);

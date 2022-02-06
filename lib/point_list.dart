@@ -42,17 +42,17 @@ class _PointListState extends State<PointList> {
     super.initState();
     points = List.of(widget.points, growable: false);
 
-    getStorage().whenComplete(() => setState((){
-      asc = storage.pointListSortDir;
-      sort = storage.pointListSort;
-      checkedCategories.clear();
-      developer.log('modified checkedCategories: $checkedCategories');
-      checkedCategories.addAll(storage.pointListCheckedCategories);
-      developer.log('modified checkedCategories: $checkedCategories');
-      checkedUsers.clear();
-      checkedUsers.addAll(storage.pointListCheckedUsers);
-      doSort();
-    }));
+    getStorage().whenComplete(() => setState(() {
+          asc = storage.pointListSortDir;
+          sort = storage.pointListSort;
+          checkedCategories.clear();
+          developer.log('modified checkedCategories: $checkedCategories');
+          checkedCategories.addAll(storage.pointListCheckedCategories);
+          developer.log('modified checkedCategories: $checkedCategories');
+          checkedUsers.clear();
+          checkedUsers.addAll(storage.pointListCheckedUsers);
+          doSort();
+        }));
   }
 
   Future<void> getStorage() async {
@@ -182,8 +182,8 @@ class _PointListState extends State<PointList> {
       builder: (context) => MultiChecker<int>(
         items: widget.users.keys.toList(growable: false),
         checkedItems: checkedUsers,
-        titleBuilder: (int uid, bool _) =>
-            Text('${widget.users[uid] ?? '<unknown ID: $uid>'}${uid == widget.myId ? ' (${I18N.of(context).me})' : ''}'),
+        titleBuilder: (int uid, bool _) => Text(
+            '${widget.users[uid] ?? '<unknown ID: $uid>'}${uid == widget.myId ? ' (${I18N.of(context).me})' : ''}'),
       ),
     );
     if (checked == null) {

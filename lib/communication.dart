@@ -52,14 +52,15 @@ Future<ServerSettings> handshake(
   }
   Map<String, dynamic> data = jsonDecode(res.body);
   return ServerSettings(
-      serverAddress: serverAddress,
-      name: data['name'],
-      id: data['id'],
-      mapPackPath: data['map_info']['map_pack_path'],
-      mapPackSize: data['map_info']['map_pack_size'],
-      tilePathTemplate: data['map_info']['tile_path_template'],
-      minZoom: data['map_info']['min_zoom'],
-      defaultCenter: LatLng(data['map_info']['default_center']['lat'], data['map_info']['default_center']['lng']),
+    serverAddress: serverAddress,
+    name: data['name'],
+    id: data['id'],
+    mapPackPath: data['map_info']['map_pack_path'],
+    mapPackSize: data['map_info']['map_pack_size'],
+    tilePathTemplate: data['map_info']['tile_path_template'],
+    minZoom: data['map_info']['min_zoom'],
+    defaultCenter: LatLng(data['map_info']['default_center']['lat'],
+        data['map_info']['default_center']['lng']),
   );
 }
 

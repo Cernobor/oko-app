@@ -92,38 +92,35 @@ Future<void> commErrorDialog(Exception e, BuildContext context) async {
     subText = e.toString();
   }
   await showDialog(
-    context: context,
-    builder: (BuildContext context) {
-      return AlertDialog(
-        title: Text(I18N
-            .of(context)
-            .alertErrorTitle),
-        content: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisAlignment: MainAxisAlignment.start,
-          mainAxisSize: MainAxisSize.min,
-          children: <Widget>[
-            Text(errorText),
-            Text(subText, style: const TextStyle(fontFamily: 'monospace', fontSize: 10),),
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text(I18N.of(context).alertErrorTitle),
+          content: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisAlignment: MainAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: <Widget>[
+              Text(errorText),
+              Text(
+                subText,
+                style: const TextStyle(fontFamily: 'monospace', fontSize: 10),
+              ),
+            ],
+          ),
+          actions: <Widget>[
+            MaterialButton(
+              child: Text(I18N.of(context).ok),
+              color: Theme.of(context).colorScheme.secondary,
+              textTheme: Theme.of(context).buttonTheme.textTheme,
+              onPressed: () => Navigator.of(context).pop(),
+            )
           ],
-        ),
-        actions: <Widget>[
-          MaterialButton(
-            child: Text(I18N.of(context).ok),
-            color: Theme.of(context).colorScheme.secondary,
-            textTheme: Theme.of(context).buttonTheme.textTheme,
-            onPressed: () => Navigator.of(context).pop(),
-          )
-        ],
-      );
-    }
-  );
+        );
+      });
 }
 
-enum Sort {
-  name,
-  owner
-}
+enum Sort { name, owner }
 
 extension SortExt on Sort {
   String name() {
@@ -143,7 +140,7 @@ extension SortExt on Sort {
 }
 
 class _BaseException implements Exception {
-  final String ?msg;
+  final String? msg;
 
   _BaseException([this.msg]);
 

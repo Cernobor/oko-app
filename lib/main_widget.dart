@@ -117,7 +117,7 @@ class MainWidgetState extends State<MainWidget> {
     canVibrate = await Vibrate.canVibrate;
     try {
       storage = await Storage.getInstance();
-    } catch(e) {
+    } catch (e) {
       developer.log(e.toString());
       notify('Error while getting storage: ${e.toString()}', true);
     }
@@ -1071,43 +1071,34 @@ class MainWidgetState extends State<MainWidget> {
     if (only) {
       bool? confirm = await showDialog<bool>(
           context: ctx!,
-          builder: (context) =>
-          AlertDialog(
-            title: Text(I18N
-                .of(context)
-                .downloadConfirm),
-            content: SingleChildScrollView(
-              child: Text(I18N
-                  .of(context)
-                  .downloadConfirmDetail),
-            ),
-            actionsAlignment: MainAxisAlignment.center,
-            actions: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                children: [
-                  MaterialButton(
-                    child: Text(I18N
-                        .of(context)
-                        .dialogConfirm),
-                    color: Theme.of(context).colorScheme.primary,
-                    onPressed: () {
-                      Navigator.of(context).pop(true)
-                    },
-                  ),
-                  MaterialButton(
-                    child: Text(I18N
-                        .of(context)
-                        .dialogCancel),
-                    color: Theme.of(context).colorScheme.primary,
-                    onPressed: () {
-                      Navigator.of(context).pop(false)
-                    },
+          builder: (context) => AlertDialog(
+                title: Text(I18N.of(context).downloadConfirm),
+                content: SingleChildScrollView(
+                  child: Text(I18N.of(context).downloadConfirmDetail),
+                ),
+                actionsAlignment: MainAxisAlignment.center,
+                actions: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                    children: [
+                      MaterialButton(
+                        child: Text(I18N.of(context).dialogConfirm),
+                        color: Theme.of(context).colorScheme.primary,
+                        onPressed: () {
+                          Navigator.of(context).pop(true);
+                        },
+                      ),
+                      MaterialButton(
+                        child: Text(I18N.of(context).dialogCancel),
+                        color: Theme.of(context).colorScheme.primary,
+                        onPressed: () {
+                          Navigator.of(context).pop(false);
+                        },
+                      )
+                    ],
                   )
                 ],
-              )
-            ],
-          ));
+              ));
       if (confirm != true) {
         return;
       }
@@ -1387,34 +1378,33 @@ class MainWidgetState extends State<MainWidget> {
           return AlertDialog(
             title: Text(question(context)),
             content: SingleChildScrollView(
-            child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
+                child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                ListTile(
+                  title: Text(point.name),
+                  subtitle: Text(I18N.of(context).nameLabel),
+                ),
+                ListTile(
+                    title: Text(storage?.users[point.ownerId] ??
+                        '<unknown ID: ${point.ownerId}>'),
+                    subtitle: Text(I18N.of(context).owner)),
+                ListTile(
+                  title: Text(formatCoords(point.coords, true)),
+                  subtitle: Text(I18N.of(context).position),
+                ),
+                if (point.description?.isNotEmpty ?? false)
                   ListTile(
-                    title: Text(point.name),
-                    subtitle: Text(I18N.of(context).nameLabel),
+                    title: Text(point.description!),
+                    subtitle: Text(I18N.of(context).descriptionLabel),
                   ),
-                  ListTile(
-                      title: Text(storage?.users[point.ownerId] ??
-                          '<unknown ID: ${point.ownerId}>'),
-                      subtitle: Text(I18N.of(context).owner)),
-                  ListTile(
-                    title: Text(formatCoords(point.coords, true)),
-                    subtitle: Text(I18N.of(context).position),
-                  ),
-                  if (point.description?.isNotEmpty ?? false)
-                    ListTile(
-                      title: Text(point.description!),
-                      subtitle: Text(I18N.of(context).descriptionLabel),
-                    ),
-                  ListTile(
-                      title: Text(I18N.of(context).categories(point.category)),
-                      subtitle: Text(I18N.of(context).category),
-                      trailing: Icon(point.category.iconData))
-                ],
-              )
-            ),
+                ListTile(
+                    title: Text(I18N.of(context).categories(point.category)),
+                    subtitle: Text(I18N.of(context).category),
+                    trailing: Icon(point.category.iconData))
+              ],
+            )),
             actionsAlignment: MainAxisAlignment.center,
             actions: <Widget>[
               MaterialButton(
@@ -1448,9 +1438,15 @@ class MainWidgetState extends State<MainWidget> {
 
   void notify(String msg, bool error, [int seconds = 5]) {
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-      content: Text(msg, style: TextStyle(color: error ? Theme.of(context).colorScheme.onError : Theme.of(context).colorScheme.onSurface)),
-      backgroundColor: error ? Theme.of(context).colorScheme.error : Theme.of(context).colorScheme.surface,
-        duration: Duration(seconds: seconds),
+      content: Text(msg,
+          style: TextStyle(
+              color: error
+                  ? Theme.of(context).colorScheme.onError
+                  : Theme.of(context).colorScheme.onSurface)),
+      backgroundColor: error
+          ? Theme.of(context).colorScheme.error
+          : Theme.of(context).colorScheme.surface,
+      duration: Duration(seconds: seconds),
     ));
     if (canVibrate) {
       Vibrate.feedback(error ? FeedbackType.warning : FeedbackType.success);

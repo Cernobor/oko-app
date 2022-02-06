@@ -3,7 +3,8 @@ Map<String, dynamic> mapThemeData() {
     'version': 8,
     'name': 'OSM Liberty',
     'metadata': {
-      'maputnik:license': 'https://github.com/maputnik/osm-liberty/blob/gh-pages/LICENSE.md',
+      'maputnik:license':
+          'https://github.com/maputnik/osm-liberty/blob/gh-pages/LICENSE.md',
       'maputnik:renderer': 'mbgljs',
       'openmaptiles:version': '3.x'
     },
@@ -22,7 +23,8 @@ Map<String, dynamic> mapThemeData() {
       }
     },
     'sprite': 'https://maputnik.github.io/osm-liberty/sprites/osm-liberty',
-    'glyphs': 'https://api.maptiler.com/fonts/{fontstack}/{range}.pbf?key={key}',
+    'glyphs':
+        'https://api.maptiler.com/fonts/{fontstack}/{range}.pbf?key={key}',
     'layers': [
       {
         'id': 'background',
@@ -34,7 +36,15 @@ Map<String, dynamic> mapThemeData() {
         'type': 'raster',
         'source': 'natural_earth_shaded_relief',
         'maxzoom': 6,
-        'paint': {'raster-opacity': {'base': 1.5, 'stops': [[0, 0.6], [6, 0.1]]}}
+        'paint': {
+          'raster-opacity': {
+            'base': 1.5,
+            'stops': [
+              [0, 0.6],
+              [6, 0.1]
+            ]
+          }
+        }
       },
       {
         'id': 'park',
@@ -79,7 +89,10 @@ Map<String, dynamic> mapThemeData() {
         'type': 'fill',
         'source': 'openmaptiles',
         'source-layer': 'landcover',
-        'filter': ['all', ['==', 'class', 'wood']],
+        'filter': [
+          'all',
+          ['==', 'class', 'wood']
+        ],
         'paint': {
           'fill-antialias': false,
           'fill-color': 'hsla(98, 61%, 72%, 0.7)',
@@ -91,7 +104,10 @@ Map<String, dynamic> mapThemeData() {
         'type': 'fill',
         'source': 'openmaptiles',
         'source-layer': 'landcover',
-        'filter': ['all', ['==', 'class', 'grass']],
+        'filter': [
+          'all',
+          ['==', 'class', 'grass']
+        ],
         'paint': {
           'fill-antialias': false,
           'fill-color': 'rgba(176, 213, 154, 1)',
@@ -103,7 +119,10 @@ Map<String, dynamic> mapThemeData() {
         'type': 'fill',
         'source': 'openmaptiles',
         'source-layer': 'landcover',
-        'filter': ['all', ['==', 'class', 'ice']],
+        'filter': [
+          'all',
+          ['==', 'class', 'ice']
+        ],
         'paint': {
           'fill-antialias': false,
           'fill-color': 'rgba(224, 236, 236, 1)',
@@ -139,13 +158,27 @@ Map<String, dynamic> mapThemeData() {
         'type': 'line',
         'source': 'openmaptiles',
         'source-layer': 'waterway',
-        'filter': ['all', ['==', 'brunnel', 'tunnel']],
+        'filter': [
+          'all',
+          ['==', 'brunnel', 'tunnel']
+        ],
         'paint': {
           'line-color': '#a0c8f0',
           'line-dasharray': [3, 3],
-          'line-gap-width': {'stops': [[12, 0], [20, 6]]},
+          'line-gap-width': {
+            'stops': [
+              [12, 0],
+              [20, 6]
+            ]
+          },
           'line-opacity': 1,
-          'line-width': {'base': 1.4, 'stops': [[8, 1], [20, 2]]}
+          'line-width': {
+            'base': 1.4,
+            'stops': [
+              [8, 1],
+              [20, 2]
+            ]
+          }
         }
       },
       {
@@ -153,11 +186,21 @@ Map<String, dynamic> mapThemeData() {
         'type': 'line',
         'source': 'openmaptiles',
         'source-layer': 'waterway',
-        'filter': ['all', ['==', 'class', 'river'], ['!=', 'brunnel', 'tunnel']],
+        'filter': [
+          'all',
+          ['==', 'class', 'river'],
+          ['!=', 'brunnel', 'tunnel']
+        ],
         'layout': {'line-cap': 'round'},
         'paint': {
           'line-color': '#a0c8f0',
-          'line-width': {'base': 1.2, 'stops': [[11, 0.5], [20, 6]]}
+          'line-width': {
+            'base': 1.2,
+            'stops': [
+              [11, 0.5],
+              [20, 6]
+            ]
+          }
         }
       },
       {
@@ -165,11 +208,21 @@ Map<String, dynamic> mapThemeData() {
         'type': 'line',
         'source': 'openmaptiles',
         'source-layer': 'waterway',
-        'filter': ['all', ['!=', 'class', 'river'], ['!=', 'brunnel', 'tunnel']],
+        'filter': [
+          'all',
+          ['!=', 'class', 'river'],
+          ['!=', 'brunnel', 'tunnel']
+        ],
         'layout': {'line-cap': 'round'},
         'paint': {
           'line-color': '#a0c8f0',
-          'line-width': {'base': 1.3, 'stops': [[13, 0.5], [20, 6]]}
+          'line-width': {
+            'base': 1.3,
+            'stops': [
+              [13, 0.5],
+              [20, 6]
+            ]
+          }
         }
       },
       {
@@ -177,7 +230,10 @@ Map<String, dynamic> mapThemeData() {
         'type': 'fill',
         'source': 'openmaptiles',
         'source-layer': 'water',
-        'filter': ['all', ['!=', 'brunnel', 'tunnel']],
+        'filter': [
+          'all',
+          ['!=', 'brunnel', 'tunnel']
+        ],
         'paint': {'fill-color': 'rgb(158,189,255)'}
       },
       {
@@ -185,7 +241,10 @@ Map<String, dynamic> mapThemeData() {
         'type': 'fill',
         'source': 'openmaptiles',
         'source-layer': 'landcover',
-        'filter': ['all', ['==', 'class', 'sand']],
+        'filter': [
+          'all',
+          ['==', 'class', 'sand']
+        ],
         'paint': {'fill-color': 'rgba(247, 239, 195, 1)'}
       },
       {
@@ -210,7 +269,13 @@ Map<String, dynamic> mapThemeData() {
         ],
         'paint': {
           'line-color': '#f0ede9',
-          'line-width': {'base': 1.2, 'stops': [[11, 3], [20, 16]]}
+          'line-width': {
+            'base': 1.2,
+            'stops': [
+              [11, 3],
+              [20, 16]
+            ]
+          }
         }
       },
       {
@@ -226,7 +291,13 @@ Map<String, dynamic> mapThemeData() {
         ],
         'paint': {
           'line-color': '#f0ede9',
-          'line-width': {'base': 1.2, 'stops': [[11, 0.5], [20, 6]]}
+          'line-width': {
+            'base': 1.2,
+            'stops': [
+              [11, 0.5],
+              [20, 6]
+            ]
+          }
         }
       },
       {
@@ -246,7 +317,12 @@ Map<String, dynamic> mapThemeData() {
           'line-dasharray': [0.5, 0.25],
           'line-width': {
             'base': 1.2,
-            'stops': [[12, 1], [13, 3], [14, 4], [20, 15]]
+            'stops': [
+              [12, 1],
+              [13, 3],
+              [14, 4],
+              [20, 15]
+            ]
           }
         }
       },
@@ -264,7 +340,14 @@ Map<String, dynamic> mapThemeData() {
         'paint': {
           'line-color': '#cfcdca',
           'line-dasharray': [0.5, 0.25],
-          'line-width': {'base': 1.2, 'stops': [[15, 1], [16, 4], [20, 11]]}
+          'line-width': {
+            'base': 1.2,
+            'stops': [
+              [15, 1],
+              [16, 4],
+              [20, 11]
+            ]
+          }
         }
       },
       {
@@ -272,13 +355,22 @@ Map<String, dynamic> mapThemeData() {
         'type': 'line',
         'source': 'openmaptiles',
         'source-layer': 'transportation',
-        'filter': ['all', ['==', 'ramp', 1], ['==', 'brunnel', 'tunnel']],
+        'filter': [
+          'all',
+          ['==', 'ramp', 1],
+          ['==', 'brunnel', 'tunnel']
+        ],
         'layout': {'line-join': 'round'},
         'paint': {
           'line-color': '#e9ac77',
           'line-width': {
             'base': 1.2,
-            'stops': [[12, 1], [13, 3], [14, 4], [20, 15]]
+            'stops': [
+              [12, 1],
+              [13, 3],
+              [14, 4],
+              [20, 15]
+            ]
           }
         }
       },
@@ -295,10 +387,20 @@ Map<String, dynamic> mapThemeData() {
         'layout': {'line-join': 'round'},
         'paint': {
           'line-color': '#cfcdca',
-          'line-opacity': {'stops': [[12, 0], [12.5, 1]]},
+          'line-opacity': {
+            'stops': [
+              [12, 0],
+              [12.5, 1]
+            ]
+          },
           'line-width': {
             'base': 1.2,
-            'stops': [[12, 0.5], [13, 1], [14, 4], [20, 15]]
+            'stops': [
+              [12, 0.5],
+              [13, 1],
+              [14, 4],
+              [20, 15]
+            ]
           }
         }
       },
@@ -315,7 +417,13 @@ Map<String, dynamic> mapThemeData() {
         'layout': {'line-join': 'round'},
         'paint': {
           'line-color': '#e9ac77',
-          'line-width': {'base': 1.2, 'stops': [[8, 1.5], [20, 17]]}
+          'line-width': {
+            'base': 1.2,
+            'stops': [
+              [8, 1.5],
+              [20, 17]
+            ]
+          }
         }
       },
       {
@@ -333,7 +441,12 @@ Map<String, dynamic> mapThemeData() {
           'line-color': '#e9ac77',
           'line-width': {
             'base': 1.2,
-            'stops': [[5, 0.4], [6, 0.7], [7, 1.75], [20, 22]]
+            'stops': [
+              [5, 0.4],
+              [6, 0.7],
+              [7, 1.75],
+              [20, 22]
+            ]
           }
         }
       },
@@ -354,7 +467,12 @@ Map<String, dynamic> mapThemeData() {
           'line-dasharray': [0.5, 0.25],
           'line-width': {
             'base': 1.2,
-            'stops': [[5, 0.4], [6, 0.7], [7, 1.75], [20, 22]]
+            'stops': [
+              [5, 0.4],
+              [6, 0.7],
+              [7, 1.75],
+              [20, 22]
+            ]
           }
         }
       },
@@ -372,7 +490,13 @@ Map<String, dynamic> mapThemeData() {
         'paint': {
           'line-color': 'hsl(0, 0%, 100%)',
           'line-dasharray': [1, 0.75],
-          'line-width': {'base': 1.2, 'stops': [[14, 0.5], [20, 10]]}
+          'line-width': {
+            'base': 1.2,
+            'stops': [
+              [14, 0.5],
+              [20, 10]
+            ]
+          }
         }
       },
       {
@@ -391,7 +515,12 @@ Map<String, dynamic> mapThemeData() {
           'line-color': '#fc8',
           'line-width': {
             'base': 1.2,
-            'stops': [[12.5, 0], [13, 1.5], [14, 2.5], [20, 11.5]]
+            'stops': [
+              [12.5, 0],
+              [13, 1.5],
+              [14, 2.5],
+              [20, 11.5]
+            ]
           }
         }
       },
@@ -408,7 +537,14 @@ Map<String, dynamic> mapThemeData() {
         'layout': {'line-join': 'round'},
         'paint': {
           'line-color': '#fff',
-          'line-width': {'base': 1.2, 'stops': [[15.5, 0], [16, 2], [20, 7.5]]}
+          'line-width': {
+            'base': 1.2,
+            'stops': [
+              [15.5, 0],
+              [16, 2],
+              [20, 7.5]
+            ]
+          }
         }
       },
       {
@@ -416,13 +552,22 @@ Map<String, dynamic> mapThemeData() {
         'type': 'line',
         'source': 'openmaptiles',
         'source-layer': 'transportation',
-        'filter': ['all', ['==', 'ramp', 1], ['==', 'brunnel', 'tunnel']],
+        'filter': [
+          'all',
+          ['==', 'ramp', 1],
+          ['==', 'brunnel', 'tunnel']
+        ],
         'layout': {'line-join': 'round'},
         'paint': {
           'line-color': '#fff4c6',
           'line-width': {
             'base': 1.2,
-            'stops': [[12.5, 0], [13, 1.5], [14, 2.5], [20, 11.5]]
+            'stops': [
+              [12.5, 0],
+              [13, 1.5],
+              [14, 2.5],
+              [20, 11.5]
+            ]
           }
         }
       },
@@ -431,11 +576,22 @@ Map<String, dynamic> mapThemeData() {
         'type': 'line',
         'source': 'openmaptiles',
         'source-layer': 'transportation',
-        'filter': ['all', ['==', 'brunnel', 'tunnel'], ['in', 'class', 'minor']],
+        'filter': [
+          'all',
+          ['==', 'brunnel', 'tunnel'],
+          ['in', 'class', 'minor']
+        ],
         'layout': {'line-join': 'round'},
         'paint': {
           'line-color': '#fff',
-          'line-width': {'base': 1.2, 'stops': [[13.5, 0], [14, 2.5], [20, 11.5]]}
+          'line-width': {
+            'base': 1.2,
+            'stops': [
+              [13.5, 0],
+              [14, 2.5],
+              [20, 11.5]
+            ]
+          }
         }
       },
       {
@@ -451,7 +607,14 @@ Map<String, dynamic> mapThemeData() {
         'layout': {'line-join': 'round'},
         'paint': {
           'line-color': '#fff4c6',
-          'line-width': {'base': 1.2, 'stops': [[6.5, 0], [7, 0.5], [20, 10]]}
+          'line-width': {
+            'base': 1.2,
+            'stops': [
+              [6.5, 0],
+              [7, 0.5],
+              [20, 10]
+            ]
+          }
         }
       },
       {
@@ -467,7 +630,14 @@ Map<String, dynamic> mapThemeData() {
         'layout': {'line-join': 'round'},
         'paint': {
           'line-color': '#fff4c6',
-          'line-width': {'base': 1.2, 'stops': [[5, 0], [7, 1], [20, 18]]}
+          'line-width': {
+            'base': 1.2,
+            'stops': [
+              [5, 0],
+              [7, 1],
+              [20, 18]
+            ]
+          }
         }
       },
       {
@@ -484,7 +654,14 @@ Map<String, dynamic> mapThemeData() {
         'layout': {'line-join': 'round'},
         'paint': {
           'line-color': '#ffdaa6',
-          'line-width': {'base': 1.2, 'stops': [[5, 0], [7, 1], [20, 18]]}
+          'line-width': {
+            'base': 1.2,
+            'stops': [
+              [5, 0],
+              [7, 1],
+              [20, 18]
+            ]
+          }
         }
       },
       {
@@ -492,10 +669,21 @@ Map<String, dynamic> mapThemeData() {
         'type': 'line',
         'source': 'openmaptiles',
         'source-layer': 'transportation',
-        'filter': ['all', ['==', 'brunnel', 'tunnel'], ['in', 'class', 'rail']],
+        'filter': [
+          'all',
+          ['==', 'brunnel', 'tunnel'],
+          ['in', 'class', 'rail']
+        ],
         'paint': {
           'line-color': '#bbb',
-          'line-width': {'base': 1.4, 'stops': [[14, 0.4], [15, 0.75], [20, 2]]}
+          'line-width': {
+            'base': 1.4,
+            'stops': [
+              [14, 0.4],
+              [15, 0.75],
+              [20, 2]
+            ]
+          }
         }
       },
       {
@@ -503,11 +691,22 @@ Map<String, dynamic> mapThemeData() {
         'type': 'line',
         'source': 'openmaptiles',
         'source-layer': 'transportation',
-        'filter': ['all', ['==', 'brunnel', 'tunnel'], ['==', 'class', 'rail']],
+        'filter': [
+          'all',
+          ['==', 'brunnel', 'tunnel'],
+          ['==', 'class', 'rail']
+        ],
         'paint': {
           'line-color': '#bbb',
           'line-dasharray': [0.2, 8],
-          'line-width': {'base': 1.4, 'stops': [[14.5, 0], [15, 3], [20, 8]]}
+          'line-width': {
+            'base': 1.4,
+            'stops': [
+              [14.5, 0],
+              [15, 3],
+              [20, 8]
+            ]
+          }
         }
       },
       {
@@ -522,7 +721,14 @@ Map<String, dynamic> mapThemeData() {
         ],
         'paint': {
           'line-color': '#bbb',
-          'line-width': {'base': 1.4, 'stops': [[14, 0.4], [15, 0.75], [20, 2]]}
+          'line-width': {
+            'base': 1.4,
+            'stops': [
+              [14, 0.4],
+              [15, 0.75],
+              [20, 2]
+            ]
+          }
         }
       },
       {
@@ -538,7 +744,14 @@ Map<String, dynamic> mapThemeData() {
         'paint': {
           'line-color': '#bbb',
           'line-dasharray': [0.2, 8],
-          'line-width': {'base': 1.4, 'stops': [[14.5, 0], [15, 3], [20, 8]]}
+          'line-width': {
+            'base': 1.4,
+            'stops': [
+              [14.5, 0],
+              [15, 3],
+              [20, 8]
+            ]
+          }
         }
       },
       {
@@ -546,7 +759,10 @@ Map<String, dynamic> mapThemeData() {
         'type': 'fill',
         'source': 'openmaptiles',
         'source-layer': 'transportation',
-        'filter': ['all', ['==', '\$type', 'Polygon']],
+        'filter': [
+          'all',
+          ['==', '\$type', 'Polygon']
+        ],
         'paint': {'fill-pattern': 'pedestrian_polygon'}
       },
       {
@@ -566,7 +782,12 @@ Map<String, dynamic> mapThemeData() {
           'line-color': '#e9ac77',
           'line-width': {
             'base': 1.2,
-            'stops': [[12, 1], [13, 3], [14, 4], [20, 15]]
+            'stops': [
+              [12, 1],
+              [13, 3],
+              [14, 4],
+              [20, 15]
+            ]
           }
         }
       },
@@ -583,7 +804,14 @@ Map<String, dynamic> mapThemeData() {
         'layout': {'line-cap': 'round', 'line-join': 'round'},
         'paint': {
           'line-color': '#cfcdca',
-          'line-width': {'base': 1.2, 'stops': [[15, 1], [16, 4], [20, 11]]}
+          'line-width': {
+            'base': 1.2,
+            'stops': [
+              [15, 1],
+              [16, 4],
+              [20, 11]
+            ]
+          }
         }
       },
       {
@@ -595,7 +823,15 @@ Map<String, dynamic> mapThemeData() {
         'filter': [
           'all',
           ['!in', 'brunnel', 'bridge', 'tunnel'],
-          ['!in', 'class', 'pedestrian', 'path', 'track', 'service', 'motorway'],
+          [
+            '!in',
+            'class',
+            'pedestrian',
+            'path',
+            'track',
+            'service',
+            'motorway'
+          ],
           ['==', 'ramp', 1]
         ],
         'layout': {'line-cap': 'round', 'line-join': 'round'},
@@ -603,7 +839,12 @@ Map<String, dynamic> mapThemeData() {
           'line-color': '#e9ac77',
           'line-width': {
             'base': 1.2,
-            'stops': [[12, 1], [13, 3], [14, 4], [20, 15]]
+            'stops': [
+              [12, 1],
+              [13, 3],
+              [14, 4],
+              [20, 15]
+            ]
           }
         }
       },
@@ -622,10 +863,20 @@ Map<String, dynamic> mapThemeData() {
         'layout': {'line-cap': 'round', 'line-join': 'round'},
         'paint': {
           'line-color': '#cfcdca',
-          'line-opacity': {'stops': [[12, 0], [12.5, 1]]},
+          'line-opacity': {
+            'stops': [
+              [12, 0],
+              [12.5, 1]
+            ]
+          },
           'line-width': {
             'base': 1.2,
-            'stops': [[12, 0.5], [13, 1], [14, 4], [20, 20]]
+            'stops': [
+              [12, 0.5],
+              [13, 1],
+              [14, 4],
+              [20, 20]
+            ]
           }
         }
       },
@@ -643,7 +894,13 @@ Map<String, dynamic> mapThemeData() {
         'layout': {'line-cap': 'round', 'line-join': 'round'},
         'paint': {
           'line-color': '#e9ac77',
-          'line-width': {'base': 1.2, 'stops': [[8, 1.5], [20, 17]]}
+          'line-width': {
+            'base': 1.2,
+            'stops': [
+              [8, 1.5],
+              [20, 17]
+            ]
+          }
         }
       },
       {
@@ -661,7 +918,12 @@ Map<String, dynamic> mapThemeData() {
           'line-color': '#e9ac77',
           'line-width': {
             'base': 1.2,
-            'stops': [[5, 0.4], [6, 0.7], [7, 1.75], [20, 22]]
+            'stops': [
+              [5, 0.4],
+              [6, 0.7],
+              [7, 1.75],
+              [20, 22]
+            ]
           }
         }
       },
@@ -682,7 +944,12 @@ Map<String, dynamic> mapThemeData() {
           'line-color': '#e9ac77',
           'line-width': {
             'base': 1.2,
-            'stops': [[5, 0.4], [6, 0.7], [7, 1.75], [20, 22]]
+            'stops': [
+              [5, 0.4],
+              [6, 0.7],
+              [7, 1.75],
+              [20, 22]
+            ]
           }
         }
       },
@@ -702,7 +969,13 @@ Map<String, dynamic> mapThemeData() {
         'paint': {
           'line-color': 'hsl(0, 0%, 100%)',
           'line-dasharray': [1, 0.7],
-          'line-width': {'base': 1.2, 'stops': [[14, 1], [20, 10]]}
+          'line-width': {
+            'base': 1.2,
+            'stops': [
+              [14, 1],
+              [20, 10]
+            ]
+          }
         }
       },
       {
@@ -722,7 +995,12 @@ Map<String, dynamic> mapThemeData() {
           'line-color': '#fc8',
           'line-width': {
             'base': 1.2,
-            'stops': [[12.5, 0], [13, 1.5], [14, 2.5], [20, 11.5]]
+            'stops': [
+              [12.5, 0],
+              [13, 1.5],
+              [14, 2.5],
+              [20, 11.5]
+            ]
           }
         }
       },
@@ -739,7 +1017,14 @@ Map<String, dynamic> mapThemeData() {
         'layout': {'line-cap': 'round', 'line-join': 'round'},
         'paint': {
           'line-color': '#fff',
-          'line-width': {'base': 1.2, 'stops': [[15.5, 0], [16, 2], [20, 7.5]]}
+          'line-width': {
+            'base': 1.2,
+            'stops': [
+              [15.5, 0],
+              [16, 2],
+              [20, 7.5]
+            ]
+          }
         }
       },
       {
@@ -759,7 +1044,12 @@ Map<String, dynamic> mapThemeData() {
           'line-color': '#fea',
           'line-width': {
             'base': 1.2,
-            'stops': [[12.5, 0], [13, 1.5], [14, 2.5], [20, 11.5]]
+            'stops': [
+              [12.5, 0],
+              [13, 1.5],
+              [14, 2.5],
+              [20, 11.5]
+            ]
           }
         }
       },
@@ -777,7 +1067,14 @@ Map<String, dynamic> mapThemeData() {
         'layout': {'line-cap': 'round', 'line-join': 'round'},
         'paint': {
           'line-color': '#fff',
-          'line-width': {'base': 1.2, 'stops': [[13.5, 0], [14, 2.5], [20, 18]]}
+          'line-width': {
+            'base': 1.2,
+            'stops': [
+              [13.5, 0],
+              [14, 2.5],
+              [20, 18]
+            ]
+          }
         }
       },
       {
@@ -793,7 +1090,14 @@ Map<String, dynamic> mapThemeData() {
         'layout': {'line-cap': 'round', 'line-join': 'round'},
         'paint': {
           'line-color': '#fea',
-          'line-width': {'base': 1.2, 'stops': [[6.5, 0], [8, 0.5], [20, 13]]}
+          'line-width': {
+            'base': 1.2,
+            'stops': [
+              [6.5, 0],
+              [8, 0.5],
+              [20, 13]
+            ]
+          }
         }
       },
       {
@@ -809,7 +1113,14 @@ Map<String, dynamic> mapThemeData() {
         'layout': {'line-join': 'round'},
         'paint': {
           'line-color': '#fea',
-          'line-width': {'base': 1.2, 'stops': [[5, 0], [7, 1], [20, 18]]}
+          'line-width': {
+            'base': 1.2,
+            'stops': [
+              [5, 0],
+              [7, 1],
+              [20, 18]
+            ]
+          }
         }
       },
       {
@@ -828,9 +1139,19 @@ Map<String, dynamic> mapThemeData() {
         'paint': {
           'line-color': {
             'base': 1,
-            'stops': [[5, 'hsl(26, 87%, 62%)'], [6, '#fc8']]
+            'stops': [
+              [5, 'hsl(26, 87%, 62%)'],
+              [6, '#fc8']
+            ]
           },
-          'line-width': {'base': 1.2, 'stops': [[5, 0], [7, 1], [20, 18]]}
+          'line-width': {
+            'base': 1.2,
+            'stops': [
+              [5, 0],
+              [7, 1],
+              [20, 18]
+            ]
+          }
         }
       },
       {
@@ -845,7 +1166,14 @@ Map<String, dynamic> mapThemeData() {
         ],
         'paint': {
           'line-color': '#bbb',
-          'line-width': {'base': 1.4, 'stops': [[14, 0.4], [15, 0.75], [20, 2]]}
+          'line-width': {
+            'base': 1.4,
+            'stops': [
+              [14, 0.4],
+              [15, 0.75],
+              [20, 2]
+            ]
+          }
         }
       },
       {
@@ -861,7 +1189,14 @@ Map<String, dynamic> mapThemeData() {
         'paint': {
           'line-color': '#bbb',
           'line-dasharray': [0.2, 8],
-          'line-width': {'base': 1.4, 'stops': [[14.5, 0], [15, 3], [20, 8]]}
+          'line-width': {
+            'base': 1.4,
+            'stops': [
+              [14.5, 0],
+              [15, 3],
+              [20, 8]
+            ]
+          }
         }
       },
       {
@@ -876,7 +1211,14 @@ Map<String, dynamic> mapThemeData() {
         ],
         'paint': {
           'line-color': '#bbb',
-          'line-width': {'base': 1.4, 'stops': [[14, 0.4], [15, 0.75], [20, 2]]}
+          'line-width': {
+            'base': 1.4,
+            'stops': [
+              [14, 0.4],
+              [15, 0.75],
+              [20, 2]
+            ]
+          }
         }
       },
       {
@@ -892,7 +1234,14 @@ Map<String, dynamic> mapThemeData() {
         'paint': {
           'line-color': '#bbb',
           'line-dasharray': [0.2, 8],
-          'line-width': {'base': 1.4, 'stops': [[14.5, 0], [15, 3], [20, 8]]}
+          'line-width': {
+            'base': 1.4,
+            'stops': [
+              [14.5, 0],
+              [15, 3],
+              [20, 8]
+            ]
+          }
         }
       },
       {
@@ -933,7 +1282,12 @@ Map<String, dynamic> mapThemeData() {
           'line-color': '#e9ac77',
           'line-width': {
             'base': 1.2,
-            'stops': [[12, 1], [13, 3], [14, 4], [20, 15]]
+            'stops': [
+              [12, 1],
+              [13, 3],
+              [14, 4],
+              [20, 15]
+            ]
           }
         }
       },
@@ -950,7 +1304,14 @@ Map<String, dynamic> mapThemeData() {
         'layout': {'line-join': 'round'},
         'paint': {
           'line-color': '#cfcdca',
-          'line-width': {'base': 1.2, 'stops': [[15, 1], [16, 4], [20, 11]]}
+          'line-width': {
+            'base': 1.2,
+            'stops': [
+              [15, 1],
+              [16, 4],
+              [20, 11]
+            ]
+          }
         }
       },
       {
@@ -958,13 +1319,22 @@ Map<String, dynamic> mapThemeData() {
         'type': 'line',
         'source': 'openmaptiles',
         'source-layer': 'transportation',
-        'filter': ['all', ['==', 'class', 'link'], ['==', 'brunnel', 'bridge']],
+        'filter': [
+          'all',
+          ['==', 'class', 'link'],
+          ['==', 'brunnel', 'bridge']
+        ],
         'layout': {'line-join': 'round'},
         'paint': {
           'line-color': '#e9ac77',
           'line-width': {
             'base': 1.2,
-            'stops': [[12, 1], [13, 3], [14, 4], [20, 15]]
+            'stops': [
+              [12, 1],
+              [13, 3],
+              [14, 4],
+              [20, 15]
+            ]
           }
         }
       },
@@ -981,10 +1351,20 @@ Map<String, dynamic> mapThemeData() {
         'layout': {'line-join': 'round'},
         'paint': {
           'line-color': 'hsl(36, 6%, 74%)',
-          'line-opacity': {'stops': [[12, 0], [12.5, 1]]},
+          'line-opacity': {
+            'stops': [
+              [12, 0],
+              [12.5, 1]
+            ]
+          },
           'line-width': {
             'base': 1.2,
-            'stops': [[12, 0.5], [13, 1], [14, 4], [20, 25]]
+            'stops': [
+              [12, 0.5],
+              [13, 1],
+              [14, 4],
+              [20, 25]
+            ]
           }
         }
       },
@@ -1002,7 +1382,13 @@ Map<String, dynamic> mapThemeData() {
         'paint': {
           'line-color': 'hsl(35, 6%, 80%)',
           'line-dasharray': [1, 0],
-          'line-width': {'base': 1.2, 'stops': [[14, 1.5], [20, 18]]}
+          'line-width': {
+            'base': 1.2,
+            'stops': [
+              [14, 1.5],
+              [20, 18]
+            ]
+          }
         }
       },
       {
@@ -1018,7 +1404,13 @@ Map<String, dynamic> mapThemeData() {
         'layout': {'line-join': 'round'},
         'paint': {
           'line-color': '#e9ac77',
-          'line-width': {'base': 1.2, 'stops': [[8, 1.5], [20, 17]]}
+          'line-width': {
+            'base': 1.2,
+            'stops': [
+              [8, 1.5],
+              [20, 17]
+            ]
+          }
         }
       },
       {
@@ -1036,7 +1428,12 @@ Map<String, dynamic> mapThemeData() {
           'line-color': '#e9ac77',
           'line-width': {
             'base': 1.2,
-            'stops': [[5, 0.4], [6, 0.7], [7, 1.75], [20, 22]]
+            'stops': [
+              [5, 0.4],
+              [6, 0.7],
+              [7, 1.75],
+              [20, 22]
+            ]
           }
         }
       },
@@ -1056,7 +1453,12 @@ Map<String, dynamic> mapThemeData() {
           'line-color': '#e9ac77',
           'line-width': {
             'base': 1.2,
-            'stops': [[5, 0.4], [6, 0.7], [7, 1.75], [20, 22]]
+            'stops': [
+              [5, 0.4],
+              [6, 0.7],
+              [7, 1.75],
+              [20, 22]
+            ]
           }
         }
       },
@@ -1074,7 +1476,13 @@ Map<String, dynamic> mapThemeData() {
         'paint': {
           'line-color': 'hsl(0, 0%, 100%)',
           'line-dasharray': [1, 0.3],
-          'line-width': {'base': 1.2, 'stops': [[14, 0.5], [20, 10]]}
+          'line-width': {
+            'base': 1.2,
+            'stops': [
+              [14, 0.5],
+              [20, 10]
+            ]
+          }
         }
       },
       {
@@ -1093,7 +1501,12 @@ Map<String, dynamic> mapThemeData() {
           'line-color': '#fc8',
           'line-width': {
             'base': 1.2,
-            'stops': [[12.5, 0], [13, 1.5], [14, 2.5], [20, 11.5]]
+            'stops': [
+              [12.5, 0],
+              [13, 1.5],
+              [14, 2.5],
+              [20, 11.5]
+            ]
           }
         }
       },
@@ -1110,7 +1523,14 @@ Map<String, dynamic> mapThemeData() {
         'layout': {'line-join': 'round'},
         'paint': {
           'line-color': '#fff',
-          'line-width': {'base': 1.2, 'stops': [[15.5, 0], [16, 2], [20, 7.5]]}
+          'line-width': {
+            'base': 1.2,
+            'stops': [
+              [15.5, 0],
+              [16, 2],
+              [20, 7.5]
+            ]
+          }
         }
       },
       {
@@ -1118,13 +1538,22 @@ Map<String, dynamic> mapThemeData() {
         'type': 'line',
         'source': 'openmaptiles',
         'source-layer': 'transportation',
-        'filter': ['all', ['==', 'class', 'link'], ['==', 'brunnel', 'bridge']],
+        'filter': [
+          'all',
+          ['==', 'class', 'link'],
+          ['==', 'brunnel', 'bridge']
+        ],
         'layout': {'line-join': 'round'},
         'paint': {
           'line-color': '#fea',
           'line-width': {
             'base': 1.2,
-            'stops': [[12.5, 0], [13, 1.5], [14, 2.5], [20, 11.5]]
+            'stops': [
+              [12.5, 0],
+              [13, 1.5],
+              [14, 2.5],
+              [20, 11.5]
+            ]
           }
         }
       },
@@ -1133,11 +1562,22 @@ Map<String, dynamic> mapThemeData() {
         'type': 'line',
         'source': 'openmaptiles',
         'source-layer': 'transportation',
-        'filter': ['all', ['==', 'brunnel', 'bridge'], ['in', 'class', 'minor']],
+        'filter': [
+          'all',
+          ['==', 'brunnel', 'bridge'],
+          ['in', 'class', 'minor']
+        ],
         'layout': {'line-join': 'round'},
         'paint': {
           'line-color': '#fff',
-          'line-width': {'base': 1.2, 'stops': [[13.5, 0], [14, 2.5], [20, 18]]}
+          'line-width': {
+            'base': 1.2,
+            'stops': [
+              [13.5, 0],
+              [14, 2.5],
+              [20, 18]
+            ]
+          }
         }
       },
       {
@@ -1153,7 +1593,14 @@ Map<String, dynamic> mapThemeData() {
         'layout': {'line-join': 'round'},
         'paint': {
           'line-color': '#fea',
-          'line-width': {'base': 1.2, 'stops': [[6.5, 0], [7, 0.5], [20, 10]]}
+          'line-width': {
+            'base': 1.2,
+            'stops': [
+              [6.5, 0],
+              [7, 0.5],
+              [20, 10]
+            ]
+          }
         }
       },
       {
@@ -1169,7 +1616,14 @@ Map<String, dynamic> mapThemeData() {
         'layout': {'line-join': 'round'},
         'paint': {
           'line-color': '#fea',
-          'line-width': {'base': 1.2, 'stops': [[5, 0], [7, 1], [20, 18]]}
+          'line-width': {
+            'base': 1.2,
+            'stops': [
+              [5, 0],
+              [7, 1],
+              [20, 18]
+            ]
+          }
         }
       },
       {
@@ -1186,7 +1640,14 @@ Map<String, dynamic> mapThemeData() {
         'layout': {'line-join': 'round'},
         'paint': {
           'line-color': '#fc8',
-          'line-width': {'base': 1.2, 'stops': [[5, 0], [7, 1], [20, 18]]}
+          'line-width': {
+            'base': 1.2,
+            'stops': [
+              [5, 0],
+              [7, 1],
+              [20, 18]
+            ]
+          }
         }
       },
       {
@@ -1194,10 +1655,21 @@ Map<String, dynamic> mapThemeData() {
         'type': 'line',
         'source': 'openmaptiles',
         'source-layer': 'transportation',
-        'filter': ['all', ['==', 'class', 'rail'], ['==', 'brunnel', 'bridge']],
+        'filter': [
+          'all',
+          ['==', 'class', 'rail'],
+          ['==', 'brunnel', 'bridge']
+        ],
         'paint': {
           'line-color': '#bbb',
-          'line-width': {'base': 1.4, 'stops': [[14, 0.4], [15, 0.75], [20, 2]]}
+          'line-width': {
+            'base': 1.4,
+            'stops': [
+              [14, 0.4],
+              [15, 0.75],
+              [20, 2]
+            ]
+          }
         }
       },
       {
@@ -1205,11 +1677,22 @@ Map<String, dynamic> mapThemeData() {
         'type': 'line',
         'source': 'openmaptiles',
         'source-layer': 'transportation',
-        'filter': ['all', ['==', 'class', 'rail'], ['==', 'brunnel', 'bridge']],
+        'filter': [
+          'all',
+          ['==', 'class', 'rail'],
+          ['==', 'brunnel', 'bridge']
+        ],
         'paint': {
           'line-color': '#bbb',
           'line-dasharray': [0.2, 8],
-          'line-width': {'base': 1.4, 'stops': [[14.5, 0], [15, 3], [20, 8]]}
+          'line-width': {
+            'base': 1.4,
+            'stops': [
+              [14.5, 0],
+              [15, 3],
+              [20, 8]
+            ]
+          }
         }
       },
       {
@@ -1224,7 +1707,14 @@ Map<String, dynamic> mapThemeData() {
         ],
         'paint': {
           'line-color': '#bbb',
-          'line-width': {'base': 1.4, 'stops': [[14, 0.4], [15, 0.75], [20, 2]]}
+          'line-width': {
+            'base': 1.4,
+            'stops': [
+              [14, 0.4],
+              [15, 0.75],
+              [20, 2]
+            ]
+          }
         }
       },
       {
@@ -1240,7 +1730,14 @@ Map<String, dynamic> mapThemeData() {
         'paint': {
           'line-color': '#bbb',
           'line-dasharray': [0.2, 8],
-          'line-width': {'base': 1.4, 'stops': [[14.5, 0], [15, 3], [20, 8]]}
+          'line-width': {
+            'base': 1.4,
+            'stops': [
+              [14.5, 0],
+              [15, 3],
+              [20, 8]
+            ]
+          }
         }
       },
       {
@@ -1254,7 +1751,10 @@ Map<String, dynamic> mapThemeData() {
           'fill-color': 'hsl(35, 8%, 85%)',
           'fill-outline-color': {
             'base': 1,
-            'stops': [[13, 'hsla(35, 6%, 79%, 0.32)'], [14, 'hsl(35, 6%, 79%)']]
+            'stops': [
+              [13, 'hsla(35, 6%, 79%, 0.32)'],
+              [14, 'hsl(35, 6%, 79%)']
+            ]
           }
         }
       },
@@ -1264,12 +1764,22 @@ Map<String, dynamic> mapThemeData() {
         'source': 'openmaptiles',
         'source-layer': 'boundary',
         'minzoom': 8,
-        'filter': ['all', ['in', 'admin_level', 3, 4]],
+        'filter': [
+          'all',
+          ['in', 'admin_level', 3, 4]
+        ],
         'layout': {'line-join': 'round'},
         'paint': {
           'line-color': '#9e9cab',
           'line-dasharray': [5, 1],
-          'line-width': {'base': 1, 'stops': [[4, 0.4], [5, 1], [12, 1.8]]}
+          'line-width': {
+            'base': 1,
+            'stops': [
+              [4, 0.4],
+              [5, 1],
+              [12, 1.8]
+            ]
+          }
         }
       },
       {
@@ -1278,12 +1788,29 @@ Map<String, dynamic> mapThemeData() {
         'source': 'openmaptiles',
         'source-layer': 'boundary',
         'maxzoom': 5,
-        'filter': ['all', ['==', 'admin_level', 2], ['!has', 'claimed_by']],
+        'filter': [
+          'all',
+          ['==', 'admin_level', 2],
+          ['!has', 'claimed_by']
+        ],
         'layout': {'line-cap': 'round', 'line-join': 'round'},
         'paint': {
           'line-color': 'hsl(248, 1%, 41%)',
-          'line-opacity': {'base': 1, 'stops': [[0, 0.4], [4, 1]]},
-          'line-width': {'base': 1, 'stops': [[3, 1], [5, 1.2], [12, 3]]}
+          'line-opacity': {
+            'base': 1,
+            'stops': [
+              [0, 0.4],
+              [4, 1]
+            ]
+          },
+          'line-width': {
+            'base': 1,
+            'stops': [
+              [3, 1],
+              [5, 1.2],
+              [12, 3]
+            ]
+          }
         }
       },
       {
@@ -1292,12 +1819,28 @@ Map<String, dynamic> mapThemeData() {
         'source': 'openmaptiles',
         'source-layer': 'boundary',
         'minzoom': 5,
-        'filter': ['all', ['==', 'admin_level', 2]],
+        'filter': [
+          'all',
+          ['==', 'admin_level', 2]
+        ],
         'layout': {'line-cap': 'round', 'line-join': 'round'},
         'paint': {
           'line-color': 'hsl(248, 1%, 41%)',
-          'line-opacity': {'base': 1, 'stops': [[0, 0.4], [4, 1]]},
-          'line-width': {'base': 1, 'stops': [[3, 1], [5, 1.2], [12, 3]]}
+          'line-opacity': {
+            'base': 1,
+            'stops': [
+              [0, 0.4],
+              [4, 1]
+            ]
+          },
+          'line-width': {
+            'base': 1,
+            'stops': [
+              [3, 1],
+              [5, 1.2],
+              [12, 3]
+            ]
+          }
         }
       },
       {
@@ -1305,7 +1848,10 @@ Map<String, dynamic> mapThemeData() {
         'type': 'symbol',
         'source': 'openmaptiles',
         'source-layer': 'waterway',
-        'filter': ['all', ['==', '\$type', 'LineString']],
+        'filter': [
+          'all',
+          ['==', '\$type', 'LineString']
+        ],
         'layout': {
           'text-field': '{name}',
           'text-font': ['Roboto Regular'],
@@ -1343,7 +1889,11 @@ Map<String, dynamic> mapThemeData() {
         'source': 'openmaptiles',
         'source-layer': 'poi',
         'minzoom': 16,
-        'filter': ['all', ['==', '\$type', 'Point'], ['>=', 'rank', 20]],
+        'filter': [
+          'all',
+          ['==', '\$type', 'Point'],
+          ['>=', 'rank', 20]
+        ],
         'layout': {
           'icon-image': '{class}_11',
           'text-anchor': 'top',
@@ -1421,7 +1971,10 @@ Map<String, dynamic> mapThemeData() {
         'type': 'symbol',
         'source': 'openmaptiles',
         'source-layer': 'poi',
-        'filter': ['all', ['in', 'class', 'bus', 'rail', 'airport']],
+        'filter': [
+          'all',
+          ['in', 'class', 'bus', 'rail', 'airport']
+        ],
         'layout': {
           'icon-image': '{class}_11',
           'text-anchor': 'left',
@@ -1450,7 +2003,13 @@ Map<String, dynamic> mapThemeData() {
           'text-field': '{name}',
           'text-font': ['Roboto Regular'],
           'text-offset': [0, 0.15],
-          'text-size': {'base': 1, 'stops': [[13, 12], [14, 13]]}
+          'text-size': {
+            'base': 1,
+            'stops': [
+              [13, 12],
+              [14, 13]
+            ]
+          }
         },
         'paint': {
           'text-color': '#765',
@@ -1464,11 +2023,20 @@ Map<String, dynamic> mapThemeData() {
         'source': 'openmaptiles',
         'source-layer': 'transportation_name',
         'minzoom': 7,
-        'filter': ['all', ['<=', 'ref_length', 6]],
+        'filter': [
+          'all',
+          ['<=', 'ref_length', 6]
+        ],
         'layout': {
           'icon-image': 'default_{ref_length}',
           'icon-rotation-alignment': 'viewport',
-          'symbol-placement': {'base': 1, 'stops': [[10, 'point'], [11, 'line']]},
+          'symbol-placement': {
+            'base': 1,
+            'stops': [
+              [10, 'point'],
+              [11, 'line']
+            ]
+          },
           'symbol-spacing': 500,
           'text-field': '{ref}',
           'text-font': ['Roboto Regular'],
@@ -1501,7 +2069,13 @@ Map<String, dynamic> mapThemeData() {
           'text-font': ['Roboto Condensed Italic'],
           'text-letter-spacing': 0.1,
           'text-max-width': 9,
-          'text-size': {'base': 1.2, 'stops': [[12, 10], [15, 14]]},
+          'text-size': {
+            'base': 1.2,
+            'stops': [
+              [12, 10],
+              [15, 14]
+            ]
+          },
           'text-transform': 'uppercase'
         },
         'paint': {
@@ -1515,12 +2089,21 @@ Map<String, dynamic> mapThemeData() {
         'type': 'symbol',
         'source': 'openmaptiles',
         'source-layer': 'place',
-        'filter': ['all', ['==', 'class', 'village']],
+        'filter': [
+          'all',
+          ['==', 'class', 'village']
+        ],
         'layout': {
           'text-field': '{name_en}',
           'text-font': ['Roboto Regular'],
           'text-max-width': 8,
-          'text-size': {'base': 1.2, 'stops': [[10, 12], [15, 22]]}
+          'text-size': {
+            'base': 1.2,
+            'stops': [
+              [10, 12],
+              [15, 22]
+            ]
+          }
         },
         'paint': {
           'text-color': '#333',
@@ -1533,15 +2116,30 @@ Map<String, dynamic> mapThemeData() {
         'type': 'symbol',
         'source': 'openmaptiles',
         'source-layer': 'place',
-        'filter': ['all', ['==', 'class', 'town']],
+        'filter': [
+          'all',
+          ['==', 'class', 'town']
+        ],
         'layout': {
-          'icon-image': {'base': 1, 'stops': [[0, 'dot_9'], [8, '']]},
+          'icon-image': {
+            'base': 1,
+            'stops': [
+              [0, 'dot_9'],
+              [8, '']
+            ]
+          },
           'text-anchor': 'bottom',
           'text-field': '{name_en}',
           'text-font': ['Roboto Regular'],
           'text-max-width': 8,
           'text-offset': [0, 0],
-          'text-size': {'base': 1.2, 'stops': [[7, 12], [11, 16]]}
+          'text-size': {
+            'base': 1.2,
+            'stops': [
+              [7, 12],
+              [11, 16]
+            ]
+          }
         },
         'paint': {
           'text-color': '#333',
@@ -1555,15 +2153,30 @@ Map<String, dynamic> mapThemeData() {
         'source': 'openmaptiles',
         'source-layer': 'place',
         'minzoom': 5,
-        'filter': ['all', ['==', 'class', 'city']],
+        'filter': [
+          'all',
+          ['==', 'class', 'city']
+        ],
         'layout': {
-          'icon-image': {'base': 1, 'stops': [[0, 'dot_9'], [8, '']]},
+          'icon-image': {
+            'base': 1,
+            'stops': [
+              [0, 'dot_9'],
+              [8, '']
+            ]
+          },
           'text-anchor': 'bottom',
           'text-field': '{name_en}',
           'text-font': ['Roboto Medium'],
           'text-max-width': 8,
           'text-offset': [0, 0],
-          'text-size': {'base': 1.2, 'stops': [[7, 14], [11, 24]]},
+          'text-size': {
+            'base': 1.2,
+            'stops': [
+              [7, 14],
+              [11, 24]
+            ]
+          },
           'icon-allow-overlap': true,
           'icon-optional': false
         },
@@ -1579,11 +2192,19 @@ Map<String, dynamic> mapThemeData() {
         'source': 'openmaptiles',
         'source-layer': 'place',
         'maxzoom': 6,
-        'filter': ['all', ['==', 'class', 'state']],
+        'filter': [
+          'all',
+          ['==', 'class', 'state']
+        ],
         'layout': {
           'text-field': '{name_en}',
           'text-font': ['Roboto Condensed Italic'],
-          'text-size': {'stops': [[4, 11], [6, 15]]},
+          'text-size': {
+            'stops': [
+              [4, 11],
+              [6, 15]
+            ]
+          },
           'text-transform': 'uppercase'
         },
         'paint': {
@@ -1597,12 +2218,21 @@ Map<String, dynamic> mapThemeData() {
         'type': 'symbol',
         'source': 'openmaptiles',
         'source-layer': 'place',
-        'filter': ['all', ['>=', 'rank', 3], ['==', 'class', 'country']],
+        'filter': [
+          'all',
+          ['>=', 'rank', 3],
+          ['==', 'class', 'country']
+        ],
         'layout': {
           'text-field': '{name_en}',
           'text-font': ['Roboto Condensed Italic'],
           'text-max-width': 6.25,
-          'text-size': {'stops': [[3, 11], [7, 17]]},
+          'text-size': {
+            'stops': [
+              [3, 11],
+              [7, 17]
+            ]
+          },
           'text-transform': 'none'
         },
         'paint': {
@@ -1617,12 +2247,21 @@ Map<String, dynamic> mapThemeData() {
         'type': 'symbol',
         'source': 'openmaptiles',
         'source-layer': 'place',
-        'filter': ['all', ['==', 'rank', 2], ['==', 'class', 'country']],
+        'filter': [
+          'all',
+          ['==', 'rank', 2],
+          ['==', 'class', 'country']
+        ],
         'layout': {
           'text-field': '{name_en}',
           'text-font': ['Roboto Condensed Italic'],
           'text-max-width': 6.25,
-          'text-size': {'stops': [[2, 11], [5, 17]]},
+          'text-size': {
+            'stops': [
+              [2, 11],
+              [5, 17]
+            ]
+          },
           'text-transform': 'none'
         },
         'paint': {
@@ -1637,12 +2276,21 @@ Map<String, dynamic> mapThemeData() {
         'type': 'symbol',
         'source': 'openmaptiles',
         'source-layer': 'place',
-        'filter': ['all', ['==', 'rank', 1], ['==', 'class', 'country']],
+        'filter': [
+          'all',
+          ['==', 'rank', 1],
+          ['==', 'class', 'country']
+        ],
         'layout': {
           'text-field': '{name_en}',
           'text-font': ['Roboto Condensed Italic'],
           'text-max-width': 6.25,
-          'text-size': {'stops': [[1, 11], [4, 17]]},
+          'text-size': {
+            'stops': [
+              [1, 11],
+              [4, 17]
+            ]
+          },
           'text-transform': 'none'
         },
         'paint': {
@@ -1658,7 +2306,10 @@ Map<String, dynamic> mapThemeData() {
         'source': 'openmaptiles',
         'source-layer': 'place',
         'maxzoom': 1,
-        'filter': ['all', ['==', 'class', 'continent']],
+        'filter': [
+          'all',
+          ['==', 'class', 'continent']
+        ],
         'layout': {
           'text-field': '{name_en}',
           'text-font': ['Roboto Condensed Italic'],

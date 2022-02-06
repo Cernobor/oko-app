@@ -23,7 +23,8 @@ class _AddPointDialogState extends State<AddPointDialog> {
     }
     return SimpleDialog(
       children: <Widget>[
-        Text('Lat: ${widget.location.latitude}\nLng: ${widget.location.longitude}'),
+        Text(
+            'Lat: ${widget.location.latitude}\nLng: ${widget.location.longitude}'),
         TextField(
           controller: nameInputController,
           cursorColor: Theme.of(context).colorScheme.onBackground,
