@@ -49,15 +49,33 @@ class _PairingDialogState extends State<PairingDialog> {
       nameInputError = I18N.of(context).errorNameRequired;
     }
     return SimpleDialog(
-      //title: Text('Scan pairing code'),
+      title: Text(I18N.of(context).pairing),
       children: <Widget>[
-        Row(
-          mainAxisSize: MainAxisSize.max,
-          children: <Widget>[
-            Expanded(
-              child: TextField(
+        Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+            child: TextField(
                 controller: addressInputController,
                 decoration: InputDecoration(
+                    suffixIcon: IconButton(
+                        icon: Icon(scanning
+                            ? Icons.qr_code_2
+                            : Icons.qr_code_2_outlined),
+                        color: scanning
+                            ? Theme.of(context).colorScheme.secondary
+                            : null,
+                        onPressed: () {
+                          if (scanning) {
+                            controller!.dispose();
+                            setState(() {
+                              scanning = false;
+                            });
+                          } else {
+                            FocusScope.of(context).unfocus();
+                            setState(() {
+                              scanning = true;
+                            });
+                          }
+                        }),
                     labelText: I18N.of(context).serverAddressLabel,
                     errorText: addressInputError),
                 onChanged: (String value) {
@@ -68,31 +86,7 @@ class _PairingDialogState extends State<PairingDialog> {
                       addressInputError = null;
                     }
                   });
-                },
-              ),
-            ),
-            if (scanning)
-              ElevatedButton(
-                child: Text(I18N.of(context).stop),
-                onPressed: () {
-                  setState(() {
-                    controller!.dispose();
-                    scanning = false;
-                  });
-                },
-              )
-            else
-              ElevatedButton(
-                child: Text(I18N.of(context).scan),
-                onPressed: () {
-                  FocusScope.of(context).unfocus();
-                  setState(() {
-                    scanning = true;
-                  });
-                },
-              )
-          ],
-        ),
+                })),
         if (scanning)
           AspectRatio(
               aspectRatio: 1,
@@ -124,21 +118,25 @@ class _PairingDialogState extends State<PairingDialog> {
                   ),
                 ),
               ])),
-        TextField(
-          controller: nameInputController,
-          decoration: InputDecoration(
-              labelText: I18N.of(context).nameLabel, errorText: nameInputError),
-          onChanged: (String value) {
-            setState(() {
-              if (value.isEmpty) {
-                nameInputError = I18N.of(context).errorNameRequired;
-              } else {
-                nameInputError = null;
-              }
-            });
-          },
-        ),
+        Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+            child: TextField(
+                controller: nameInputController,
+                decoration: InputDecoration(
+                    labelText: I18N.of(context).nameLabel,
+                    errorText: nameInputError),
+                onChanged: (String value) {
+                  setState(() {
+                    if (value.isEmpty) {
+                      nameInputError = I18N.of(context).errorNameRequired;
+                    } else {
+                      nameInputError = null;
+                    }
+                  });
+                })),
         CheckboxListTile(
+          contentPadding:
+              const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
           value: exists,
           title: Text(I18N.of(context).handshakeExistsTitle),
           subtitle: Text(I18N.of(context).handshakeExistsSubtitle),
@@ -148,23 +146,29 @@ class _PairingDialogState extends State<PairingDialog> {
             });
           },
         ),
-        Row(
-          mainAxisSize: MainAxisSize.max,
-          mainAxisAlignment: MainAxisAlignment.center,
-          crossAxisAlignment: CrossAxisAlignment.end,
-          children: <Widget>[
-            ElevatedButton(
-              child: Text(I18N.of(context).dialogPair),
-              onPressed: _isValid() ? _pair : null,
-            ),
-            ElevatedButton(
-              child: Text(I18N.of(context).dialogCancel),
-              onPressed: () {
-                Navigator.of(context).pop();
-              },
-            )
-          ],
-        ),
+        Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+            child: Row(
+              mainAxisSize: MainAxisSize.max,
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: <Widget>[
+                MaterialButton(
+                  color: Theme.of(context).colorScheme.primary,
+                  textColor: Theme.of(context).colorScheme.onPrimary,
+                  child: Text(I18N.of(context).dialogPair),
+                  onPressed: _isValid() ? _pair : null,
+                ),
+                MaterialButton(
+                  color: Theme.of(context).colorScheme.primary,
+                  textColor: Theme.of(context).colorScheme.onPrimary,
+                  child: Text(I18N.of(context).dialogCancel),
+                  onPressed: () {
+                    Navigator.of(context).pop();
+                  },
+                )
+              ],
+            ))
       ],
     );
   }
@@ -193,11 +197,20 @@ class _PairingDialogState extends State<PairingDialog> {
     try {
       ss =
           await comm.handshake(serverAddress, nameInputController.text, exists);
-    } on comm.CommException catch (e) {
-      await utils.commErrorDialog(e, context);
+    } on comm.DetailedCommException catch (e) {
+      developer.log('exception: ${e.toString()}');
+      await utils.notifyDialog(context, e.getMessage(context),
+          e.detail, utils.NotificationLevel.error);
       return;
-    } on Exception catch (e) {
-      await utils.commErrorDialog(e, context);
+    } on comm.CommException catch (e) {
+      developer.log('exception: ${e.toString()}');
+      await utils.notifyDialog(context, e.getMessage(context),
+          null, utils.NotificationLevel.error);
+      return;
+    } catch (e) {
+      developer.log('exception: ${e.toString()}');
+      await utils.notifyDialog(context, I18N.of(context).serverUnavailable,
+          e.toString(), utils.NotificationLevel.error);
       return;
     }
     Navigator.of(context).pop(ss);

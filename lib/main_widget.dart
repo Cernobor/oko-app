@@ -5,7 +5,6 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter_compass/flutter_compass.dart';
 import 'package:flutter_map/plugin_api.dart';
-import 'package:flutter_vibrate/flutter_vibrate.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:location/location.dart';
 import 'package:oko/map.dart';
@@ -17,13 +16,11 @@ import 'package:oko/dialogs/add_point.dart';
 import 'package:oko/dialogs/edit_point.dart';
 import 'package:oko/dialogs/pairing.dart';
 import 'package:oko/communication.dart' as comm;
-import 'package:oko/utils.dart';
+import 'package:oko/utils.dart' as utils;
 import 'package:oko/data.dart' as data;
 import 'package:oko/i18n.dart';
 import 'package:oko/point_list.dart';
 import 'package:vector_map_tiles/vector_map_tiles.dart';
-
-import 'dialogs/edit_point.dart';
 
 enum PointLogType { currentLocation, crosshair }
 
@@ -102,9 +99,6 @@ class MainWidgetState extends State<MainWidget> {
   // settings
   Storage? storage;
 
-  // hardware
-  bool canVibrate = false;
-
   Future<dynamic>? initResult;
 
   @override
@@ -114,12 +108,14 @@ class MainWidgetState extends State<MainWidget> {
   }
 
   Future<bool> init() async {
-    canVibrate = await Vibrate.canVibrate;
     try {
       storage = await Storage.getInstance();
     } catch (e) {
       developer.log(e.toString());
-      notify('Error while getting storage: ${e.toString()}', true);
+      utils.notifySnackbar(
+          context,
+          'Error while getting storage: ${e.toString()}',
+          utils.NotificationLevel.error);
     }
     return true;
   }
@@ -186,6 +182,11 @@ class MainWidgetState extends State<MainWidget> {
           // pairing
           ListTile(
             title: Text(I18N.of(context).drawerPaired),
+            isThreeLine: storage?.serverSettings != null,
+            subtitle: storage?.serverSettings?.serverAddress == null
+                ? null
+                : Text(
+                    '${storage!.serverSettings!.serverAddress}\n${storage!.serverSettings!.name} <ID: ${storage!.serverSettings!.id}>'),
             trailing: storage?.serverSettings == null
                 ? const Icon(
                     Icons.clear,
@@ -460,7 +461,7 @@ class MainWidgetState extends State<MainWidget> {
       var baseSize = 35.0;
       var width = baseSize * (infoTarget.isSamePoint(point) ? 1.5 : 1);
       var height = baseSize * (infoTarget.isSamePoint(point) ? 1.5 : 1);
-      Color color = getPoiColor(point, storage!.serverSettings!.id);
+      Color color = utils.getPoiColor(point, storage!.serverSettings!.id);
       return Marker(
         point: point.coords,
         anchorPos: AnchorPos.exactly(Anchor(
@@ -503,7 +504,7 @@ class MainWidgetState extends State<MainWidget> {
   }
 
   Widget createInfoContentDistance(BuildContext context) {
-    NavigationData nav = NavigationData.compute(
+    utils.NavigationData nav = utils.NavigationData.compute(
         currentLocation!, navigationTarget.coords, currentHeading);
     return Card(
         child: InkWell(
@@ -525,7 +526,7 @@ class MainWidgetState extends State<MainWidget> {
         navigationTarget == infoTarget;
     String distStr = '', brgStr = '', relBrgStr = '';
     if (isNavigating) {
-      NavigationData nav = NavigationData.compute(
+      utils.NavigationData nav = utils.NavigationData.compute(
           currentLocation!, navigationTarget.coords, currentHeading);
       distStr = '${I18N.of(context).distance}: ${nav.distanceM} m';
       brgStr =
@@ -560,7 +561,7 @@ class MainWidgetState extends State<MainWidget> {
                                 style: Theme.of(context).textTheme.headline6),
                             Text(
                                 [
-                                  formatCoords(infoTarget.coords, false),
+                                  utils.formatCoords(infoTarget.coords, false),
                                   '${I18N.of(context).category}: ${I18N.of(context).categories(infoTarget.point.category)}'
                                 ].join(' '),
                                 style: Theme.of(context).textTheme.caption),
@@ -702,159 +703,142 @@ class MainWidgetState extends State<MainWidget> {
   }
 
   Widget createBottomBar(BuildContext context) {
+    TextStyle ts = TextStyle(
+        color: Theme.of(context).colorScheme.onPrimary,
+        fontFamily: 'monospace');
     return BottomAppBar(
-      color: Theme.of(context).colorScheme.primary,
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: <Widget>[
-          Expanded(
-            flex: 0,
-            child: Table(
-              defaultColumnWidth: const IntrinsicColumnWidth(),
-              children: <TableRow>[
-                TableRow(children: <Widget>[
-                  Container(),
-                  Container(
-                      padding: const EdgeInsets.symmetric(
-                          vertical: 1, horizontal: 4),
-                      alignment: Alignment.center,
-                      child: Text(
-                        'GPS',
-                        style: Theme.of(context)
-                            .primaryTextTheme
-                            .bodyText2!
-                            .apply(fontFamily: 'monospace'),
-                      )),
-                  Container(
-                    padding:
-                        const EdgeInsets.symmetric(vertical: 1, horizontal: 4),
-                    alignment: Alignment.center,
-                    child: Text(
-                      'TGT',
-                      style: Theme.of(context)
-                          .primaryTextTheme
-                          .bodyText2!
-                          .apply(fontFamily: 'monospace'),
-                    ),
-                  )
-                ]),
-                TableRow(children: <Widget>[
-                  Container(
-                    padding:
-                        const EdgeInsets.symmetric(vertical: 1, horizontal: 4),
-                    alignment: Alignment.centerLeft,
-                    child: Text(
-                      'Lat',
-                      style: Theme.of(context)
-                          .primaryTextTheme
-                          .bodyText2!
-                          .apply(fontFamily: 'monospace'),
-                    ),
-                  ),
-                  Container(
-                    padding:
-                        const EdgeInsets.symmetric(vertical: 1, horizontal: 4),
-                    alignment: Alignment.centerLeft,
-                    child: Text(
-                      currentLocation == null
-                          ? '-'
-                          : currentLocation!.latitude.toStringAsPrecision(8),
-                      style: Theme.of(context)
-                          .primaryTextTheme
-                          .bodyText2!
-                          .apply(fontFamily: 'monospace'),
-                    ),
-                  ),
-                  Container(
-                    padding:
-                        const EdgeInsets.symmetric(vertical: 1, horizontal: 4),
-                    alignment: Alignment.centerLeft,
-                    child: Text(
-                      !mapReady
-                          ? '-'
-                          : mapController.center.latitude
-                              .toStringAsPrecision(8),
-                      style: Theme.of(context)
-                          .primaryTextTheme
-                          .bodyText2!
-                          .apply(fontFamily: 'monospace'),
-                    ),
-                  ),
-                ]),
-                TableRow(children: <Widget>[
-                  Container(
-                    padding:
-                        const EdgeInsets.symmetric(vertical: 1, horizontal: 4),
-                    alignment: Alignment.centerLeft,
-                    child: Text(
-                      'Lng',
-                      style: Theme.of(context)
-                          .primaryTextTheme
-                          .bodyText2!
-                          .apply(fontFamily: 'monospace'),
-                    ),
-                  ),
-                  Container(
-                    padding:
-                        const EdgeInsets.symmetric(vertical: 1, horizontal: 4),
-                    alignment: Alignment.centerLeft,
-                    child: Text(
-                      currentLocation == null
-                          ? '-'
-                          : currentLocation!.longitude.toStringAsPrecision(8),
-                      style: Theme.of(context)
-                          .primaryTextTheme
-                          .bodyText2!
-                          .apply(fontFamily: 'monospace'),
-                    ),
-                  ),
-                  Container(
-                    padding:
-                        const EdgeInsets.symmetric(vertical: 1, horizontal: 4),
-                    alignment: Alignment.centerLeft,
-                    child: Text(
-                      !mapReady
-                          ? '-'
-                          : mapController.center.longitude
-                              .toStringAsPrecision(8),
-                      style: Theme.of(context)
-                          .primaryTextTheme
-                          .bodyText2!
-                          .apply(fontFamily: 'monospace'),
-                    ),
-                  ),
-                ])
-              ],
-            ),
-          ),
-          Expanded(
-            flex: 0,
-            child: Row(
-              children: <Widget>[
-                IconButton(
-                  tooltip: I18N.of(context).locationContinuousButtonTooltip,
-                  icon: Icon(locationSubscription == null
-                      ? Icons.location_off
-                      : Icons.location_on),
-                  iconSize: 30.0,
-                  color: null,
-                  onPressed: onToggleLocationContinuous,
+      color: Theme.of(context).colorScheme.primaryVariant,
+      child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 4),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: <Widget>[
+              Expanded(
+                flex: 0,
+                child: Table(
+                  defaultColumnWidth: const IntrinsicColumnWidth(),
+                  children: <TableRow>[
+                    TableRow(children: <Widget>[
+                      Container(),
+                      Container(
+                          padding: const EdgeInsets.symmetric(
+                              vertical: 1, horizontal: 4),
+                          alignment: Alignment.center,
+                          child: Text(
+                            'GPS',
+                            style: ts,
+                          )),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            vertical: 1, horizontal: 4),
+                        alignment: Alignment.center,
+                        child: Text(
+                          'TGT',
+                          style: ts,
+                        ),
+                      )
+                    ]),
+                    TableRow(children: <Widget>[
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            vertical: 1, horizontal: 4),
+                        alignment: Alignment.centerLeft,
+                        child: Text(
+                          'Lat',
+                          style: ts,
+                        ),
+                      ),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            vertical: 1, horizontal: 4),
+                        alignment: Alignment.centerLeft,
+                        child: Text(
+                          currentLocation == null
+                              ? '-'
+                              : currentLocation!.latitude
+                                  .toStringAsPrecision(8),
+                          style: ts,
+                        ),
+                      ),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            vertical: 1, horizontal: 4),
+                        alignment: Alignment.centerLeft,
+                        child: Text(
+                          !mapReady
+                              ? '-'
+                              : mapController.center.latitude
+                                  .toStringAsPrecision(8),
+                          style: ts,
+                        ),
+                      ),
+                    ]),
+                    TableRow(children: <Widget>[
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            vertical: 1, horizontal: 4),
+                        alignment: Alignment.centerLeft,
+                        child: Text(
+                          'Lng',
+                          style: ts,
+                        ),
+                      ),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            vertical: 1, horizontal: 4),
+                        alignment: Alignment.centerLeft,
+                        child: Text(
+                          currentLocation == null
+                              ? '-'
+                              : currentLocation!.longitude
+                                  .toStringAsPrecision(8),
+                          style: ts,
+                        ),
+                      ),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            vertical: 1, horizontal: 4),
+                        alignment: Alignment.centerLeft,
+                        child: Text(
+                          !mapReady
+                              ? '-'
+                              : mapController.center.longitude
+                                  .toStringAsPrecision(8),
+                          style: ts,
+                        ),
+                      ),
+                    ])
+                  ],
                 ),
-                IconButton(
-                  tooltip: I18N.of(context).lockViewToLocationButtonTooltip,
-                  icon: Icon(viewLockedToLocation
-                      ? Icons.gps_fixed
-                      : Icons.gps_not_fixed),
-                  iconSize: 30.0,
-                  color: currentLocation == null ? null : null,
-                  onPressed:
-                      currentLocation == null ? null : onLockViewToLocation,
+              ),
+              Expanded(
+                flex: 0,
+                child: Row(
+                  children: <Widget>[
+                    IconButton(
+                      tooltip: I18N.of(context).locationContinuousButtonTooltip,
+                      icon: Icon(locationSubscription == null
+                          ? Icons.location_off
+                          : Icons.location_on),
+                      iconSize: 30.0,
+                      color: null,
+                      onPressed: onToggleLocationContinuous,
+                    ),
+                    IconButton(
+                      tooltip: I18N.of(context).lockViewToLocationButtonTooltip,
+                      icon: Icon(viewLockedToLocation
+                          ? Icons.gps_fixed
+                          : Icons.gps_not_fixed),
+                      iconSize: 30.0,
+                      color: currentLocation == null ? null : null,
+                      onPressed:
+                          currentLocation == null ? null : onLockViewToLocation,
+                    ),
+                  ],
                 ),
-              ],
-            ),
-          ),
-        ],
-      ),
+              ),
+            ],
+          )),
     );
   }
 
@@ -999,7 +983,8 @@ class MainWidgetState extends State<MainWidget> {
   void onUseOffline(bool use) async {
     developer.log('onUseOffline');
     Navigator.of(context).pop();
-    notify('not implemented (yet)', true);
+    utils.notifySnackbar(
+        context, 'not implemented (yet)', utils.NotificationLevel.error);
     /*
     Navigator.of(context).pop();
     // download
@@ -1106,8 +1091,15 @@ class MainWidgetState extends State<MainWidget> {
     late comm.Data data;
     try {
       data = await comm.downloadData(storage!.serverSettings!.serverAddress);
-    } on comm.CommException catch (e) {
-      await commErrorDialog(e, context);
+    } on comm.UnexpectedStatusCode catch (e) {
+      developer.log('exception: ${e.toString()}');
+      await utils.notifyDialog(context, e.getMessage(context), e.detail,
+          utils.NotificationLevel.error);
+      return;
+    } catch (e) {
+      developer.log('exception: ${e.toString()}');
+      await utils.notifyDialog(context, I18N.of(context).error, e.toString(),
+          utils.NotificationLevel.error);
       return;
     }
     await storage!.setUsers(data.users);
@@ -1117,11 +1109,13 @@ class MainWidgetState extends State<MainWidget> {
     });
     if (only) {
       Navigator.of(context).pop();
-      notify(I18N.of(context).downloaded, false);
+      utils.notifySnackbar(context, I18N.of(context).downloaded,
+          utils.NotificationLevel.success);
     }
   }
 
-  void upload() async {
+  Future<bool> upload() async {
+    developer.log('upload');
     var created = storage!.features
         .where((data.Feature f) => f.isLocal)
         .toList(growable: false);
@@ -1131,32 +1125,44 @@ class MainWidgetState extends State<MainWidget> {
     var deleted = storage!.features
         .where((data.Feature f) => f.deleted)
         .toList(growable: false);
-    await comm.uploadData(
-        storage!.serverSettings!.serverAddress, created, edited, deleted);
-  }
-
-  void onUpload() async {
-    developer.log('onUpload');
     try {
-      upload();
-    } on comm.CommException catch (e) {
-      await commErrorDialog(e, context);
-      return;
+      await comm.uploadData(
+          storage!.serverSettings!.serverAddress, created, edited, deleted);
+    } on comm.DetailedCommException catch (e) {
+      developer.log('exception: ${e.toString()}');
+      await utils.notifyDialog(context, e.getMessage(context), e.detail,
+          utils.NotificationLevel.error);
+      return false;
+    } on Exception catch (e) {
+      developer.log('exception: ${e.toString()}');
+      utils.notifySnackbar(context, I18N.of(context).serverUnavailable,
+          utils.NotificationLevel.error);
+      return false;
     }
-    setState(() {
-      infoTarget = Target.none();
-    });
+    return true;
   }
 
-  void onSync() async {
+  FutureOr<void> onUpload() async {
+    developer.log('onUpload');
+    bool success = await upload();
+    Navigator.of(context).pop();
+    if (success) {
+      utils.notifySnackbar(context, I18N.of(context).syncSuccessful,
+          utils.NotificationLevel.success);
+    }
+    setState(() {});
+  }
+
+  Future<void> onSync() async {
     developer.log('onSync');
-    try {
-      upload();
-    } on comm.CommException catch (e) {
-      await commErrorDialog(e, context);
+    if (!await upload()) {
+      Navigator.of(context).pop();
       return;
     }
     onDownload(false);
+    Navigator.of(context).pop();
+    utils.notifySnackbar(context, I18N.of(context).syncSuccessful,
+        utils.NotificationLevel.success);
   }
 
   void onLogPoi(PointLogType type) async {
@@ -1218,7 +1224,8 @@ class MainWidgetState extends State<MainWidget> {
 
   void onPointListTap() async {
     if (storage == null) {
-      notify('No storage!', true);
+      utils.notifySnackbar(
+          context, 'No storage!', utils.NotificationLevel.error);
       Navigator.of(context).pop();
     }
     Map<int, String>? users = Map.of(storage!.users);
@@ -1245,7 +1252,8 @@ class MainWidgetState extends State<MainWidget> {
 
   void onUserListTap() {
     if (storage == null) {
-      notify('No storage!', true);
+      utils.notifySnackbar(
+          context, 'No storage!', utils.NotificationLevel.error);
       Navigator.of(context).pop();
     }
     Map<int, String>? users = Map.of(storage!.users);
@@ -1391,7 +1399,7 @@ class MainWidgetState extends State<MainWidget> {
                         '<unknown ID: ${point.ownerId}>'),
                     subtitle: Text(I18N.of(context).owner)),
                 ListTile(
-                  title: Text(formatCoords(point.coords, true)),
+                  title: Text(utils.formatCoords(point.coords, true)),
                   subtitle: Text(I18N.of(context).position),
                 ),
                 if (point.description?.isNotEmpty ?? false)
@@ -1434,22 +1442,5 @@ class MainWidgetState extends State<MainWidget> {
         navigationTarget = t;
       }
     });
-  }
-
-  void notify(String msg, bool error, [int seconds = 5]) {
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-      content: Text(msg,
-          style: TextStyle(
-              color: error
-                  ? Theme.of(context).colorScheme.onError
-                  : Theme.of(context).colorScheme.onSurface)),
-      backgroundColor: error
-          ? Theme.of(context).colorScheme.error
-          : Theme.of(context).colorScheme.surface,
-      duration: Duration(seconds: seconds),
-    ));
-    if (canVibrate) {
-      Vibrate.feedback(error ? FeedbackType.warning : FeedbackType.success);
-    }
   }
 }

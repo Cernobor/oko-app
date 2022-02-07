@@ -49,7 +49,6 @@ class I18N {
       'cs': 'Pole mají neplatné hodnoty',
       'en': 'The fields have invalid values'
     },
-    'alertErrorTitle': {'cs': 'Chyba', 'en': 'Error'},
     'ok': {'cs': 'OK', 'en': 'OK'},
     'commErrorNameNotSupplied': {
       'cs': 'Nebylo posláno žádné jméno.',
@@ -86,6 +85,10 @@ class I18N {
     'sync': {
       'cs': 'Synchronizovat se serverem',
       'en': 'Synchronize with server'
+    },
+    'syncSuccessful': {
+      'cs': 'Synchronizace úspěšná',
+      'en': 'Synchronization successful'
     },
     'clearLocalPois': {
       'cs': 'Odstranit lokální body',
@@ -152,14 +155,6 @@ class I18N {
       'cs': 'Filtrovat podle kategorie',
       'en': 'Filter by category'
     },
-    'downloadConfirm': {'cs': 'Opravdu stáhnout?', 'en': 'Really download?'},
-    'downloadConfirmDetail': {
-      'cs':
-          'Pouhé stažení nezapíše lokální změny na server. Stav serveru nahradí lokální stav, čímž dojde ke smazání všech změn a nových bodů.',
-      'en':
-          'Mere download does not write local changes to the server. The server state will replace the local state, causing deletion of all changes and new points.'
-    },
-    'downloaded': {'cs': 'Staženo', 'en': 'Downloaded'}
   };
 
   String get appTitle => _messages['appTitle']![locale.languageCode]!;
@@ -190,8 +185,6 @@ class I18N {
   String get dialogSave => _messages['dialogSave']![locale.languageCode]!;
   String get invalidPairFields =>
       _messages['invalidPairFields']![locale.languageCode]!;
-  String get alertErrorTitle =>
-      _messages['alertErrorTitle']![locale.languageCode]!;
   String get ok => _messages['ok']![locale.languageCode]!;
   String get commErrorNameNotSupplied =>
       _messages['commErrorNameNotSupplied']![locale.languageCode]!;
@@ -219,6 +212,8 @@ class I18N {
   String get download => _messages['download']![locale.languageCode]!;
   String get upload => _messages['upload']![locale.languageCode]!;
   String get sync => _messages['sync']![locale.languageCode]!;
+  String get syncSuccessful =>
+      _messages['syncSuccessful']![locale.languageCode]!;
   String get clearLocalPois =>
       _messages['clearLocalPois']![locale.languageCode]!;
   String get stopNavigationButton =>
@@ -269,11 +264,29 @@ class I18N {
   String get filterByOwner => _messages['filterByOwner']![locale.languageCode]!;
   String get filterByCategory =>
       _messages['filterByCategory']![locale.languageCode]!;
-  String get downloadConfirm =>
-      _messages['downloadConfirm']![locale.languageCode]!;
-  String get downloadConfirmDetail =>
-      _messages['downloadConfirmDetail']![locale.languageCode]!;
-  String get downloaded => _messages['downloaded']![locale.languageCode]!;
+  String get downloadConfirm => {
+        'cs': 'Opravdu stáhnout?',
+        'en': 'Really download?'
+      }[locale.languageCode]!;
+  String get downloadConfirmDetail => {
+        'cs':
+            'Pouhé stažení nezapíše lokální změny na server. Stav serveru nahradí lokální stav, čímž dojde ke smazání všech změn a nových bodů.',
+        'en':
+            'Mere download does not write local changes to the server. The server state will replace the local state, causing deletion of all changes and new points.'
+      }[locale.languageCode]!;
+  String get downloaded =>
+      {'cs': 'Staženo', 'en': 'Downloaded'}[locale.languageCode]!;
+  String get dismiss => {'cs': 'Zavřít', 'en': 'Dismiss'}[locale.languageCode]!;
+  String get error => {'cs': 'Chyba', 'en': 'Error'}[locale.languageCode]!;
+  String get serverUnavailable => {'cs': 'Server nedostupný', 'en': 'Server unavailable'}[locale.languageCode]!;
+  String get pairing => {'cs': 'Párování', 'en': 'Pairing'}[locale.languageCode]!;
+  String userAlreadyExists(String user) => sprintf({'cs': 'Uživatel "%s" již existuje.', 'en': 'User "%s" already exists.'}[locale.languageCode]!, [user]);
+  String userDoesNotExist(String user) => sprintf({'cs': 'Uživatel "%s" neexistuje.', 'en': 'User "%s" does not exist.'}[locale.languageCode]!, [user]);
+  String get badRequest => {'cs': 'Chybný dotaz', 'en': 'Bad request'}[locale.languageCode]!;
+  String usernameForbidden(String username) => sprintf({'cs': 'Uživatelské jméno "%s" je zakázané.', 'en': 'Username "%s" is forbidden.'}[locale.languageCode]!, [username]);
+  String get internalServerError => {'cs': 'Interní chyba serveru', 'en': 'Internal server error'}[locale.languageCode]!;
+  String get requestRefused => {'cs': 'Požadavek zamítnut.', 'en': 'Request refused.'}[locale.languageCode]!;
+  String unexpectedStatusCode(int code) => sprintf({'cs': 'Neočekávaný stavový kód: %d', 'en': 'Unexpected status code: %d'}[locale.languageCode]!, [code]);
 }
 
 class I18NDelegate extends LocalizationsDelegate<I18N> {
