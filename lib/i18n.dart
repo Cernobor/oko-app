@@ -13,257 +13,195 @@ class I18N {
     return Localizations.of(context, I18N);
   }
 
-  static final Map<String, Map<String, String>> _messages = {
-    'appTitle': {'cs': 'OKO', 'en': 'OKO'},
-    'drawerPaired': {'cs': 'Spárováno se serverem', 'en': 'Paired to server'},
-    'drawerServerAvailable': {
-      'cs': 'Server dostupný',
-      'en': 'Server available'
-    },
-    'zoomIn': {'cs': 'Přiblížit', 'en': 'Zoom in'},
-    'zoomOut': {'cs': 'Oddálit', 'en': 'Zoom out'},
-    'resetRotation': {'cs': 'Resetovat rotaci', 'en': 'Reset rotation'},
-    'serverAddressLabel': {'cs': 'Adresa serveru', 'en': 'Server address'},
-    'errorAddressRequired': {
-      'cs': 'Adresa je vyžadována',
-      'en': 'Address is required'
-    },
-    'stop': {'cs': 'Stop', 'en': 'Stop'},
-    'scan': {'cs': 'Naskenovat', 'en': 'Scan'},
-    'nameLabel': {'cs': 'Jméno', 'en': 'Name'},
-    'descriptionLabel': {'cs': 'Popis', 'en': 'Description'},
-    'errorNameRequired': {
-      'cs': 'Jméno je vyžadováno',
-      'en': 'Name is required'
-    },
-    'dialogPair': {'cs': 'Spárovat', 'en': 'Pair'},
-    'handshakeExistsTitle': {'cs': 'Existující jméno', 'en': 'Existing name'},
-    'handshakeExistsSubtitle': {
-      'cs': 'Spárovat s již existujícím jménem',
-      'en': 'Pair with already existing name'
-    },
-    'dialogCancel': {'cs': 'Zrušit', 'en': 'Cancel'},
-    'dialogConfirm': {'cs': 'Potvrdit', 'en': 'Confirm'},
-    'dialogSave': {'cs': 'Uložit', 'en': 'Save'},
-    'invalidPairFields': {
-      'cs': 'Pole mají neplatné hodnoty',
-      'en': 'The fields have invalid values'
-    },
-    'ok': {'cs': 'OK', 'en': 'OK'},
-    'commErrorNameNotSupplied': {
-      'cs': 'Nebylo posláno žádné jméno.',
-      'en': 'No name was sent.'
-    },
-    'commErrorNameAlreadyExists': {
-      'cs': 'Poslané jméno již existuje.',
-      'en': 'The sent name already exists.'
-    },
-    'logPoiCurrentLocation': {
-      'cs': 'Zanést bod na aktuální poloze',
-      'en': 'Log point at current position'
-    },
-    'logPoiCrosshair': {
-      'cs': 'Zanést bod na zaměřovači',
-      'en': 'Log point at crosshair'
-    },
-    'locationContinuousButtonTooltip': {
-      'cs': 'Zapnout/vypnout získávání polohy',
-      'en': 'Turn location acquisition on/off',
-    },
-    'toggleLockViewToLocationButtonTooltip': {
-      'cs': 'Zaměřit pohled na aktuální polohu',
-      'en': 'Center view to current location'
-    },
-    'addPoiDialogTitle': {'cs': 'Vlastnosti bodu', 'en': 'Point properties'},
-    'useOfflineMap': {'cs': 'Použít offline mapu', 'en': 'Use offline map'},
-    'mapSizeWarning': {'cs': '%s', 'en': '%s'},
-    'downloadingMapSnackBar': {'cs': 'Stahuji...', 'en': 'Downloading...'},
-    'unpackingMapSnackBar': {'cs': 'Rozbaluji...', 'en': 'Unpacking...'},
-    'doneMapSnackBar': {'cs': 'Hotovo!', 'en': 'Done!'},
-    'download': {'cs': 'Stáhnout ze serveru', 'en': 'Download from server'},
-    'upload': {'cs': 'Nahrát na server', 'en': 'Upload to server'},
-    'sync': {
-      'cs': 'Synchronizovat se serverem',
-      'en': 'Synchronize with server'
-    },
-    'syncSuccessful': {
-      'cs': 'Synchronizace úspěšná',
-      'en': 'Synchronization successful'
-    },
-    'clearLocalPois': {
-      'cs': 'Odstranit lokální body',
-      'en': 'Clear local points'
-    },
-    'stopNavigationButton': {
-      'cs': 'Zastavit navigaci',
-      'en': 'Stop navigation'
-    },
-    'navigateToButton': {'cs': 'Navigovat', 'en': 'Navigate'},
-    'deleteButton': {'cs': 'Smazat', 'en': 'Delete'},
-    'undeleteButton': {'cs': 'Odsmazat', 'en': 'Undelete'},
-    'distance': {'cs': 'Vzdálenost', 'en': 'Distance'},
-    'bearing': {'cs': 'Azimut', 'en': 'Bearing'},
-    'relativeBearing': {'cs': 'Rel. azimut', 'en': 'Rel. bearing'},
-    'yes': {'cs': 'Ano', 'en': 'Yes'},
-    'no': {'cs': 'Ne', 'en': 'No'},
-    'aboutToDeleteLocalPoi': {
-      'cs': 'Opravdu smazat lokální bod? Tuto operaci nelze vrátit.',
-      'en': 'Really delete local point? This operation cannot be undone.'
-    },
-    'aboutToRevertGlobalPoi': {
-      'cs':
-          'Opravdu vrátit původní data k tomuto bodu? Tuto operaci nelze vrátit.',
-      'en':
-          'Really revert to the original data for thsi point? This operation cannot be undone.'
-    },
-    'nPois1': {'cs': '1 bod', 'en': '1 point'},
-    'nPois2-4': {'cs': '%d body', 'en': '%d points'},
-    'nPois5+': {'cs': '%d bodů', 'en': '%d points'},
-    'centerViewInfoButton': {'cs': 'Vycentrovat mapu', 'en': 'Center map'},
-    'poiListTitle': {'cs': 'Seznam bodů', 'en': 'Point list'},
-    'userListTitle': {'cs': 'Seznam uživatelů', 'en': 'User list'},
-    'infoOnly': {'cs': 'Pouze informativní', 'en': 'Informative only'},
-    'category': {'cs': 'Kategorie', 'en': 'Category'},
-    'category-${PointCategory.general.name}': {'cs': 'obecné', 'en': 'general'},
-    'category-${PointCategory.camp.name}': {'cs': 'tábor', 'en': 'camp'},
-    'category-${PointCategory.animal.name}': {'cs': 'zvíře', 'en': 'animal'},
-    'category-${PointCategory.holySite.name}': {
-      'cs': 'posvátné místo',
-      'en': 'holy site'
-    },
-    'category-${PointCategory.treasure.name}': {
-      'cs': 'poklad',
-      'en': 'treasure'
-    },
-    'category-${PointCategory.important.name}': {
-      'cs': 'důležité',
-      'en': 'important'
-    },
-    'category-${PointCategory.unknown.name}': {'cs': '???', 'en': '???'},
-    'edit': {'cs': 'Upravit', 'en': 'Edit'},
-    'revert': {'cs': 'Vrátit', 'en': 'Revert'},
-    'location': {'cs': 'Pozice', 'en': 'Position'},
-    'metadata': {'cs': 'Metadata', 'en': 'Metadata'},
-    'owner': {'cs': 'Vlastník', 'en': 'Owner'},
-    'me': {'cs': 'já', 'en': 'me'},
-    'toFilter': {'cs': 'Filtrovat', 'en': 'Filter'},
-    'filterByOwner': {
-      'cs': 'Filtrovat podle vlastníka',
-      'en': 'Filter by owner'
-    },
-    'filterByCategory': {
-      'cs': 'Filtrovat podle kategorie',
-      'en': 'Filter by category'
-    },
-  };
-
-  String get appTitle => _messages['appTitle']![locale.languageCode]!;
-  String get drawerPaired => _messages['drawerPaired']![locale.languageCode]!;
+  String get appTitle => {'cs': 'OKO', 'en': 'OKO'}[locale.languageCode]!;
+  String get drawerPaired => {
+        'cs': 'Spárováno se serverem',
+        'en': 'Paired to server'
+      }[locale.languageCode]!;
   String get drawerServerAvailable =>
-      _messages['drawerServerAvailable']![locale.languageCode]!;
-  String get zoomIn => _messages['zoomIn']![locale.languageCode]!;
-  String get zoomOut => _messages['zoomOut']![locale.languageCode]!;
-  String get resetRotation => _messages['resetRotation']![locale.languageCode]!;
+      {'cs': 'Server dostupný', 'en': 'Server available'}[locale.languageCode]!;
+  String get zoomIn =>
+      {'cs': 'Přiblížit', 'en': 'Zoom in'}[locale.languageCode]!;
+  String get zoomOut =>
+      {'cs': 'Oddálit', 'en': 'Zoom out'}[locale.languageCode]!;
+  String get resetRotation =>
+      {'cs': 'Resetovat rotaci', 'en': 'Reset rotation'}[locale.languageCode]!;
   String get serverAddressLabel =>
-      _messages['serverAddressLabel']![locale.languageCode]!;
-  String get errorAddressRequired =>
-      _messages['errorAddressRequired']![locale.languageCode]!;
-  String get stop => _messages['stop']![locale.languageCode]!;
-  String get scan => _messages['scan']![locale.languageCode]!;
-  String get nameLabel => _messages['nameLabel']![locale.languageCode]!;
+      {'cs': 'Adresa serveru', 'en': 'Server address'}[locale.languageCode]!;
+  String get errorAddressRequired => {
+        'cs': 'Adresa je vyžadována',
+        'en': 'Address is required'
+      }[locale.languageCode]!;
+  String get stop => {'cs': 'Stop', 'en': 'Stop'}[locale.languageCode]!;
+  String get scan => {'cs': 'Naskenovat', 'en': 'Scan'}[locale.languageCode]!;
+  String get nameLabel => {'cs': 'Jméno', 'en': 'Name'}[locale.languageCode]!;
   String get descriptionLabel =>
-      _messages['descriptionLabel']![locale.languageCode]!;
-  String get errorNameRequired =>
-      _messages['errorNameRequired']![locale.languageCode]!;
-  String get dialogPair => _messages['dialogPair']![locale.languageCode]!;
+      {'cs': 'Popis', 'en': 'Description'}[locale.languageCode]!;
+  String get errorNameRequired => {
+        'cs': 'Jméno je vyžadováno',
+        'en': 'Name is required'
+      }[locale.languageCode]!;
+  String get dialogPair =>
+      {'cs': 'Spárovat', 'en': 'Pair'}[locale.languageCode]!;
   String get handshakeExistsTitle =>
-      _messages['handshakeExistsTitle']![locale.languageCode]!;
-  String get handshakeExistsSubtitle =>
-      _messages['handshakeExistsSubtitle']![locale.languageCode]!;
-  String get dialogCancel => _messages['dialogCancel']![locale.languageCode]!;
-  String get dialogConfirm => _messages['dialogConfirm']![locale.languageCode]!;
-  String get dialogSave => _messages['dialogSave']![locale.languageCode]!;
-  String get invalidPairFields =>
-      _messages['invalidPairFields']![locale.languageCode]!;
-  String get ok => _messages['ok']![locale.languageCode]!;
-  String get commErrorNameNotSupplied =>
-      _messages['commErrorNameNotSupplied']![locale.languageCode]!;
-  String get commErrorNameAlreadyExists =>
-      _messages['commErrorNameAlreadyExists']![locale.languageCode]!;
-  String get logPoiCurrentLocation =>
-      _messages['logPoiCurrentLocation']![locale.languageCode]!;
-  String get logPoiCrosshair =>
-      _messages['logPoiCrosshair']![locale.languageCode]!;
-  String get locationContinuousButtonTooltip =>
-      _messages['locationContinuousButtonTooltip']![locale.languageCode]!;
-  String get lockViewToLocationButtonTooltip =>
-      _messages['toggleLockViewToLocationButtonTooltip']![locale.languageCode]!;
+      {'cs': 'Existující jméno', 'en': 'Existing name'}[locale.languageCode]!;
+  String get handshakeExistsSubtitle => {
+        'cs': 'Spárovat s již existujícím jménem',
+        'en': 'Pair with already existing name'
+      }[locale.languageCode]!;
+  String get dialogCancel =>
+      {'cs': 'Zrušit', 'en': 'Cancel'}[locale.languageCode]!;
+  String get dialogConfirm =>
+      {'cs': 'Potvrdit', 'en': 'Confirm'}[locale.languageCode]!;
+  String get dialogSave => {'cs': 'Uložit', 'en': 'Save'}[locale.languageCode]!;
+  String get invalidPairFields => {
+        'cs': 'Pole mají neplatné hodnoty',
+        'en': 'The fields have invalid values'
+      }[locale.languageCode]!;
+  String get ok => {'cs': 'OK', 'en': 'OK'}[locale.languageCode]!;
+  String get commErrorNameNotSupplied => {
+        'cs': 'Nebylo posláno žádné jméno.',
+        'en': 'No name was sent.'
+      }[locale.languageCode]!;
+  String get commErrorNameAlreadyExists => {
+        'cs': 'Poslané jméno již existuje.',
+        'en': 'The sent name already exists.'
+      }[locale.languageCode]!;
+  String get logPoiCurrentLocation => {
+        'cs': 'Zanést bod na aktuální poloze',
+        'en': 'Log point at current position'
+      }[locale.languageCode]!;
+  String get logPoiCrosshair => {
+        'cs': 'Zanést bod na zaměřovači',
+        'en': 'Log point at crosshair'
+      }[locale.languageCode]!;
+  String get locationContinuousButtonTooltip => {
+        'cs': 'Zapnout/vypnout získávání polohy',
+        'en': 'Turn location acquisition on/off',
+      }[locale.languageCode]!;
+  String get lockViewToLocationButtonTooltip => {
+        'cs': 'Zaměřit pohled na aktuální polohu',
+        'en': 'Center view to current location'
+      }[locale.languageCode]!;
   String get addPoiDialogTitle =>
-      _messages['addPoiDialogTitle']![locale.languageCode]!;
-  String get useOfflineMap => _messages['useOfflineMap']![locale.languageCode]!;
-  String mapSizeWarning(int size) => sprintf(
-      _messages['mapSizeWarning']![locale.languageCode]!, [filesize(size)]);
+      {'cs': 'Vlastnosti bodu', 'en': 'Point properties'}[locale.languageCode]!;
+  String get useOfflineMap => {
+        'cs': 'Použít offline mapu',
+        'en': 'Use offline map'
+      }[locale.languageCode]!;
+  String mapSizeWarning(int size) =>
+      sprintf({'cs': '%s', 'en': '%s'}[locale.languageCode]!, [filesize(size)]);
   String get downloadingMapSnackBar =>
-      _messages['downloadingMapSnackBar']![locale.languageCode]!;
+      {'cs': 'Stahuji...', 'en': 'Downloading...'}[locale.languageCode]!;
   String get unpackingMapSnackBar =>
-      _messages['unpackingMapSnackBar']![locale.languageCode]!;
+      {'cs': 'Rozbaluji...', 'en': 'Unpacking...'}[locale.languageCode]!;
   String get doneMapSnackBar =>
-      _messages['doneMapSnackBar']![locale.languageCode]!;
-  String get download => _messages['download']![locale.languageCode]!;
-  String get upload => _messages['upload']![locale.languageCode]!;
-  String get sync => _messages['sync']![locale.languageCode]!;
-  String get syncSuccessful =>
-      _messages['syncSuccessful']![locale.languageCode]!;
-  String get clearLocalPois =>
-      _messages['clearLocalPois']![locale.languageCode]!;
-  String get stopNavigationButton =>
-      _messages['stopNavigationButton']![locale.languageCode]!;
+      {'cs': 'Hotovo!', 'en': 'Done!'}[locale.languageCode]!;
+  String get download => {
+        'cs': 'Stáhnout ze serveru',
+        'en': 'Download from server'
+      }[locale.languageCode]!;
+  String get upload => {
+        'cs': 'Nahrát na server',
+        'en': 'Upload to server'
+      }[locale.languageCode]!;
+  String get sync => {
+        'cs': 'Synchronizovat se serverem',
+        'en': 'Synchronize with server'
+      }[locale.languageCode]!;
+  String get syncSuccessful => {
+        'cs': 'Synchronizace úspěšná',
+        'en': 'Synchronization successful'
+      }[locale.languageCode]!;
+  String get clearLocalPois => {
+        'cs': 'Odstranit lokální body',
+        'en': 'Clear local points'
+      }[locale.languageCode]!;
+  String get stopNavigationButton => {
+        'cs': 'Zastavit navigaci',
+        'en': 'Stop navigation'
+      }[locale.languageCode]!;
   String get navigateToButton =>
-      _messages['navigateToButton']![locale.languageCode]!;
-  String get deleteButton => _messages['deleteButton']![locale.languageCode]!;
+      {'cs': 'Navigovat', 'en': 'Navigate'}[locale.languageCode]!;
+  String get deleteButton =>
+      {'cs': 'Smazat', 'en': 'Delete'}[locale.languageCode]!;
   String get undeleteButton =>
-      _messages['undeleteButton']![locale.languageCode]!;
-  String get distance => _messages['distance']![locale.languageCode]!;
-  String get bearing => _messages['bearing']![locale.languageCode]!;
+      {'cs': 'Odsmazat', 'en': 'Undelete'}[locale.languageCode]!;
+  String get distance =>
+      {'cs': 'Vzdálenost', 'en': 'Distance'}[locale.languageCode]!;
+  String get bearing => {'cs': 'Azimut', 'en': 'Bearing'}[locale.languageCode]!;
   String get relativeBearing =>
-      _messages['relativeBearing']![locale.languageCode]!;
-  String get yes => _messages['yes']![locale.languageCode]!;
-  String get no => _messages['no']![locale.languageCode]!;
-  String get aboutToDeleteLocalPoi =>
-      _messages['aboutToDeleteLocalPoi']![locale.languageCode]!;
-  String get aboutToRevertGlobalPoi =>
-      _messages['aboutToRevertGlobalPoi']![locale.languageCode]!;
+      {'cs': 'Rel. azimut', 'en': 'Rel. bearing'}[locale.languageCode]!;
+  String get yes => {'cs': 'Ano', 'en': 'Yes'}[locale.languageCode]!;
+  String get no => {'cs': 'Ne', 'en': 'No'}[locale.languageCode]!;
+  String get aboutToDeleteLocalPoi => {
+        'cs': 'Opravdu smazat lokální bod? Tuto operaci nelze vrátit.',
+        'en': 'Really delete local point? This operation cannot be undone.'
+      }[locale.languageCode]!;
+  String get aboutToRevertGlobalPoi => {
+        'cs':
+            'Opravdu vrátit původní data k tomuto bodu? Tuto operaci nelze vrátit.',
+        'en':
+            'Really revert to the original data for thsi point? This operation cannot be undone.'
+      }[locale.languageCode]!;
   String Function(int n) get nPois => (int n) {
         if (n < 0) {
           throw Exception('negative number');
         }
         if (n == 1) {
-          return sprintf(_messages['nPois1']![locale.languageCode]!, [n]);
+          return sprintf(
+              {'cs': '1 bod', 'en': '1 point'}[locale.languageCode]!, [n]);
         }
         if (n < 5) {
-          return sprintf(_messages['nPois2-4']![locale.languageCode]!, [n]);
+          return sprintf(
+              {'cs': '%d body', 'en': '%d points'}[locale.languageCode]!, [n]);
         }
-        return sprintf(_messages['nPois5+']![locale.languageCode]!, [n]);
+        return sprintf(
+            {'cs': '%d bodů', 'en': '%d points'}[locale.languageCode]!, [n]);
       };
   String get centerViewInfoButton =>
-      _messages['centerViewInfoButton']![locale.languageCode]!;
-  String get poiListTitle => _messages['poiListTitle']![locale.languageCode]!;
-  String get userListTitle => _messages['userListTitle']![locale.languageCode]!;
-  String get infoOnly => _messages['infoOnly']![locale.languageCode]!;
-  String get category => _messages['category']![locale.languageCode]!;
+      {'cs': 'Vycentrovat mapu', 'en': 'Center map'}[locale.languageCode]!;
+  String get poiListTitle =>
+      {'cs': 'Seznam bodů', 'en': 'Point list'}[locale.languageCode]!;
+  String get userListTitle =>
+      {'cs': 'Seznam uživatelů', 'en': 'User list'}[locale.languageCode]!;
+  String get infoOnly => {
+        'cs': 'Pouze informativní',
+        'en': 'Informative only'
+      }[locale.languageCode]!;
+  String get category =>
+      {'cs': 'Kategorie', 'en': 'Category'}[locale.languageCode]!;
   String Function(PointCategory x) get categories =>
-      ((PointCategory category) =>
-          _messages['category-${category.name}']![locale.languageCode]!);
-  String get edit => _messages['edit']![locale.languageCode]!;
-  String get revert => _messages['revert']![locale.languageCode]!;
-  String get position => _messages['location']![locale.languageCode]!;
-  String get metadata => _messages['metadata']![locale.languageCode]!;
-  String get owner => _messages['owner']![locale.languageCode]!;
-  String get me => _messages['me']![locale.languageCode]!;
-  String get toFilter => _messages['toFilter']![locale.languageCode]!;
-  String get filterByOwner => _messages['filterByOwner']![locale.languageCode]!;
-  String get filterByCategory =>
-      _messages['filterByCategory']![locale.languageCode]!;
+      ((PointCategory category) => {
+            PointCategory.general.name: {'cs': 'obecné', 'en': 'general'},
+            PointCategory.camp.name: {'cs': 'tábor', 'en': 'camp'},
+            PointCategory.animal.name: {'cs': 'zvíře', 'en': 'animal'},
+            PointCategory.holySite.name: {
+              'cs': 'posvátné místo',
+              'en': 'holy site'
+            },
+            PointCategory.treasure.name: {'cs': 'poklad', 'en': 'treasure'},
+            PointCategory.important.name: {'cs': 'důležité', 'en': 'important'},
+            PointCategory.unknown.name: {'cs': '???', 'en': '???'}
+          }[category.name]![locale.languageCode]!);
+  String get edit => {'cs': 'Upravit', 'en': 'Edit'}[locale.languageCode]!;
+  String get revert => {'cs': 'Vrátit', 'en': 'Revert'}[locale.languageCode]!;
+  String get position =>
+      {'cs': 'Pozice', 'en': 'Position'}[locale.languageCode]!;
+  String get metadata =>
+      {'cs': 'Metadata', 'en': 'Metadata'}[locale.languageCode]!;
+  String get owner => {'cs': 'Vlastník', 'en': 'Owner'}[locale.languageCode]!;
+  String get me => {'cs': 'já', 'en': 'me'}[locale.languageCode]!;
+  String get toFilter =>
+      {'cs': 'Filtrovat', 'en': 'Filter'}[locale.languageCode]!;
+  String get filterByOwner => {
+        'cs': 'Filtrovat podle vlastníka',
+        'en': 'Filter by owner'
+      }[locale.languageCode]!;
+  String get filterByCategory => {
+        'cs': 'Filtrovat podle kategorie',
+        'en': 'Filter by category'
+      }[locale.languageCode]!;
   String get downloadConfirm => {
         'cs': 'Opravdu stáhnout?',
         'en': 'Really download?'
@@ -278,15 +216,46 @@ class I18N {
       {'cs': 'Staženo', 'en': 'Downloaded'}[locale.languageCode]!;
   String get dismiss => {'cs': 'Zavřít', 'en': 'Dismiss'}[locale.languageCode]!;
   String get error => {'cs': 'Chyba', 'en': 'Error'}[locale.languageCode]!;
-  String get serverUnavailable => {'cs': 'Server nedostupný', 'en': 'Server unavailable'}[locale.languageCode]!;
-  String get pairing => {'cs': 'Párování', 'en': 'Pairing'}[locale.languageCode]!;
-  String userAlreadyExists(String user) => sprintf({'cs': 'Uživatel "%s" již existuje.', 'en': 'User "%s" already exists.'}[locale.languageCode]!, [user]);
-  String userDoesNotExist(String user) => sprintf({'cs': 'Uživatel "%s" neexistuje.', 'en': 'User "%s" does not exist.'}[locale.languageCode]!, [user]);
-  String get badRequest => {'cs': 'Chybný dotaz', 'en': 'Bad request'}[locale.languageCode]!;
-  String usernameForbidden(String username) => sprintf({'cs': 'Uživatelské jméno "%s" je zakázané.', 'en': 'Username "%s" is forbidden.'}[locale.languageCode]!, [username]);
-  String get internalServerError => {'cs': 'Interní chyba serveru', 'en': 'Internal server error'}[locale.languageCode]!;
-  String get requestRefused => {'cs': 'Požadavek zamítnut.', 'en': 'Request refused.'}[locale.languageCode]!;
-  String unexpectedStatusCode(int code) => sprintf({'cs': 'Neočekávaný stavový kód: %d', 'en': 'Unexpected status code: %d'}[locale.languageCode]!, [code]);
+  String get serverUnavailable => {
+        'cs': 'Server nedostupný',
+        'en': 'Server unavailable'
+      }[locale.languageCode]!;
+  String get pairing =>
+      {'cs': 'Párování', 'en': 'Pairing'}[locale.languageCode]!;
+  String userAlreadyExists(String user) => sprintf(
+      {
+        'cs': 'Uživatel "%s" již existuje.',
+        'en': 'User "%s" already exists.'
+      }[locale.languageCode]!,
+      [user]);
+  String userDoesNotExist(String user) => sprintf(
+      {
+        'cs': 'Uživatel "%s" neexistuje.',
+        'en': 'User "%s" does not exist.'
+      }[locale.languageCode]!,
+      [user]);
+  String get badRequest =>
+      {'cs': 'Chybný dotaz', 'en': 'Bad request'}[locale.languageCode]!;
+  String usernameForbidden(String username) => sprintf(
+      {
+        'cs': 'Uživatelské jméno "%s" je zakázané.',
+        'en': 'Username "%s" is forbidden.'
+      }[locale.languageCode]!,
+      [username]);
+  String get internalServerError => {
+        'cs': 'Interní chyba serveru',
+        'en': 'Internal server error'
+      }[locale.languageCode]!;
+  String get requestRefused => {
+        'cs': 'Požadavek zamítnut.',
+        'en': 'Request refused.'
+      }[locale.languageCode]!;
+  String unexpectedStatusCode(int code) => sprintf(
+      {
+        'cs': 'Neočekávaný stavový kód: %d',
+        'en': 'Unexpected status code: %d'
+      }[locale.languageCode]!,
+      [code]);
 }
 
 class I18NDelegate extends LocalizationsDelegate<I18N> {
