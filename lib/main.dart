@@ -18,6 +18,8 @@ const _error = Color(0xff890000);
 const _onError = Color(0xffffffff);
 const _disabled = Color(0x88909090);
 const _onDisabled = Color(0x88ffffff);
+const _labelColor = Color(0x77ffffff);
+const _focusedLabelColor = Color(0xddffffff);
 
 class Home extends StatelessWidget {
   const Home({Key? key}) : super(key: key);
@@ -58,6 +60,28 @@ class Home extends StatelessWidget {
                 return _onSecondary;
               }
             })
+          ),
+          inputDecorationTheme: InputDecorationTheme(
+            labelStyle: const TextStyle(color: _labelColor),
+            border: const UnderlineInputBorder(borderSide: BorderSide(color: _labelColor)),
+            focusedBorder: const UnderlineInputBorder(borderSide: BorderSide(color: _focusedLabelColor, width: 1)),
+            iconColor: MaterialStateColor.resolveWith((states) {
+              if (states.contains(MaterialState.focused)) {
+                return _focusedLabelColor;
+              }
+              return _labelColor;
+            }),
+            floatingLabelStyle: MaterialStateTextStyle.resolveWith((states) {
+              if (states.contains(MaterialState.focused)) {
+                return const TextStyle(color: _focusedLabelColor);
+              }
+              return const TextStyle(color: _labelColor);
+            })
+          ),
+          textSelectionTheme: const TextSelectionThemeData(
+            cursorColor: _surface,
+            selectionColor: _surface,
+            selectionHandleColor: _surface
           ),
           disabledColor: _disabled,
           backgroundColor: _background),
