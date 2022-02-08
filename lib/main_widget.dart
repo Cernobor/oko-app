@@ -14,12 +14,12 @@ import 'package:vector_tile_renderer/vector_tile_renderer.dart' hide Theme;
 import 'package:oko/storage.dart';
 import 'package:oko/dialogs/add_point.dart';
 import 'package:oko/dialogs/edit_point.dart';
-import 'package:oko/dialogs/pairing.dart';
+import 'package:oko/subpages/pairing.dart';
 import 'package:oko/communication.dart' as comm;
 import 'package:oko/utils.dart' as utils;
 import 'package:oko/data.dart' as data;
 import 'package:oko/i18n.dart';
-import 'package:oko/point_list.dart';
+import 'package:oko/subpages/point_list.dart';
 import 'package:vector_map_tiles/vector_map_tiles.dart';
 
 enum PointLogType { currentLocation, crosshair }
@@ -922,14 +922,9 @@ class MainWidgetState extends State<MainWidget> {
   }
 
   void onPair() async {
-    data.ServerSettings? settings = await showDialog<data.ServerSettings>(
-      context: context,
-      builder: (BuildContext context) {
-        return PairingDialog(
-          scaffoldKey: scaffoldKey,
-        );
-      },
-    );
+    data.ServerSettings? settings = await Navigator.of(context).push(
+        MaterialPageRoute<data.ServerSettings>(
+            builder: (context) => Pairing(scaffoldKey: scaffoldKey)));
     if (settings == null) {
       developer.log('no settings');
     } else {
@@ -945,9 +940,9 @@ class MainWidgetState extends State<MainWidget> {
       setState(() {});
       mapController.move(storage!.serverSettings!.defaultCenter,
           storage!.serverSettings!.minZoom.toDouble());
+      Navigator.of(context).pop();
+      startPinging();
     }
-    Navigator.of(context).pop();
-    startPinging();
   }
 
   void onPing() {
