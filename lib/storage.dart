@@ -10,6 +10,7 @@ import 'package:path/path.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:sqflite/sqflite.dart';
 
+// ignore: unused_element
 Future<String> get _localPath async {
   final dir = await getApplicationDocumentsDirectory();
   return dir.path;
@@ -307,7 +308,7 @@ class Storage {
     await _db.transaction((Transaction tx) async {
       await tx.execute('delete from users');
       Batch batch = tx.batch();
-      _users.forEach((id, name) {
+      users.forEach((id, name) {
         batch.insert('users', {'id': id, 'name': name});
       });
       await batch.commit(noResult: true);
