@@ -185,6 +185,8 @@ class I18N {
             PointCategory.unknown.name: {'cs': '???', 'en': '???'}
           }[category.name]![locale.languageCode]!);
   String get edit => {'cs': 'Upravit', 'en': 'Edit'}[locale.languageCode]!;
+  String get editPoint => {'cs': 'Upravit bod', 'en': 'Edit point'}[locale.languageCode]!;
+  String get newPoint => {'cs': 'Nový bod', 'en': 'New point'}[locale.languageCode]!;
   String get revert => {'cs': 'Vrátit', 'en': 'Revert'}[locale.languageCode]!;
   String get position =>
       {'cs': 'Pozice', 'en': 'Position'}[locale.languageCode]!;

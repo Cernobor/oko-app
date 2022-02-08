@@ -12,8 +12,7 @@ import 'package:positioned_tap_detector_2/positioned_tap_detector_2.dart';
 import 'package:vector_tile_renderer/vector_tile_renderer.dart' hide Theme;
 
 import 'package:oko/storage.dart';
-import 'package:oko/dialogs/add_point.dart';
-import 'package:oko/dialogs/edit_point.dart';
+import 'package:oko/subpages/edit_point.dart';
 import 'package:oko/subpages/pairing.dart';
 import 'package:oko/communication.dart' as comm;
 import 'package:oko/utils.dart' as utils;
@@ -271,7 +270,7 @@ class MainWidgetState extends State<MainWidget> {
             title: Text(I18N.of(context).logPoiCurrentLocation),
             leading: const Icon(Icons.add_location_alt_outlined),
             trailing: const Icon(Icons.my_location),
-            onTap: () => onLogPoi(PointLogType.currentLocation),
+            onTap: () => onLogPoint(PointLogType.currentLocation),
             enabled: storage?.serverSettings != null && currentLocation != null,
           ),
           // log on crosshair
@@ -279,7 +278,7 @@ class MainWidgetState extends State<MainWidget> {
             title: Text(I18N.of(context).logPoiCrosshair),
             leading: const Icon(Icons.add_location_alt_outlined),
             trailing: const Icon(Icons.add),
-            onTap: () => onLogPoi(PointLogType.crosshair),
+            onTap: () => onLogPoint(PointLogType.crosshair),
             enabled: storage?.serverSettings != null,
           ),
           // point list
@@ -1160,44 +1159,36 @@ class MainWidgetState extends State<MainWidget> {
         utils.NotificationLevel.success);
   }
 
-  void onLogPoi(PointLogType type) async {
+  void onLogPoint(PointLogType type) async {
     developer.log('Log poi $type');
     LatLng loc = mapController.center;
     if (type == PointLogType.currentLocation && currentLocation != null) {
       loc = currentLocation!;
     }
-    Map<String, String>? info = await showDialog<Map<String, String>>(
-        context: context,
-        builder: (BuildContext context) {
-          return AddPointDialog(location: loc);
-        });
-    if (info == null) {
+    data.Point? point = await Navigator.of(context).push(
+        MaterialPageRoute<data.Point>(
+            builder: (context) => EditPoint(
+                myId: storage!.serverSettings!.id,
+                targetLocation: loc,
+                users: storage!.users)));
+    if (point == null) {
       return;
     }
     Navigator.pop(context);
-    var localId = await storage!.nextLocalId();
-    var point = data.Point.origSame(
-        localId,
-        storage!.serverSettings!.id,
-        info['name']!,
-        info['description']!,
-        loc,
-        data.PointCategory.fromNameString(info['category']),
-        false);
+    point.id = await storage!.nextLocalId();
     await storage!.upsertFeature(point);
     setState(() {});
   }
 
   void onEditPoint(data.Point point) async {
     developer.log('Edit poi $point');
-    data.Point? replacement = await showDialog<data.Point>(
-        context: context,
-        builder: (BuildContext context) {
-          return EditPointDialog(
-              point: point,
-              targetLocation: storage!.mapState!.center,
-              users: storage!.users);
-        });
+    data.Point? replacement = await Navigator.of(context).push(
+        MaterialPageRoute<data.Point>(
+            builder: (context) => EditPoint(
+                point: point,
+                myId: storage!.serverSettings!.id,
+                targetLocation: storage!.mapState!.center,
+                users: storage!.users)));
     if (replacement == null) {
       return;
     }
