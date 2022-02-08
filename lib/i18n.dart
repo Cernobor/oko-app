@@ -256,6 +256,14 @@ class I18N {
         'en': 'Unexpected status code: %d'
       }[locale.languageCode]!,
       [code]);
+  String get allNothing => {
+    'cs': 'Vše/nic',
+    'en': 'All/nothing'
+  }[locale.languageCode]!;
+  String get invert => {
+    'cs': 'Invertovat',
+    'en': 'Invert'
+  }[locale.languageCode]!;
 }
 
 class I18NDelegate extends LocalizationsDelegate<I18N> {

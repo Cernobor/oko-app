@@ -18,6 +18,35 @@ class _MultiCheckerState<T> extends State<MultiChecker<T>> {
   Widget build(BuildContext context) {
     return SimpleDialog(
       children: <Widget>[
+        Row(
+          mainAxisSize: MainAxisSize.max,
+          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+          crossAxisAlignment: CrossAxisAlignment.end,
+          children: <Widget>[
+            MaterialButton(
+              color: Theme.of(context).colorScheme.primary,
+              textColor: Theme.of(context).colorScheme.onPrimary,
+              child: Text(I18N.of(context).allNothing),
+              onPressed: () {
+                bool val = checked.contains(false);
+                  setState(() {
+                    checked.setAll(0, List<bool>.filled(checked.length, val));
+                  });
+              },
+            ),
+            MaterialButton(
+              color: Theme.of(context).colorScheme.primary,
+              textColor: Theme.of(context).colorScheme.onPrimary,
+              child: Text(I18N.of(context).invert),
+              onPressed: () {
+                setState(() {
+                  checked.setAll(0, checked.map((e) => !e));
+                });
+              },
+            )
+          ],
+        ),
+        const Divider(),
         ListView(
           scrollDirection: Axis.vertical,
           shrinkWrap: true,
@@ -37,16 +66,21 @@ class _MultiCheckerState<T> extends State<MultiChecker<T>> {
               .values
               .toList(growable: false),
         ),
+        const Divider(),
         Row(
           mainAxisSize: MainAxisSize.max,
-          mainAxisAlignment: MainAxisAlignment.center,
+          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
           crossAxisAlignment: CrossAxisAlignment.end,
           children: <Widget>[
-            ElevatedButton(
+            MaterialButton(
+              color: Theme.of(context).colorScheme.primary,
+              textColor: Theme.of(context).colorScheme.onPrimary,
               child: Text(I18N.of(context).dialogCancel),
               onPressed: onCancel,
             ),
-            ElevatedButton(
+            MaterialButton(
+              color: Theme.of(context).colorScheme.primary,
+              textColor: Theme.of(context).colorScheme.onPrimary,
               child: Text(I18N.of(context).ok),
               onPressed: onOk,
             )
