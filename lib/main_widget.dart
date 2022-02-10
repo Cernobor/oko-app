@@ -116,6 +116,9 @@ class MainWidgetState extends State<MainWidget> {
           'Error while getting storage: ${e.toString()}',
           utils.NotificationLevel.error);
     }
+    if (storage?.serverSettings?.serverAddress != null) {
+      startPinging();
+    }
     return true;
   }
 
@@ -382,7 +385,7 @@ class MainWidgetState extends State<MainWidget> {
                     'openmaptiles': MemoryCacheVectorTileProvider(
                         delegate: NetworkVectorTileProvider(
                             urlTemplate:
-                                '${storage!.serverSettings!.serverAddress}${storage!.serverSettings!.tilePathTemplate}',
+                                '${comm.ensureNoTrailingSlash(storage!.serverSettings!.serverAddress)}${storage!.serverSettings!.tilePathTemplate}',
                             maximumZoom: 14),
                         maxSizeBytes: 1024 * 1024 * 5)
                   }),
@@ -961,11 +964,9 @@ class MainWidgetState extends State<MainWidget> {
       developer.log('No settings, cannot start pinging.');
       return;
     }
-    onPing();
     Future.doWhile(() {
       if (storage?.serverSettings == null) {
-        return Future.delayed(
-            const Duration(seconds: 5), () => Future.value(true));
+        return Future.delayed(const Duration(seconds: 5), () => true);
       }
       return Future.delayed(const Duration(seconds: 5), () {
         onPing();

@@ -201,6 +201,7 @@ class _PairingState extends State<Pairing> {
 
   void _pair() async {
     String serverAddress = addressInputController.text;
+    serverAddress = comm.ensureNoTrailingSlash(serverAddress);
     ServerSettings ss;
     try {
       ss =

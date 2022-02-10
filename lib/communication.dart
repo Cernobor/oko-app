@@ -1,15 +1,14 @@
+import 'dart:async';
 import 'dart:collection';
 import 'dart:convert';
 import 'dart:io';
+import 'dart:developer' as developer;
 
 import 'package:flutter/cupertino.dart';
 import 'package:http/http.dart' as http;
 import 'package:latlong2/latlong.dart';
 import 'package:oko/data.dart';
 import 'package:oko/i18n.dart';
-import 'package:oko/urls/urls.dart';
-
-UriCreator uriCreator = UriCreator();
 
 abstract class CommException implements Exception {
   String getMessage(BuildContext context);
@@ -93,18 +92,34 @@ class UnexpectedStatusCode extends DetailedCommException {
   }
 }
 
+String ensureNoTrailingSlash(String baseAddr) =>
+    baseAddr.endsWith('/') ? baseAddr.substring(0, baseAddr.length - 1) : baseAddr;
+
+String ensureTrailingSlash(String baseAddr) =>
+    baseAddr.endsWith('/') ? baseAddr : (baseAddr + '/');
+
+Uri _handshakeUri(String baseAddr) =>
+    Uri.parse(ensureTrailingSlash(baseAddr)).resolve('handshake');
+
+Uri _pingUri(String baseAddr) =>
+    Uri.parse(ensureTrailingSlash(baseAddr)).resolve('ping');
+
+Uri _dataUri(String baseAddr) =>
+    Uri.parse(ensureTrailingSlash(baseAddr)).resolve('data');
+
 Future<ServerSettings> handshake(
     String serverAddress, String name, bool exists) async {
-  Uri uri = uriCreator.handshakeUri(serverAddress);
-  http.Response res;
-  res = await http.post(uri,
+  Uri uri = _handshakeUri(serverAddress);
+  developer.log('Handshaking: $uri');
+  var res = await http.post(uri,
       headers: {'Content-Type': 'application/json'},
       body: jsonEncode({'name': name, 'exists': exists}));
+  var body = res.body;
   switch (res.statusCode) {
     case HttpStatus.ok:
       break;
     case HttpStatus.badRequest:
-      throw BadRequest(res.body);
+      throw BadRequest(body);
     case HttpStatus.conflict:
       throw UserAlreadyExists(name);
     case HttpStatus.notFound:
@@ -112,9 +127,9 @@ Future<ServerSettings> handshake(
     case HttpStatus.forbidden:
       throw UsernameForbidden(name);
     default:
-      throw InternalServerError(res.body);
+      throw InternalServerError(body);
   }
-  Map<String, dynamic> data = jsonDecode(res.body);
+  Map<String, dynamic> data = jsonDecode(body);
   return ServerSettings(
     serverAddress: serverAddress,
     name: data['name'],
@@ -129,17 +144,13 @@ Future<ServerSettings> handshake(
 }
 
 Future<bool> ping(String serverAddress) async {
-  var uri = uriCreator.pingUri(serverAddress);
-  http.Response res;
+  var uri = _pingUri(serverAddress);
   try {
-    res = await http.get(uri);
+    var res = await http.get(uri);
+    return res.statusCode == HttpStatus.noContent;
   } catch (_) {
     return false;
   }
-  if (res.statusCode == HttpStatus.noContent) {
-    return true;
-  }
-  return false;
 }
 
 class MapData {
@@ -149,6 +160,7 @@ class MapData {
   MapData(this.contentLength, this.dataStream);
 }
 
+/*
 Future<MapData> downloadMap(String serverAddress, String tilePackPath) async {
   Uri uri = Uri.http(serverAddress, tilePackPath);
   http.Request req = http.Request('GET', uri);
@@ -159,6 +171,7 @@ Future<MapData> downloadMap(String serverAddress, String tilePackPath) async {
   }
   return MapData(res.contentLength, res.stream);
 }
+*/
 
 class Data {
   Map<int, String> users;
@@ -168,13 +181,13 @@ class Data {
 }
 
 Future<Data> downloadData(String serverAddress) async {
-  Uri uri = uriCreator.data(serverAddress);
-  http.Response res;
-  res = await http.get(uri);
+  Uri uri = _dataUri(serverAddress);
+  var res = await http.get(uri);
+  var body = res.body;
   if (res.statusCode != HttpStatus.ok) {
-    throw UnexpectedStatusCode(res.statusCode, res.body);
+    throw UnexpectedStatusCode(res.statusCode, body);
   }
-  Map<String, dynamic> data = jsonDecode(res.body);
+  Map<String, dynamic> data = jsonDecode(body);
   Map<int, String> users = HashMap.fromEntries((data['users'] as List)
       .cast<Map<String, dynamic>>()
       .map((m) => MapEntry<int, String>(m['id'], m['name'])));
@@ -187,22 +200,24 @@ Future<Data> downloadData(String serverAddress) async {
 
 Future<void> uploadData(String serverAddress, List<Feature> created,
     List<Feature> edited, List<Feature> deleted) async {
-  var uri = uriCreator.data(serverAddress);
+  var uri = _dataUri(serverAddress);
   Map<String, dynamic> data = {
     'create': created.map((Feature f) => f.toJson()).toList(growable: false),
     'update': edited.map((Feature f) => f.toJson()).toList(growable: false),
     'delete': deleted.map((Feature f) => f.id).toList(growable: false)
   };
-  http.Response res;
-  res = await http.post(uri,
+
+  var res = await http.post(uri,
       headers: {'Content-Type': 'application/json'}, body: jsonEncode(data));
+  var body = res.body;
+
   switch (res.statusCode) {
     case HttpStatus.badRequest:
-      throw BadRequest(res.body);
+      throw BadRequest(body);
     case HttpStatus.noContent:
       return;
     default:
-      throw InternalServerError(res.body);
+      throw InternalServerError(body);
   }
 }
 /*
