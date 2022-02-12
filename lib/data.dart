@@ -34,6 +34,7 @@ class ServerSettings {
 }
 
 class MapState {
+  final bool render;
   final bool usingOffline;
   final LatLng center;
   final int zoom;
@@ -41,17 +42,19 @@ class MapState {
   final LatLng? swBound;
   final int? zoomMax;
 
-  MapState(this.usingOffline, this.center, this.zoom, this.neBound,
+  MapState(this.render, this.usingOffline, this.center, this.zoom, this.neBound,
       this.swBound, this.zoomMax);
 
   MapState from(
-      {bool? usingOffline,
+      {bool? render,
+      bool? usingOffline,
       LatLng? center,
       int? zoom,
       LatLng? neBound,
       LatLng? swBound,
       int? zoomMax}) {
     return MapState(
+        render ?? this.render,
         usingOffline ?? this.usingOffline,
         center ?? this.center,
         zoom ?? this.zoom,
@@ -64,7 +67,7 @@ class MapState {
 
   @override
   String toString() {
-    return 'MapState{center: $center, zoom: $zoom, neBound: $neBound, swBound: $swBound, zoomMax: $zoomMax}';
+    return 'MapState{render: $render, usingOffline: $usingOffline, center: $center, zoom: $zoom, neBound: $neBound, swBound: $swBound, zoomMax: $zoomMax}';
   }
 }
 

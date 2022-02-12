@@ -67,6 +67,7 @@ class Storage {
         'default_center_lat real not null,'
         'default_center_lng real not null)');
     await db.execute('CREATE TABLE map_state ('
+        'render integer not null,'
         'using_offline integer not null,'
         'lat real not null,'
         'lng real not null,'
@@ -191,6 +192,7 @@ class Storage {
 
   Future<void> setMapState(MapState ms) async {
     if (_mapState != null &&
+        _mapState!.render == ms.render &&
         _mapState!.center == ms.center &&
         _mapState!.zoom == ms.zoom) {
       return;
@@ -199,6 +201,7 @@ class Storage {
     await _db.transaction((Transaction tx) async {
       await tx.execute('delete from map_state');
       await tx.insert('map_state', {
+        'render': ms.render ? 1 : 0,
         'using_offline': ms.usingOffline ? 1 : 0,
         'lat': ms.center.latitude,
         'lng': ms.center.longitude,
@@ -215,6 +218,7 @@ class Storage {
   Future<void> _loadMapState() async {
     var rows = await _db.query('map_state',
         columns: [
+          'render',
           'using_offline',
           'lat',
           'lng',
@@ -232,6 +236,7 @@ class Storage {
     }
     var row = rows[0];
     _mapState = MapState(
+      row['render'] != 0,
       row['using_offline'] != 0,
       LatLng(row['lat']! as double, row['lng']! as double),
       row['zoom']! as int,
@@ -324,7 +329,7 @@ class Storage {
       for (var row in rows) {
         _pointListSortKey = SortExt.parse(row['sort_key'] as String);
         _pointListSortDir = row['sort_direction'] as int;
-        _pointListAttributeFilterExact = row['attribute_filter_exact'] == 1;
+        _pointListAttributeFilterExact = row['attribute_filter_exact'] != 0;
       }
 
       rows = await tx

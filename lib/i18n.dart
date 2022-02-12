@@ -302,6 +302,10 @@ class I18N {
     'cs': 'Zavřít',
     'en': 'Close'
   }[locale.languageCode]!;
+  String get renderBaseMap => {
+    'cs': 'Vykreslovat podkladovou mapu',
+    'en': 'Draw base map'
+  }[locale.languageCode]!;
 }
 
 class I18NDelegate extends LocalizationsDelegate<I18N> {

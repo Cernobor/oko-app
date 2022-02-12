@@ -1,3 +1,8 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_map/plugin_api.dart';
+
+const Color mapBackgroundColor = Color.fromRGBO(239, 239, 239, 1);
+
 Map<String, dynamic> mapThemeData() {
   return {
     'version': 8,
@@ -29,7 +34,10 @@ Map<String, dynamic> mapThemeData() {
       {
         'id': 'background',
         'type': 'background',
-        'paint': {'background-color': 'rgb(239,239,239)'}
+        'paint': {
+          'background-color':
+              'rgb(${mapBackgroundColor.red},${mapBackgroundColor.green},${mapBackgroundColor.blue})'
+        }
       },
       {
         'id': 'natural_earth',
@@ -2326,4 +2334,35 @@ Map<String, dynamic> mapThemeData() {
     ],
     'id': 'osm-liberty'
   };
+}
+
+class SolidColorLayerOptions extends TileLayerOptions {
+  final Color color;
+
+  SolidColorLayerOptions({required this.color});
+}
+
+class SolidColorLayerWidget extends StatelessWidget {
+  final SolidColorLayerOptions options;
+
+  const SolidColorLayerWidget({Key? key, required this.options})
+      : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return SolidColorLayer(
+      options: options,
+    );
+  }
+}
+
+class SolidColorLayer extends StatelessWidget {
+  final SolidColorLayerOptions options;
+
+  SolidColorLayer({required this.options}) : super(key: options.key);
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(color: options.color);
+  }
 }

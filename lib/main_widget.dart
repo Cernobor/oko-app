@@ -237,6 +237,12 @@ class MainWidgetState extends State<MainWidget> {
                       )),
             onTap: onPing,
           ),
+          // map switch
+          SwitchListTile(
+              title: Text(I18N.of(context).renderBaseMap),
+              value: storage?.mapState?.render ?? false,
+              onChanged: storage?.serverSettings == null ? null : onRenderMap,
+              secondary: const Icon(Icons.map)),
           // offline map switch
           SwitchListTile(
               title: Text(I18N.of(context).useOfflineMap),
@@ -398,20 +404,25 @@ class MainWidgetState extends State<MainWidget> {
       mapController: mapController,
       children: [
         if (storage?.serverSettings != null)
-          VectorTileLayerWidget(
-              options: VectorTileLayerOptions(
-                  tileProviders: TileProviders({
-                    'openmaptiles': MemoryCacheVectorTileProvider(
-                        delegate: NetworkVectorTileProvider(
-                            urlTemplate:
-                                '${comm.ensureNoTrailingSlash(storage!.serverSettings!.serverAddress)}${storage!.serverSettings!.tilePathTemplate}',
-                            maximumZoom: 14),
-                        maxSizeBytes: 1024 * 1024 * 5)
-                  }),
-                  theme: ThemeReader().read(mapThemeData()),
-                  backgroundTheme: ThemeReader().readAsBackground(
-                      mapThemeData(),
-                      layerPredicate: defaultBackgroundLayerPredicate)))
+          if (storage?.mapState?.render ?? false)
+            VectorTileLayerWidget(
+                options: VectorTileLayerOptions(
+                    tileProviders: TileProviders({
+                      'openmaptiles': MemoryCacheVectorTileProvider(
+                          delegate: NetworkVectorTileProvider(
+                              urlTemplate:
+                                  '${comm.ensureNoTrailingSlash(storage!.serverSettings!.serverAddress)}${storage!.serverSettings!.tilePathTemplate}',
+                              maximumZoom: 14),
+                          maxSizeBytes: 1024 * 1024 * 5)
+                    }),
+                    theme: ThemeReader().read(mapThemeData()),
+                    backgroundTheme: ThemeReader().readAsBackground(
+                        mapThemeData(),
+                        layerPredicate: defaultBackgroundLayerPredicate)))
+          else
+            SolidColorLayerWidget(options: SolidColorLayerOptions(
+              color: mapBackgroundColor
+            ))
       ],
       layers: [
         // limits
@@ -988,6 +999,7 @@ class MainWidgetState extends State<MainWidget> {
       developer.log(settings.toString());
       await storage?.setServerSettings(settings);
       await storage?.setMapState(data.MapState(
+          true,
           false,
           storage!.serverSettings!.defaultCenter,
           storage!.serverSettings!.minZoom,
@@ -1032,6 +1044,14 @@ class MainWidgetState extends State<MainWidget> {
         return true;
       });
     });
+  }
+
+  Future<void> onRenderMap(bool render) async {
+    developer.log('onRenderMap: $render');
+    if (storage?.mapState != null) {
+      await storage!.setMapState(storage!.mapState!.from(render: render));
+    }
+    setState(() {});
   }
 
   void onUseOffline(bool use) async {
@@ -1156,7 +1176,8 @@ class MainWidgetState extends State<MainWidget> {
           utils.NotificationLevel.error);
       return;
     }
-    bool usersChanged = !setEquals(data.users.keys.toSet(), storage!.users.keys.toSet());
+    bool usersChanged =
+        !setEquals(data.users.keys.toSet(), storage!.users.keys.toSet());
     await storage!.setUsers(data.users);
     await storage!.setFeatures(data.features);
     if (usersChanged) {
