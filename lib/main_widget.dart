@@ -457,18 +457,20 @@ class MainWidgetState extends State<MainWidget> {
                       ),
                     );
                   }
-                  return Icon(
-                    Icons.my_location,
-                    color: locationSubscription == null
-                        ? Theme.of(context).disabledColor
-                        : Theme.of(context).primaryColorLight,
-                    size: 40,
-                  );
+                  return Transform.rotate(
+                      angle: -mapController.rotation * math.pi / 180.0,
+                      child: Icon(
+                        Icons.my_location,
+                        color: locationSubscription == null
+                            ? Theme.of(context).disabledColor
+                            : Theme.of(context).primaryColorLight,
+                        size: 40,
+                      ));
                 })
           ]),
         // extra geometry
         GroupLayerOptions(group: createGeometry()),
-        // POIs
+        // Points
         MarkerLayerOptions(markers: createMarkers()),
       ],
     );
@@ -493,11 +495,14 @@ class MainWidgetState extends State<MainWidget> {
             behavior: HitTestBehavior.opaque,
             onTap: () => onPointTap(point),
             onLongPress: () => onPointLongPress(point),
-            child: Icon(
-              point.category.iconData,
-              size: baseSize * (infoTarget.isSamePoint(point) ? 1.5 : 1),
-              color: color,
-            )),
+            child: Transform.rotate(
+                angle: -mapController.rotation * math.pi / 180.0,
+                alignment: Alignment(-2 * point.category.xAlign + 1, -2 * point.category.yAlign + 1),
+                child: Icon(
+                  point.category.iconData,
+                  size: baseSize * (infoTarget.isSamePoint(point) ? 1.5 : 1),
+                  color: color,
+                ))),
       );
     }).toList();
   }
