@@ -66,7 +66,7 @@ Color getPoiColor(Point point, int? myId) {
     if (point.ownerId == myId) {
       if (point.deleted) {
         return myGlobalDeletedPoiColor;
-      } else if (point.isEdited()) {
+      } else if (point.isEdited) {
         return myGlobalEditedPoiColor;
       } else {
         return myGlobalPoiColor;
@@ -74,7 +74,7 @@ Color getPoiColor(Point point, int? myId) {
     } else {
       if (point.deleted) {
         return otherGlobalDeletedPoiColor;
-      } else if (point.isEdited()) {
+      } else if (point.isEdited) {
         return otherGlobalEditedPoiColor;
       } else {
         return otherGlobalPoiColor;

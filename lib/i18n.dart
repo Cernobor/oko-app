@@ -209,6 +209,10 @@ class I18N {
         'cs': 'Filtrovat podle vlastností',
         'en': 'Filter by attributes'
       }[locale.languageCode]!;
+  String get filterByEditState => {
+    'cs': 'Filtrovat podle stavu úprav',
+    'en': 'Filter by edit state'
+  }[locale.languageCode]!;
   String get downloadConfirm => {
         'cs': 'Opravdu stáhnout?',
         'en': 'Really download?'
@@ -305,6 +309,22 @@ class I18N {
   String get renderBaseMap => {
     'cs': 'Vykreslovat podkladovou mapu',
     'en': 'Draw base map'
+  }[locale.languageCode]!;
+  String get newState => {
+    'cs': 'Nový',
+    'en': 'New'
+  }[locale.languageCode]!;
+  String get editedState => {
+    'cs': 'Upravený',
+    'en': 'Edited'
+  }[locale.languageCode]!;
+  String get pristineState => {
+    'cs': 'Nedotčený',
+    'en': 'Pristine'
+  }[locale.languageCode]!;
+  String get anyState => {
+    'cs': 'Jakýkoliv',
+    'en': 'Any state'
   }[locale.languageCode]!;
 }
 

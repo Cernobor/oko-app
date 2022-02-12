@@ -81,9 +81,10 @@ class Storage {
     await db.execute('CREATE TABLE point_list_settings ('
         'sort_key text not null,'
         'sort_direction integer not null,'
-        'attribute_filter_exact integer not null)');
+        'attribute_filter_exact integer not null,'
+        'edit_state_filter text not null)');
     await db.insert('point_list_settings',
-        {'sort_key': 'name', 'sort_direction': 1, 'attribute_filter_exact': 0});
+        {'sort_key': 'name', 'sort_direction': 1, 'attribute_filter_exact': 0, 'edit_state_filter': EditState.anyState.name});
     await db.execute('CREATE TABLE point_list_checked_categories ('
         'category text not null)');
     var batch = db.batch();
@@ -256,12 +257,14 @@ class Storage {
   late Sort _pointListSortKey;
   late int _pointListSortDir;
   late bool _pointListAttributeFilterExact;
+  late EditState _pointListEditStateFilter;
   final Set<int> _pointListCheckedUsers = {};
   final Set<PointCategory> _pointListCheckedCategories = {};
   final Set<PointAttribute> _pointListCheckedAttributes = {};
   Sort get pointListSortKey => _pointListSortKey;
   int get pointListSortDir => _pointListSortDir;
   bool get pointListAttributeFilterExact => _pointListAttributeFilterExact;
+  EditState get pointListEditStateFilter => _pointListEditStateFilter;
   UnmodifiableSetView<int> get pointListCheckedUsers =>
       UnmodifiableSetView(_pointListCheckedUsers);
   UnmodifiableSetView<PointCategory> get pointListCheckedCategories =>
@@ -282,6 +285,11 @@ class Storage {
   Future<void> setPointListAttributeFilterExact(bool exact) async {
     _pointListAttributeFilterExact = exact;
     await _db.update('point_list_settings', {'attribute_filter_exact': exact ? 1 : 0});
+  }
+
+  Future<void> setPointListEditStateFilter(EditState editState) async {
+    _pointListEditStateFilter = editState;
+    await _db.update('point_list_settings', {'edit_state_filter': editState.name});
   }
 
   Future<void> setPointListCheckedUsers(Iterable<int> userIds) async {
@@ -325,11 +333,12 @@ class Storage {
   Future<void> _loadPointListSettings([Transaction? txn]) async {
     Future<void> f(Transaction tx) async {
       var rows =
-          await tx.query('point_list_settings', columns: ['sort_key', 'sort_direction', 'attribute_filter_exact'], limit: 1);
+          await tx.query('point_list_settings', columns: ['sort_key', 'sort_direction', 'attribute_filter_exact', 'edit_state_filter'], limit: 1);
       for (var row in rows) {
         _pointListSortKey = SortExt.parse(row['sort_key'] as String);
         _pointListSortDir = row['sort_direction'] as int;
         _pointListAttributeFilterExact = row['attribute_filter_exact'] != 0;
+        _pointListEditStateFilter = parseEditState(row['edit_state_filter'] as String);
       }
 
       rows = await tx

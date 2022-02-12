@@ -198,6 +198,17 @@ class PointAttribute implements Comparable {
   Alignment badgeAlignment() => Alignment(xAlign, yAlign);
 }
 
+enum EditState { anyState, pristineState, newState, editedState }
+
+EditState parseEditState(String str) {
+  return {
+    EditState.anyState.name: EditState.anyState,
+    EditState.pristineState.name: EditState.pristineState,
+    EditState.newState.name: EditState.newState,
+    EditState.editedState.name: EditState.editedState
+  }[str]!;
+}
+
 abstract class Feature {
   int id;
   int ownerId;
@@ -264,11 +275,10 @@ abstract class Feature {
   bool isLineString();
   LineString asLineString();
 
-  bool isEdited() {
-    return ownerId != origOwnerId ||
-        name != origName ||
-        description != origDescription;
-  }
+  bool get isEdited =>
+      ownerId != origOwnerId ||
+      name != origName ||
+      description != origDescription;
 
   void revert() {
     ownerId = origOwnerId;
@@ -386,12 +396,11 @@ class Point extends Feature {
   }
 
   @override
-  bool isEdited() {
-    return super.isEdited() ||
-        coords != origCoords ||
-        category != origCategory ||
-        !setEquals(attributes, origAttributes);
-  }
+  bool get isEdited =>
+      super.isEdited ||
+      coords != origCoords ||
+      category != origCategory ||
+      !setEquals(attributes, origAttributes);
 
   @override
   void revert() {
@@ -527,10 +536,8 @@ class LineString extends Feature {
   LineString asLineString() => this;
 
   @override
-  bool isEdited() {
-    return super.isEdited() ||
-        const IterableEquality().equals(coords, origCoords);
-  }
+  bool get isEdited =>
+      super.isEdited || const IterableEquality().equals(coords, origCoords);
 
   @override
   void revert() {

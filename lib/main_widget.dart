@@ -518,6 +518,22 @@ class MainWidgetState extends State<MainWidget> {
                           baseSize * (infoTarget.isSamePoint(point) ? 1.5 : 1),
                       color: color,
                     ),
+                    if (point.isEdited)
+                      Align(
+                        alignment: const Alignment(1, -1),
+                        child: Icon(Icons.edit,
+                            size: badgeSize *
+                                (infoTarget.isSamePoint(point) ? 1.5 : 1),
+                            color: Theme.of(context).colorScheme.secondary),
+                      ),
+                    if (point.isLocal)
+                      Align(
+                        alignment: const Alignment(1, -1),
+                        child: Icon(Icons.star,
+                            size: badgeSize *
+                                (infoTarget.isSamePoint(point) ? 1.5 : 1),
+                            color: Theme.of(context).colorScheme.secondary),
+                      ),
                     for (var attr in point.attributes)
                       Align(
                         alignment: Alignment(attr.xAlign, attr.yAlign),
@@ -672,7 +688,7 @@ class MainWidgetState extends State<MainWidget> {
                                 tooltip: I18N.of(context).edit,
                                 onPressed: () => onEditPoint(infoTarget.point)),
                           if (infoTarget.point.ownerId != 0 &&
-                              infoTarget.point.isEdited())
+                              infoTarget.point.isEdited)
                             IconButton(
                                 icon: const Icon(Icons.restore),
                                 tooltip: I18N.of(context).revert,
@@ -1199,7 +1215,7 @@ class MainWidgetState extends State<MainWidget> {
         .where((data.Feature f) => f.isLocal)
         .toList(growable: false);
     var edited = storage!.features
-        .where((data.Feature f) => f.isEdited())
+        .where((data.Feature f) => f.isEdited)
         .toList(growable: false);
     var deleted = storage!.features
         .where((data.Feature f) => f.deleted)

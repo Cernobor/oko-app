@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:oko/data.dart';
 import 'package:oko/dialogs/multi_checker.dart';
+import 'package:oko/dialogs/single_chooser.dart';
 import 'package:oko/i18n.dart';
 import 'package:oko/storage.dart';
 import 'package:oko/utils.dart';
@@ -41,6 +42,7 @@ class _PointListState extends State<PointList> {
   Set<PointCategory> checkedCategories = <PointCategory>{};
   Set<PointAttribute> checkedAttributes = <PointAttribute>{};
   bool exact = false;
+  EditState editState = EditState.anyState;
   Sort sort = Sort.name;
   int asc = 1;
 
@@ -58,6 +60,7 @@ class _PointListState extends State<PointList> {
           asc = storage.pointListSortDir;
           sort = storage.pointListSortKey;
           exact = storage.pointListAttributeFilterExact;
+          editState = storage.pointListEditStateFilter;
           checkedCategories.clear();
           checkedCategories.addAll(storage.pointListCheckedCategories);
           checkedUsers.clear();
@@ -74,6 +77,8 @@ class _PointListState extends State<PointList> {
 
   @override
   Widget build(BuildContext context) {
+    const double filterButtonIconSize = 35;
+    const badgeSize = 13.7;
     return GestureDetector(
       onTap: () => FocusManager.instance.primaryFocus?.unfocus(),
       child: Scaffold(
@@ -103,7 +108,7 @@ class _PointListState extends State<PointList> {
                       Expanded(
                           flex: 0,
                           child: IconButton(
-                            iconSize: 40,
+                            iconSize: filterButtonIconSize,
                             tooltip: I18N.of(context).filterByOwner,
                             icon: Icon(
                               Icons.people,
@@ -116,7 +121,7 @@ class _PointListState extends State<PointList> {
                       Expanded(
                           flex: 0,
                           child: IconButton(
-                            iconSize: 40,
+                            iconSize: filterButtonIconSize,
                             tooltip: I18N.of(context).filterByCategory,
                             icon: Icon(
                               Icons.category,
@@ -130,7 +135,7 @@ class _PointListState extends State<PointList> {
                       Expanded(
                           flex: 0,
                           child: IconButton(
-                            iconSize: 40,
+                            iconSize: filterButtonIconSize,
                             tooltip: I18N.of(context).filterByAttributes,
                             icon: Icon(
                               Icons.edit_attributes,
@@ -139,6 +144,19 @@ class _PointListState extends State<PointList> {
                                   : null,
                             ),
                             onPressed: onAttributesButtonPressed,
+                          )),
+                      Expanded(
+                          flex: 0,
+                          child: IconButton(
+                            iconSize: filterButtonIconSize,
+                            tooltip: I18N.of(context).filterByEditState,
+                            icon: Icon(
+                              Icons.edit,
+                              color: editState != EditState.anyState
+                                  ? Theme.of(context).colorScheme.secondary
+                                  : null,
+                            ),
+                            onPressed: onEditStateButtonPressed,
                           ))
                     ],
                   ),
@@ -187,6 +205,14 @@ class _PointListState extends State<PointList> {
                         .where((point) =>
                             checkedUsers.contains(point.ownerId) &&
                             checkedCategories.contains(point.category) &&
+                            ((editState == EditState.newState &&
+                                    point.isLocal) ||
+                                (editState == EditState.editedState &&
+                                    point.isEdited) ||
+                                (editState == EditState.pristineState &&
+                                    !point.isEdited &&
+                                    !point.isLocal) ||
+                                (editState == EditState.anyState)) &&
                             (exact
                                 ? setEquals(point.attributes, checkedAttributes)
                                 : (point.attributes.any((attr) =>
@@ -203,6 +229,24 @@ class _PointListState extends State<PointList> {
                                         color: getPoiColor(point, widget.myId),
                                         size: 40,
                                       ),
+                                      if (point.isEdited)
+                                        Align(
+                                          alignment: const Alignment(1, -1),
+                                          child: Icon(Icons.edit,
+                                              size: badgeSize,
+                                              color: Theme.of(context)
+                                                  .colorScheme
+                                                  .secondary),
+                                        ),
+                                      if (point.isLocal)
+                                        Align(
+                                          alignment: const Alignment(1, -1),
+                                          child: Icon(Icons.star,
+                                              size: badgeSize,
+                                              color: Theme.of(context)
+                                                  .colorScheme
+                                                  .secondary),
+                                        ),
                                       for (var attr in point.attributes)
                                         Align(
                                             alignment: Alignment(
@@ -210,7 +254,7 @@ class _PointListState extends State<PointList> {
                                             child: Icon(
                                               attr.iconData,
                                               color: attr.color,
-                                              size: 13.7,
+                                              size: badgeSize,
                                             ))
                                     ],
                                   )),
@@ -234,7 +278,6 @@ class _PointListState extends State<PointList> {
         ),
       ),
     );
-    ;
   }
 
   Future<void> onUsersButtonPressed() async {
@@ -285,10 +328,9 @@ class _PointListState extends State<PointList> {
       context: context,
       builder: (context) => MultiChecker<PointAttribute>(
         switcher: MultiCheckerSwitcher(
-          value: exact,
-          offLabel: I18N.of(context).intersection,
-          onLabel: I18N.of(context).exact
-        ),
+            value: exact,
+            offLabel: I18N.of(context).intersection,
+            onLabel: I18N.of(context).exact),
         items: PointAttribute.attributes,
         checkedItems: checkedAttributes,
         titleBuilder: (PointAttribute attr, bool _) =>
@@ -305,6 +347,37 @@ class _PointListState extends State<PointList> {
       exact = result.switcher;
       checkedAttributes.clear();
       checkedAttributes.addAll(storage.pointListCheckedAttributes);
+    });
+  }
+
+  Future<void> onEditStateButtonPressed() async {
+    var titles = {
+      EditState.newState: I18N.of(context).newState,
+      EditState.editedState: I18N.of(context).editedState,
+      EditState.pristineState: I18N.of(context).pristineState,
+      EditState.anyState: I18N.of(context).anyState,
+    };
+    var secondaries = const {
+      EditState.newState: Icon(Icons.star),
+      EditState.editedState: Icon(Icons.edit),
+      EditState.pristineState: SizedBox(),
+      EditState.anyState: SizedBox()
+    };
+    EditState? result = await showDialog<EditState>(
+      context: context,
+      builder: (context) => SingleChooser<EditState>(
+        value: editState,
+        items: EditState.values,
+        titleBuilder: (item, _) => Text(titles[item]!),
+        secondaryBuilder: (item, _) => secondaries[item],
+      ),
+    );
+    if (result == null) {
+      return;
+    }
+    await storage.setPointListEditStateFilter(result);
+    setState(() {
+      editState = result;
     });
   }
 
