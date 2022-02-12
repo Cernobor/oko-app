@@ -17,14 +17,28 @@ Future<String> get _localPath async {
 }
 
 class Storage {
-  static const String storageDbFile = 'storage.db';
+  static const String _storageDbFile = 'storage.db';
   static Storage? _instance;
 
-  static Future<Storage> getInstance() async {
+  static Future<String> _storageFilePath() async {
+    String databasesPath = await getDatabasesPath();
+    return join(databasesPath, _storageDbFile);
+  }
+
+  static Future<Storage> getInstance({bool reset = false}) async {
+    String path = await _storageFilePath();
+
+    if (reset) {
+      if (_instance != null) {
+        await _instance!._db.close();
+        var dbFile = File(path);
+        await dbFile.delete();
+        _instance = null;
+      }
+    }
+
     if (_instance == null) {
-      String databasesPath = await getDatabasesPath();
-      String path = join(databasesPath, storageDbFile);
-      await Directory(databasesPath).create(recursive: true);
+      await Directory(dirname(path)).create(recursive: true);
       Database db = await openDatabase(path,
           version: 1, onConfigure: _onConfigure, onCreate: _onCreate);
       Storage s = Storage._(db);

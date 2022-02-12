@@ -185,8 +185,10 @@ class I18N {
             PointCategory.unknown.name: {'cs': '???', 'en': '???'}
           }[category.name]![locale.languageCode]!);
   String get edit => {'cs': 'Upravit', 'en': 'Edit'}[locale.languageCode]!;
-  String get editPoint => {'cs': 'Upravit bod', 'en': 'Edit point'}[locale.languageCode]!;
-  String get newPoint => {'cs': 'Nový bod', 'en': 'New point'}[locale.languageCode]!;
+  String get editPoint =>
+      {'cs': 'Upravit bod', 'en': 'Edit point'}[locale.languageCode]!;
+  String get newPoint =>
+      {'cs': 'Nový bod', 'en': 'New point'}[locale.languageCode]!;
   String get revert => {'cs': 'Vrátit', 'en': 'Revert'}[locale.languageCode]!;
   String get position =>
       {'cs': 'Pozice', 'en': 'Position'}[locale.languageCode]!;
@@ -258,14 +260,20 @@ class I18N {
         'en': 'Unexpected status code: %d'
       }[locale.languageCode]!,
       [code]);
-  String get allNothing => {
-    'cs': 'Vše/nic',
-    'en': 'All/nothing'
-  }[locale.languageCode]!;
-  String get invert => {
-    'cs': 'Invertovat',
-    'en': 'Invert'
-  }[locale.languageCode]!;
+  String get allNothing =>
+      {'cs': 'Vše/nic', 'en': 'All/nothing'}[locale.languageCode]!;
+  String get invert =>
+      {'cs': 'Invertovat', 'en': 'Invert'}[locale.languageCode]!;
+  String get reset =>
+      {'cs': 'Resetovat aplikaci', 'en': 'Reset app'}[locale.languageCode]!;
+  String get resetInfo => {
+        'cs':
+            'Zruší párování a smaže veškerá data. NEVRATNÁ OPERACE. Aktivujete dlouhým stiskem.',
+        'en':
+            'Breaks pairing and deletes all data. IRREVERSIBLE OPERATION. Activate by long press.'
+      }[locale.languageCode]!;
+  String get resetDone =>
+      {'cs': 'Vyresetováno.', 'en': 'Reset done.'}[locale.languageCode]!;
 }
 
 class I18NDelegate extends LocalizationsDelegate<I18N> {

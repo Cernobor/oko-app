@@ -10,6 +10,7 @@ import 'package:location/location.dart';
 import 'package:oko/map.dart';
 import 'package:positioned_tap_detector_2/positioned_tap_detector_2.dart';
 import 'package:vector_tile_renderer/vector_tile_renderer.dart' hide Theme;
+import 'package:rxdart/rxdart.dart';
 
 import 'package:oko/storage.dart';
 import 'package:oko/subpages/edit_point.dart';
@@ -80,6 +81,9 @@ class MainWidgetState extends State<MainWidget> {
   // location and map
   final Location location = Location();
   final MapControllerImpl mapController = MapControllerImpl();
+  late final StreamSubscription<MapEvent> mapSubscription;
+  late final StreamController<MapEvent> mapStateStorageController =
+      StreamController<MapEvent>(sync: true);
 
   // handling flags and values
   bool mapReady = false;
@@ -119,6 +123,16 @@ class MainWidgetState extends State<MainWidget> {
     if (storage?.serverSettings?.serverAddress != null) {
       startPinging();
     }
+    mapSubscription = mapController.mapEventStream
+        .where((evt) =>
+            evt is MapEventWithMove ||
+            evt is MapEventRotate ||
+            evt is MapEventMoveEnd ||
+            evt is MapEventRotateEnd)
+        .listen(onMapEvent);
+    mapStateStorageController.stream
+        .debounceTime(const Duration(milliseconds: 200))
+        .listen(onMapEventStorage);
     return true;
   }
 
@@ -300,6 +314,12 @@ class MainWidgetState extends State<MainWidget> {
             trailing: const Icon(Icons.arrow_forward),
             onTap: onUserListTap,
             enabled: storage?.serverSettings != null,
+          ),
+          ListTile(
+            title: Text(I18N.of(context).reset),
+            subtitle: Text(I18N.of(context).resetInfo),
+            leading: const Icon(Icons.warning),
+            onLongPress: onReset,
           )
         ],
       ),
@@ -363,7 +383,6 @@ class MainWidgetState extends State<MainWidget> {
               storage?.serverSettings?.minZoom.toDouble() ?? fallbackMinZoom,
           nePanBoundary: storage?.mapState?.neBound,
           swPanBoundary: storage?.mapState?.swBound,
-          onPositionChanged: onMapPositionChanged,
           onTap: onMapTap,
           enableMultiFingerGestureRace: true,
           pinchZoomThreshold: 0.2,
@@ -684,9 +703,12 @@ class MainWidgetState extends State<MainWidget> {
             heroTag: 'fab-reset-rotation',
             tooltip: I18N.of(context).resetRotation,
             elevation: 0,
-            child: const Icon(
-              Icons.explore,
-              size: 30,
+            child: Transform.rotate(
+              angle: mapReady ? mapController.rotation * math.pi / 180 : 0,
+              child: const Icon(
+                Icons.north,
+                size: 30,
+              ),
             ),
             backgroundColor: !mapReady || mapController.rotation == 0.0
                 ? Theme.of(context).disabledColor
@@ -878,15 +900,27 @@ class MainWidgetState extends State<MainWidget> {
     developer.log('zoom after: ${mapController.zoom}');
   }
 
-  void onMapPositionChanged(MapPosition position, bool hasGesture) {
-    if (storage?.mapState != null) {
-      storage!.setMapState(storage!.mapState!.from(
-          center: mapController.center, zoom: mapController.zoom.round()));
+  void onMapEvent(MapEvent evt) {
+    //developer.log('onMapEvent: $evt');
+    if (mapReady && evt.center != currentLocation) {
+      viewLockedToLocation = false;
     }
-    if (mapReady && mapController.center != currentLocation) {
-      setState(() {
-        viewLockedToLocation = false;
-      });
+    setState(() {});
+    if (evt is MapEventWithMove || evt is MapEventMoveEnd) {
+      mapStateStorageController.add(evt);
+    }
+  }
+
+  void onMapEventStorage(MapEvent evt) async {
+    //developer.log('onMapEventStorage: $evt');
+    if (storage?.mapState != null) {
+      if (evt is MapEventWithMove) {
+        await storage!.setMapState(storage!.mapState!
+            .from(center: evt.targetCenter, zoom: evt.targetZoom.round()));
+      } else {
+        await storage!.setMapState(storage!.mapState!
+            .from(center: evt.center, zoom: evt.zoom.round()));
+      }
     }
   }
 
@@ -1216,10 +1250,6 @@ class MainWidgetState extends State<MainWidget> {
       Navigator.of(context).pop();
     }
     Map<int, String>? users = Map.of(storage!.users);
-    if (storage!.serverSettings != null &&
-        !users.containsKey(storage!.serverSettings!.id)) {
-      users[storage!.serverSettings!.id] = storage!.serverSettings!.name;
-    }
     data.Point? selected = await Navigator.of(context).push(
         MaterialPageRoute<data.Point>(
             builder: (context) => PointList(
@@ -1244,10 +1274,6 @@ class MainWidgetState extends State<MainWidget> {
       Navigator.of(context).pop();
     }
     Map<int, String>? users = Map.of(storage!.users);
-    if (storage!.serverSettings != null &&
-        !users.containsKey(storage!.serverSettings!.id)) {
-      users[storage!.serverSettings!.id] = storage!.serverSettings!.name;
-    }
     showDialog(
         context: context,
         builder: (context) => SimpleDialog(
@@ -1363,6 +1389,19 @@ class MainWidgetState extends State<MainWidget> {
       infoTarget = Target(r!.asPoint());
     }
     setState(() {});
+  }
+
+  void onReset() async {
+    developer.log('Resetting app.');
+    if (storage == null) {
+      developer.log('No storage - nothing to reset.');
+      return;
+    }
+    storage = await Storage.getInstance(reset: true);
+    setState(() {});
+    Navigator.of(context).pop();
+    utils.notifySnackbar(
+        context, I18N.of(context).resetDone, utils.NotificationLevel.info);
   }
 
   Future<bool> pointDataConfirm(
