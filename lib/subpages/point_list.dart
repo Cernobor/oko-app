@@ -1,4 +1,5 @@
 import 'package:diacritic/diacritic.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:oko/data.dart';
 import 'package:oko/dialogs/multi_checker.dart';
@@ -16,9 +17,9 @@ String _sortToString(Sort sort, BuildContext context) {
 }
 
 bool _fulltext(Point point, String needle) {
-  String n = removeDiacritics(needle);
-  return removeDiacritics(point.name).contains(n) ||
-      removeDiacritics(point.description ?? '').contains(n);
+  String n = removeDiacritics(needle).toLowerCase();
+  return removeDiacritics(point.name).toLowerCase().contains(n) ||
+      removeDiacritics(point.description ?? '').toLowerCase().contains(n);
 }
 
 class PointList extends StatefulWidget {
@@ -38,6 +39,8 @@ class _PointListState extends State<PointList> {
   late final List<Point> points;
   Set<int> checkedUsers = <int>{};
   Set<PointCategory> checkedCategories = <PointCategory>{};
+  Set<PointAttribute> checkedAttributes = <PointAttribute>{};
+  bool exact = false;
   Sort sort = Sort.name;
   int asc = 1;
 
@@ -58,6 +61,8 @@ class _PointListState extends State<PointList> {
           checkedCategories.addAll(storage.pointListCheckedCategories);
           checkedUsers.clear();
           checkedUsers.addAll(storage.pointListCheckedUsers);
+          checkedAttributes.clear();
+          checkedAttributes.addAll(storage.pointListCheckedAttributes);
           doSort();
         }));
   }
@@ -68,127 +73,171 @@ class _PointListState extends State<PointList> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('List of points'),
-        primary: true,
-        backgroundColor: Theme.of(context).colorScheme.primary,
-        foregroundColor: Theme.of(context).colorScheme.onPrimary,
-        leading: BackButton(
-          onPressed: () => Navigator.of(context).pop(),
+    return GestureDetector(
+      onTap: () => FocusManager.instance.primaryFocus?.unfocus(),
+      child: Scaffold(
+        appBar: AppBar(
+          title: const Text('List of points'),
+          primary: true,
+          backgroundColor: Theme.of(context).colorScheme.primary,
+          foregroundColor: Theme.of(context).colorScheme.onPrimary,
+          leading: BackButton(
+            onPressed: () => Navigator.of(context).pop(),
+          ),
         ),
-      ),
-      body: Column(
-        mainAxisAlignment: MainAxisAlignment.start,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisSize: MainAxisSize.max,
-        verticalDirection: VerticalDirection.down,
-        children: [
-          Row(
-              mainAxisSize: MainAxisSize.max,
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Row(
-                  mainAxisSize: MainAxisSize.min,
-                  mainAxisAlignment: MainAxisAlignment.start,
-                  children: [
-                    Expanded(
-                        flex: 0,
-                        child: IconButton(
-                          icon: Container(
-                              padding:
-                                  const EdgeInsets.symmetric(horizontal: 10),
-                              child: Icon(
-                                Icons.people,
-                                size: 40,
-                                color: checkedUsers.length < widget.users.length
-                                    ? Theme.of(context).colorScheme.secondary
-                                    : null,
-                              )),
-                          onPressed: onUsersButtonPressed,
-                        )),
-                    Expanded(
-                        flex: 0,
-                        child: IconButton(
-                          icon: Container(
-                              padding:
-                                  const EdgeInsets.symmetric(horizontal: 10),
-                              child: Icon(
-                                Icons.category,
-                                size: 40,
-                                color: checkedCategories.length <
-                                        PointCategory.allCategories.length
-                                    ? Theme.of(context).colorScheme.secondary
-                                    : null,
-                              )),
-                          onPressed: onCategoryButtonPressed,
-                        ))
-                  ],
-                ),
-                Row(
+        body: Column(
+          mainAxisAlignment: MainAxisAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.max,
+          verticalDirection: VerticalDirection.down,
+          children: [
+            Row(
+                mainAxisSize: MainAxisSize.max,
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Row(
                     mainAxisSize: MainAxisSize.min,
-                    mainAxisAlignment: MainAxisAlignment.end,
+                    mainAxisAlignment: MainAxisAlignment.start,
                     children: [
                       Expanded(
                           flex: 0,
-                          child: DropdownButton<Sort>(
-                            items: Sort.values
-                                .map((sort) => DropdownMenuItem<Sort>(
-                                      value: sort,
-                                      child: Text(_sortToString(sort, context)),
-                                    ))
-                                .toList(growable: false),
-                            icon: const Icon(Icons.sort),
-                            value: sort,
-                            onChanged: onSort,
+                          child: IconButton(
+                            iconSize: 40,
+                            tooltip: I18N.of(context).filterByOwner,
+                            icon: Icon(
+                              Icons.people,
+                              color: checkedUsers.length < widget.users.length
+                                  ? Theme.of(context).colorScheme.secondary
+                                  : null,
+                            ),
+                            onPressed: onUsersButtonPressed,
                           )),
-                      IconButton(
-                        icon: Icon(asc > 0
-                            ? Icons.arrow_upward
-                            : Icons.arrow_downward),
-                        onPressed: onSortDir,
-                      )
-                    ])
-              ]),
-          Padding(
-              padding: const EdgeInsets.all(8),
-              child: TextField(
-                decoration: const InputDecoration(icon: Icon(Icons.search)),
-                controller: searchController,
-              )),
-          const Divider(),
-          Expanded(
-              child: ListView(
-                  children: points
-                      .where((point) => checkedUsers.contains(point.ownerId))
-                      .where(
-                          (point) => checkedCategories.contains(point.category))
-                      .where((point) => _fulltext(point, searchController.text))
-                      .map((Point point) => ListTile(
-                            leading: Icon(point.category.iconData,
-                                color: getPoiColor(point, widget.myId)),
-                            title: Text(point.name),
-                            subtitle: Text(
-                                [
-                                  if (point.description?.isNotEmpty ?? false)
-                                    point.description,
-                                  formatCoords(point.coords, false)
-                                ].join('\n'),
-                                maxLines: 2),
-                            dense: true,
-                            isThreeLine: point.description?.isNotEmpty ?? false,
-                            onTap: () {
-                              Navigator.of(context).pop(point);
-                            },
+                      Expanded(
+                          flex: 0,
+                          child: IconButton(
+                            iconSize: 40,
+                            tooltip: I18N.of(context).filterByCategory,
+                            icon: Icon(
+                              Icons.category,
+                              color: checkedCategories.length <
+                                      PointCategory.allCategories.length
+                                  ? Theme.of(context).colorScheme.secondary
+                                  : null,
+                            ),
+                            onPressed: onCategoryButtonPressed,
+                          )),
+                      Expanded(
+                          flex: 0,
+                          child: IconButton(
+                            iconSize: 40,
+                            tooltip: I18N.of(context).filterByAttributes,
+                            icon: Icon(
+                              Icons.edit_attributes,
+                              color: (exact || checkedAttributes.isNotEmpty)
+                                  ? Theme.of(context).colorScheme.secondary
+                                  : null,
+                            ),
+                            onPressed: onAttributesButtonPressed,
                           ))
-                      .toList(growable: false)))
-        ],
+                    ],
+                  ),
+                  Row(
+                      mainAxisSize: MainAxisSize.min,
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: [
+                        Expanded(
+                            flex: 0,
+                            child: DropdownButton<Sort>(
+                              items: Sort.values
+                                  .map((sort) => DropdownMenuItem<Sort>(
+                                        value: sort,
+                                        child:
+                                            Text(_sortToString(sort, context)),
+                                      ))
+                                  .toList(growable: false),
+                              icon: const Icon(Icons.sort),
+                              value: sort,
+                              onChanged: onSort,
+                            )),
+                        IconButton(
+                          icon: Icon(asc > 0
+                              ? Icons.arrow_upward
+                              : Icons.arrow_downward),
+                          onPressed: onSortDir,
+                        )
+                      ])
+                ]),
+            Padding(
+                padding: const EdgeInsets.all(8),
+                child: TextField(
+                  decoration: const InputDecoration(icon: Icon(Icons.search)),
+                  controller: searchController,
+                )),
+            const Padding(
+              padding: EdgeInsets.only(top: 8),
+              child: Divider(
+                thickness: 0,
+                height: 0,
+              ),
+            ),
+            Expanded(
+                child: ListView(
+                    children: points
+                        .where((point) =>
+                            checkedUsers.contains(point.ownerId) &&
+                            checkedCategories.contains(point.category) &&
+                            (exact
+                                ? setEquals(point.attributes, checkedAttributes)
+                                : (point.attributes.any((attr) =>
+                                        checkedAttributes.contains(attr))) ||
+                                    checkedAttributes.isEmpty) &&
+                            _fulltext(point, searchController.text))
+                        .map((Point point) => ListTile(
+                              leading: SizedBox(
+                                  width: 40,
+                                  child: Stack(
+                                    children: [
+                                      Icon(
+                                        point.category.iconData,
+                                        color: getPoiColor(point, widget.myId),
+                                        size: 40,
+                                      ),
+                                      for (var attr in point.attributes)
+                                        Align(
+                                            alignment: Alignment(
+                                                attr.xAlign, attr.yAlign),
+                                            child: Icon(
+                                              attr.iconData,
+                                              color: attr.color,
+                                              size: 13.7,
+                                            ))
+                                    ],
+                                  )),
+                              title: Text(point.name),
+                              subtitle: Text(
+                                  [
+                                    if (point.description?.isNotEmpty ?? false)
+                                      point.description,
+                                    formatCoords(point.coords, false)
+                                  ].join('\n'),
+                                  maxLines: 2),
+                              dense: true,
+                              isThreeLine:
+                                  point.description?.isNotEmpty ?? false,
+                              onTap: () {
+                                Navigator.of(context).pop(point);
+                              },
+                            ))
+                        .toList(growable: false)))
+          ],
+        ),
       ),
     );
+    ;
   }
 
   Future<void> onUsersButtonPressed() async {
-    Set<int>? checked = await showDialog<Set<int>>(
+    MultiCheckerResult<int>? result = await showDialog<MultiCheckerResult<int>>(
       context: context,
       builder: (context) => MultiChecker<int>(
         items: widget.users.keys.toList(growable: false),
@@ -197,10 +246,10 @@ class _PointListState extends State<PointList> {
             '${widget.users[uid] ?? '<unknown ID: $uid>'}${uid == widget.myId ? ' (${I18N.of(context).me})' : ''}'),
       ),
     );
-    if (checked == null) {
+    if (result == null) {
       return;
     }
-    await storage.setPointListCheckedUsers(checked);
+    await storage.setPointListCheckedUsers(result.checked);
     setState(() {
       checkedUsers.clear();
       checkedUsers.addAll(storage.pointListCheckedUsers);
@@ -208,23 +257,52 @@ class _PointListState extends State<PointList> {
   }
 
   Future<void> onCategoryButtonPressed() async {
-    Set<PointCategory>? checked = await showDialog<Set<PointCategory>>(
+    MultiCheckerResult<PointCategory>? result =
+        await showDialog<MultiCheckerResult<PointCategory>>(
       context: context,
       builder: (context) => MultiChecker<PointCategory>(
         items: PointCategory.allCategories,
         checkedItems: checkedCategories,
         titleBuilder: (PointCategory cat, bool _) =>
-            Text(I18N.of(context).categories(cat)),
+            Text(I18N.of(context).category(cat)),
         secondaryBuilder: (PointCategory cat, bool _) => Icon(cat.iconData),
       ),
     );
-    if (checked == null) {
+    if (result == null) {
       return;
     }
-    await storage.setPointListCheckedCategories(checked);
+    await storage.setPointListCheckedCategories(result.checked);
     setState(() {
       checkedCategories.clear();
       checkedCategories.addAll(storage.pointListCheckedCategories);
+    });
+  }
+
+  Future<void> onAttributesButtonPressed() async {
+    MultiCheckerResult<PointAttribute>? result =
+        await showDialog<MultiCheckerResult<PointAttribute>>(
+      context: context,
+      builder: (context) => MultiChecker<PointAttribute>(
+        switcher: MultiCheckerSwitcher(
+          value: exact,
+          offLabel: I18N.of(context).intersection,
+          onLabel: I18N.of(context).exact
+        ),
+        items: PointAttribute.attributes,
+        checkedItems: checkedAttributes,
+        titleBuilder: (PointAttribute attr, bool _) =>
+            Text(I18N.of(context).attribute(attr)),
+        secondaryBuilder: (PointAttribute attr, bool _) => Icon(attr.iconData),
+      ),
+    );
+    if (result == null) {
+      return;
+    }
+    await storage.setPointListCheckedAttributes(result.checked);
+    setState(() {
+      exact = result.switcher;
+      checkedAttributes.clear();
+      checkedAttributes.addAll(storage.pointListCheckedAttributes);
     });
   }
 

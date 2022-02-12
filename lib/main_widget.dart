@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:developer' as developer;
 import 'dart:math' as math;
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_compass/flutter_compass.dart';
 import 'package:flutter_map/plugin_api.dart';
@@ -311,7 +312,6 @@ class MainWidgetState extends State<MainWidget> {
             title: Text(I18N.of(context).userListTitle),
             subtitle: Text(I18N.of(context).infoOnly),
             leading: const Icon(Icons.people),
-            trailing: const Icon(Icons.arrow_forward),
             onTap: onUserListTap,
             enabled: storage?.serverSettings != null,
           ),
@@ -482,13 +482,13 @@ class MainWidgetState extends State<MainWidget> {
     }
     return storage!.features.whereType<data.Point>().map((data.Point point) {
       var baseSize = 35.0;
+      var badgeSize = 12.0;
       var width = baseSize * (infoTarget.isSamePoint(point) ? 1.5 : 1);
       var height = baseSize * (infoTarget.isSamePoint(point) ? 1.5 : 1);
       Color color = utils.getPoiColor(point, storage!.serverSettings!.id);
       return Marker(
         point: point.coords,
-        anchorPos: AnchorPos.exactly(Anchor(
-            width * point.category.xAlign, height * point.category.yAlign)),
+        anchorPos: point.category.anchorPos(width, height),
         width: width,
         height: height,
         builder: (context) => GestureDetector(
@@ -497,11 +497,27 @@ class MainWidgetState extends State<MainWidget> {
             onLongPress: () => onPointLongPress(point),
             child: Transform.rotate(
                 angle: -mapController.rotation * math.pi / 180.0,
-                alignment: Alignment(-2 * point.category.xAlign + 1, -2 * point.category.yAlign + 1),
-                child: Icon(
-                  point.category.iconData,
-                  size: baseSize * (infoTarget.isSamePoint(point) ? 1.5 : 1),
-                  color: color,
+                alignment: point.category.rotationAlignment(),
+                child: Stack(
+                  alignment: Alignment.center,
+                  children: [
+                    Icon(
+                      point.category.iconData,
+                      size:
+                          baseSize * (infoTarget.isSamePoint(point) ? 1.5 : 1),
+                      color: color,
+                    ),
+                    for (var attr in point.attributes)
+                      Align(
+                        alignment: Alignment(attr.xAlign, attr.yAlign),
+                        child: Icon(attr.iconData,
+                            size: badgeSize *
+                                (infoTarget.isSamePoint(point) ? 1.5 : 1),
+                            color: point.deleted
+                                ? attr.color.withOpacity(0.5)
+                                : attr.color),
+                      )
+                  ],
                 ))),
       );
     }).toList();
@@ -588,7 +604,7 @@ class MainWidgetState extends State<MainWidget> {
                             Text(
                                 [
                                   utils.formatCoords(infoTarget.coords, false),
-                                  '${I18N.of(context).category}: ${I18N.of(context).categories(infoTarget.point.category)}'
+                                  '${I18N.of(context).categoryTitle}: ${I18N.of(context).category(infoTarget.point.category)}'
                                 ].join(' '),
                                 style: Theme.of(context).textTheme.caption),
                             if (isNavigating)
@@ -978,6 +994,7 @@ class MainWidgetState extends State<MainWidget> {
           null,
           null,
           null));
+      await onDownload(false);
       setState(() {});
       mapController.move(storage!.serverSettings!.defaultCenter,
           storage!.serverSettings!.minZoom.toDouble());
@@ -988,6 +1005,9 @@ class MainWidgetState extends State<MainWidget> {
 
   void onPing() {
     setState(() {
+      if (storage?.serverSettings?.serverAddress == null) {
+        return;
+      }
       pinging = true;
       comm.ping(storage!.serverSettings!.serverAddress).then((bool pong) {
         setState(() {
@@ -1085,7 +1105,7 @@ class MainWidgetState extends State<MainWidget> {
     */
   }
 
-  void onDownload(bool only, [BuildContext? ctx]) async {
+  Future<void> onDownload(bool only, [BuildContext? ctx]) async {
     developer.log('onDownload');
     if (only) {
       bool? confirm = await showDialog<bool>(
@@ -1125,19 +1145,23 @@ class MainWidgetState extends State<MainWidget> {
     late comm.Data data;
     try {
       data = await comm.downloadData(storage!.serverSettings!.serverAddress);
-    } on comm.UnexpectedStatusCode catch (e) {
-      developer.log('exception: ${e.toString()}');
+    } on comm.UnexpectedStatusCode catch (e, stack) {
+      developer.log('exception: ${e.toString()} $stack');
       await utils.notifyDialog(context, e.getMessage(context), e.detail,
           utils.NotificationLevel.error);
       return;
-    } catch (e) {
-      developer.log('exception: ${e.toString()}');
+    } catch (e, stack) {
+      developer.log('exception: ${e.toString()} $stack');
       await utils.notifyDialog(context, I18N.of(context).error, e.toString(),
           utils.NotificationLevel.error);
       return;
     }
+    bool usersChanged = !setEquals(data.users.keys.toSet(), storage!.users.keys.toSet());
     await storage!.setUsers(data.users);
     await storage!.setFeatures(data.features);
+    if (usersChanged) {
+      await storage!.setPointListCheckedUsers(storage!.users.keys);
+    }
     setState(() {
       infoTarget = Target.none();
     });
@@ -1162,13 +1186,13 @@ class MainWidgetState extends State<MainWidget> {
     try {
       await comm.uploadData(
           storage!.serverSettings!.serverAddress, created, edited, deleted);
-    } on comm.DetailedCommException catch (e) {
-      developer.log('exception: ${e.toString()}');
+    } on comm.DetailedCommException catch (e, stack) {
+      developer.log('exception: ${e.toString()} $stack');
       await utils.notifyDialog(context, e.getMessage(context), e.detail,
           utils.NotificationLevel.error);
       return false;
-    } on Exception catch (e) {
-      developer.log('exception: ${e.toString()}');
+    } on Exception catch (e, stack) {
+      developer.log('exception: ${e.toString()} $stack');
       utils.notifySnackbar(context, I18N.of(context).serverUnavailable,
           utils.NotificationLevel.error);
       return false;
@@ -1193,7 +1217,7 @@ class MainWidgetState extends State<MainWidget> {
       Navigator.of(context).pop();
       return;
     }
-    onDownload(false);
+    await onDownload(false);
     Navigator.of(context).pop();
     utils.notifySnackbar(context, I18N.of(context).syncSuccessful,
         utils.NotificationLevel.success);
@@ -1281,22 +1305,26 @@ class MainWidgetState extends State<MainWidget> {
     Map<int, String>? users = Map.of(storage!.users);
     showDialog(
         context: context,
-        builder: (context) => SimpleDialog(
+        builder: (context) => AlertDialog(
+              actionsAlignment: MainAxisAlignment.center,
               title: Text(I18N.of(context).userListTitle),
-              children: [
-                ListView(
-                  scrollDirection: Axis.vertical,
-                  shrinkWrap: true,
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
-                  children: users.entries
-                      .map((e) => Text(
-                          '\u2022 ${e.value}${e.key == storage!.serverSettings?.id ? ' (${I18N.of(context).me})' : ''}'))
-                      .toList(growable: false)
-                    ..sort((Text a, Text b) => -a.data!.compareTo(b.data!)),
-                ),
+              content: ListView(
+                scrollDirection: Axis.vertical,
+                shrinkWrap: true,
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+                children: users.entries
+                    .map((e) => Text(
+                        '\u2022 ${e.value}${e.key == storage!.serverSettings?.id ? ' (${I18N.of(context).me})' : ''}'))
+                    .toList(growable: false)
+                  ..sort((Text a, Text b) => -a.data!.compareTo(b.data!)),
+              ),
+              actions: [
                 MaterialButton(
-                    child: Text(I18N.of(context).ok),
+                    child: Text(I18N.of(context).close,
+                        style: TextStyle(
+                            color: Theme.of(context).colorScheme.onPrimary)),
+                    color: Theme.of(context).colorScheme.primary,
                     onPressed: () => Navigator.of(context).pop())
               ],
             ));
@@ -1415,35 +1443,54 @@ class MainWidgetState extends State<MainWidget> {
         context: context,
         builder: (BuildContext context) {
           return AlertDialog(
+            contentPadding: const EdgeInsets.symmetric(horizontal: 8.0),
             title: Text(question(context)),
-            content: SingleChildScrollView(
-                child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                ListTile(
-                  title: Text(point.name),
-                  subtitle: Text(I18N.of(context).nameLabel),
-                ),
-                ListTile(
-                    title: Text(storage?.users[point.ownerId] ??
-                        '<unknown ID: ${point.ownerId}>'),
-                    subtitle: Text(I18N.of(context).owner)),
-                ListTile(
-                  title: Text(utils.formatCoords(point.coords, true)),
-                  subtitle: Text(I18N.of(context).position),
-                ),
-                if (point.description?.isNotEmpty ?? false)
-                  ListTile(
-                    title: Text(point.description!),
-                    subtitle: Text(I18N.of(context).descriptionLabel),
-                  ),
-                ListTile(
-                    title: Text(I18N.of(context).categories(point.category)),
-                    subtitle: Text(I18N.of(context).category),
-                    trailing: Icon(point.category.iconData))
-              ],
-            )),
+            content: Scrollbar(
+                isAlwaysShown: true,
+                child: SingleChildScrollView(
+                    child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    ListTile(
+                      title: Text(point.name),
+                      subtitle: Text(I18N.of(context).nameLabel),
+                    ),
+                    ListTile(
+                        title: Text(storage?.users[point.ownerId] ??
+                            '<unknown ID: ${point.ownerId}>'),
+                        subtitle: Text(I18N.of(context).owner)),
+                    ListTile(
+                      title: Text(utils.formatCoords(point.coords, true)),
+                      subtitle: Text(I18N.of(context).position),
+                    ),
+                    if (point.description?.isNotEmpty ?? false)
+                      ListTile(
+                        title: Text(point.description!),
+                        subtitle: Text(I18N.of(context).descriptionLabel),
+                      ),
+                    ListTile(
+                        title: Text(I18N.of(context).category(point.category)),
+                        subtitle: Text(I18N.of(context).categoryTitle),
+                        trailing: Icon(point.category.iconData)),
+                    ListTile(
+                        title: point.attributes.isEmpty
+                            ? Text(I18N.of(context).noAttributes)
+                            : Row(
+                                mainAxisSize: MainAxisSize.max,
+                                mainAxisAlignment: MainAxisAlignment.start,
+                                crossAxisAlignment: CrossAxisAlignment.center,
+                                children: point.attributes
+                                    .map((attr) => Tooltip(
+                                          message:
+                                              I18N.of(context).attribute(attr),
+                                          child: Icon(attr.iconData),
+                                        ))
+                                    .toList(growable: false),
+                              ),
+                        subtitle: Text(I18N.of(context).attributes))
+                  ],
+                ))),
             actionsAlignment: MainAxisAlignment.center,
             actions: <Widget>[
               MaterialButton(

@@ -83,6 +83,20 @@ class Home extends StatelessWidget {
             selectionColor: _surface,
             selectionHandleColor: _surface
           ),
+          switchTheme: SwitchThemeData(
+            thumbColor: MaterialStateProperty.resolveWith((states) {
+              if (states.contains(MaterialState.selected)) {
+                return _secondary;
+              }
+              return Colors.grey.shade400;
+            }),
+            trackColor: MaterialStateProperty.resolveWith((states) {
+              if (states.contains(MaterialState.selected)) {
+                return _secondaryVariant;
+              }
+              return Colors.white30;
+            })
+          ),
           disabledColor: _disabled,
           backgroundColor: _background),
       home: const MainWidget(),

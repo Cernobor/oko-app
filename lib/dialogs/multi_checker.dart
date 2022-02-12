@@ -1,9 +1,60 @@
 import 'package:flutter/material.dart';
 import 'package:oko/i18n.dart';
 
+typedef ItemWidgetBuilder<T> = Widget? Function(T item, bool checked);
+typedef ItemPredicate<T> = bool Function(T item, bool checked);
+Widget? _null<U>(U _, bool __) => null;
+
+class MultiCheckerResult<T> {
+  final Set<T> checked;
+  final bool switcher;
+
+  MultiCheckerResult._(this.checked, this.switcher);
+}
+
+class MultiCheckerSwitcher {
+  final String offLabel;
+  final String onLabel;
+  final bool value;
+  
+  MultiCheckerSwitcher({required this.offLabel, required this.onLabel, required this.value});
+}
+
+class MultiChecker<T> extends StatefulWidget {
+  final MultiCheckerSwitcher? switcher;
+  final List<T> items;
+  final Set<T> checkedItems;
+  final ItemWidgetBuilder<T> titleBuilder;
+  final ItemWidgetBuilder<T> subtitleBuilder;
+  final ItemWidgetBuilder<T> secondaryBuilder;
+  final ItemPredicate<T> isThreeLinePredicate;
+
+  MultiChecker(
+      {Key? key,
+      required List<T> items,
+      required Set<T> checkedItems,
+      this.switcher,
+      ItemWidgetBuilder<T>? titleBuilder,
+      ItemWidgetBuilder<T>? subtitleBuilder,
+      ItemWidgetBuilder<T>? secondaryBuilder,
+      ItemPredicate<T>? isThreeLinePredicate})
+      : items = List.of(items, growable: false),
+        checkedItems = Set.of(checkedItems),
+        titleBuilder = titleBuilder ?? _null<T>,
+        subtitleBuilder = subtitleBuilder ?? _null<T>,
+        secondaryBuilder = secondaryBuilder ?? _null<T>,
+        isThreeLinePredicate =
+            isThreeLinePredicate ?? ((T _, bool __) => false),
+        super(key: key);
+
+  @override
+  State<StatefulWidget> createState() => _MultiCheckerState<T>();
+}
+
 class _MultiCheckerState<T> extends State<MultiChecker<T>> {
   _MultiCheckerState();
 
+  late bool switcher;
   late List<bool> checked;
 
   @override
@@ -12,6 +63,7 @@ class _MultiCheckerState<T> extends State<MultiChecker<T>> {
     checked = widget.items
         .map((T item) => widget.checkedItems.contains(item))
         .toList(growable: false);
+    switcher = widget.switcher?.value ?? false;
   }
 
   @override
@@ -29,9 +81,9 @@ class _MultiCheckerState<T> extends State<MultiChecker<T>> {
               child: Text(I18N.of(context).allNothing),
               onPressed: () {
                 bool val = checked.contains(false);
-                  setState(() {
-                    checked.setAll(0, List<bool>.filled(checked.length, val));
-                  });
+                setState(() {
+                  checked.setAll(0, List<bool>.filled(checked.length, val));
+                });
               },
             ),
             MaterialButton(
@@ -46,7 +98,35 @@ class _MultiCheckerState<T> extends State<MultiChecker<T>> {
             )
           ],
         ),
-        const Divider(),
+        if (widget.switcher != null)
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Text(widget.switcher!.offLabel),
+              Switch.adaptive(
+                  thumbColor: MaterialStateProperty.all(Theme.of(context)
+                      .switchTheme
+                      .thumbColor
+                      ?.resolve({})),
+                  trackColor: MaterialStateProperty.all(Theme.of(context)
+                      .switchTheme
+                      .trackColor
+                      ?.resolve({})),
+                  value: switcher,
+                  onChanged: (value) => setState(() {
+                        switcher = value;
+                      })),
+              Text(widget.switcher!.onLabel),
+            ],
+          ),
+        const Padding(
+            padding: EdgeInsets.only(top: 8),
+            child: Divider(
+              thickness: 0,
+              height: 0,
+            )),
         ListView(
           scrollDirection: Axis.vertical,
           shrinkWrap: true,
@@ -66,7 +146,12 @@ class _MultiCheckerState<T> extends State<MultiChecker<T>> {
               .values
               .toList(growable: false),
         ),
-        const Divider(),
+        const Padding(
+            padding: EdgeInsets.only(bottom: 8),
+            child: Divider(
+              thickness: 0,
+              height: 0,
+            )),
         Row(
           mainAxisSize: MainAxisSize.max,
           mainAxisAlignment: MainAxisAlignment.spaceEvenly,
@@ -107,44 +192,13 @@ class _MultiCheckerState<T> extends State<MultiChecker<T>> {
   }
 
   void onOk() {
-    Navigator.of(context).pop(widget.items
-        .asMap()
-        .entries
-        .where((MapEntry<int, T> e) => checked[e.key])
-        .map((MapEntry<int, T> e) => e.value)
-        .toSet());
+    Navigator.of(context).pop(MultiCheckerResult._(
+        widget.items
+            .asMap()
+            .entries
+            .where((MapEntry<int, T> e) => checked[e.key])
+            .map((MapEntry<int, T> e) => e.value)
+            .toSet(),
+        switcher));
   }
-}
-
-typedef ItemWidgetBuilder<T> = Widget? Function(T item, bool checked);
-typedef ItemPredicate<T> = bool Function(T item, bool checked);
-Widget? _null<U>(U _, bool __) => null;
-
-class MultiChecker<T> extends StatefulWidget {
-  final List<T> items;
-  final Set<T> checkedItems;
-  final ItemWidgetBuilder<T> titleBuilder;
-  final ItemWidgetBuilder<T> subtitleBuilder;
-  final ItemWidgetBuilder<T> secondaryBuilder;
-  final ItemPredicate<T> isThreeLinePredicate;
-
-  MultiChecker(
-      {Key? key,
-      required List<T> items,
-      required Set<T> checkedItems,
-      ItemWidgetBuilder<T>? titleBuilder,
-      ItemWidgetBuilder<T>? subtitleBuilder,
-      ItemWidgetBuilder<T>? secondaryBuilder,
-      ItemPredicate<T>? isThreeLinePredicate})
-      : items = List.of(items, growable: false),
-        checkedItems = Set.of(checkedItems),
-        titleBuilder = titleBuilder ?? _null<T>,
-        subtitleBuilder = subtitleBuilder ?? _null<T>,
-        secondaryBuilder = secondaryBuilder ?? _null<T>,
-        isThreeLinePredicate =
-            isThreeLinePredicate ?? ((T _, bool __) => false),
-        super(key: key);
-
-  @override
-  State<StatefulWidget> createState() => _MultiCheckerState<T>();
 }

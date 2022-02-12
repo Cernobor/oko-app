@@ -169,19 +169,18 @@ class I18N {
         'cs': 'Pouze informativní',
         'en': 'Informative only'
       }[locale.languageCode]!;
-  String get category =>
+  String get categoryTitle =>
       {'cs': 'Kategorie', 'en': 'Category'}[locale.languageCode]!;
-  String Function(PointCategory x) get categories =>
+  String Function(PointCategory x) get category =>
       ((PointCategory category) => {
-            PointCategory.general.name: {'cs': 'obecné', 'en': 'general'},
-            PointCategory.camp.name: {'cs': 'tábor', 'en': 'camp'},
-            PointCategory.animal.name: {'cs': 'zvíře', 'en': 'animal'},
+            PointCategory.general.name: {'cs': 'Obecné', 'en': 'General'},
+            PointCategory.camp.name: {'cs': 'Tábor', 'en': 'Camp'},
+            PointCategory.animal.name: {'cs': 'Zvíře', 'en': 'Animal'},
             PointCategory.holySite.name: {
-              'cs': 'posvátné místo',
-              'en': 'holy site'
+              'cs': 'Posvátné místo',
+              'en': 'Holy site'
             },
-            PointCategory.treasure.name: {'cs': 'poklad', 'en': 'treasure'},
-            PointCategory.important.name: {'cs': 'důležité', 'en': 'important'},
+            PointCategory.treasure.name: {'cs': 'Poklad', 'en': 'Treasure'},
             PointCategory.unknown.name: {'cs': '???', 'en': '???'}
           }[category.name]![locale.languageCode]!);
   String get edit => {'cs': 'Upravit', 'en': 'Edit'}[locale.languageCode]!;
@@ -205,6 +204,10 @@ class I18N {
   String get filterByCategory => {
         'cs': 'Filtrovat podle kategorie',
         'en': 'Filter by category'
+      }[locale.languageCode]!;
+  String get filterByAttributes => {
+        'cs': 'Filtrovat podle vlastností',
+        'en': 'Filter by attributes'
       }[locale.languageCode]!;
   String get downloadConfirm => {
         'cs': 'Opravdu stáhnout?',
@@ -274,6 +277,31 @@ class I18N {
       }[locale.languageCode]!;
   String get resetDone =>
       {'cs': 'Vyresetováno.', 'en': 'Reset done.'}[locale.languageCode]!;
+  String get attributes =>
+      {'cs': 'Vlastnosti', 'en': 'Attributes'}[locale.languageCode]!;
+  String get noAttributes => {
+        'cs': '<žádné vlastnosti>',
+        'en': '<no attributes>'
+      }[locale.languageCode]!;
+  String Function(PointAttribute x) get attribute =>
+      ((PointAttribute attribute) => {
+            PointAttribute.important.name: {
+              'cs': 'Důležité',
+              'en': 'Important'
+            },
+          }[attribute.name]![locale.languageCode]!);
+  String get intersection => {
+    'cs': 'průnik',
+    'en': 'intersection'
+  }[locale.languageCode]!;
+  String get exact => {
+    'cs': 'shoda',
+    'en': 'match'
+  }[locale.languageCode]!;
+  String get close => {
+    'cs': 'Zavřít',
+    'en': 'Close'
+  }[locale.languageCode]!;
 }
 
 class I18NDelegate extends LocalizationsDelegate<I18N> {

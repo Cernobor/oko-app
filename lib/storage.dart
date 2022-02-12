@@ -83,6 +83,13 @@ class Storage {
     await db.insert('point_list_sort', {'what': 'name', 'dir': 1});
     await db.execute('CREATE TABLE point_list_checked_categories ('
         'category text not null)');
+    var batch = db.batch();
+    for (var cat in PointCategory.allCategories) {
+      batch.insert('point_list_checked_categories', {'category': cat.name});
+    }
+    await batch.commit(noResult: true);
+    await db.execute('CREATE TABLE point_list_checked_attributes ('
+        'attribute text not null)');
     await db.execute('CREATE TABLE point_list_checked_users ('
         'id integer not null)');
     await db.execute('CREATE TABLE users ('
@@ -101,6 +108,8 @@ class Storage {
         'orig_description text,'
         'point_category text,'
         'orig_point_category text,'
+        'attributes text,'
+        'orig_attributes text,'
         'geom text not null,'
         'orig_geom text not null,'
         'deleted integer not null)');
@@ -241,12 +250,15 @@ class Storage {
   late int _pointListSortDir;
   final Set<int> _pointListCheckedUsers = {};
   final Set<PointCategory> _pointListCheckedCategories = {};
+  final Set<PointAttribute> _pointListCheckedAttributes = {};
   Sort get pointListSort => _pointListSort;
   int get pointListSortDir => _pointListSortDir;
   UnmodifiableSetView<int> get pointListCheckedUsers =>
       UnmodifiableSetView(_pointListCheckedUsers);
   UnmodifiableSetView<PointCategory> get pointListCheckedCategories =>
       UnmodifiableSetView(_pointListCheckedCategories);
+  UnmodifiableSetView<PointAttribute> get pointListCheckedAttributes =>
+      UnmodifiableSetView(_pointListCheckedAttributes);
 
   Future<void> setPointListSort(Sort sort) async {
     _pointListSort = sort;
@@ -283,6 +295,19 @@ class Storage {
     });
   }
 
+  Future<void> setPointListCheckedAttributes(
+      Iterable<PointAttribute> attributes) async {
+    await _db.transaction((Transaction tx) async {
+      await tx.execute('delete from point_list_checked_attributes');
+      var batch = tx.batch();
+      for (var attr in attributes) {
+        batch.insert('point_list_checked_attributes', {'attribute': attr.name});
+      }
+      await batch.commit(noResult: true);
+      await _loadPointListSettings(tx);
+    });
+  }
+
   Future<void> _loadPointListSettings([Transaction? txn]) async {
     Future<void> f(Transaction tx) async {
       var rows =
@@ -298,6 +323,14 @@ class Storage {
       for (var row in rows) {
         _pointListCheckedCategories
             .add(PointCategory.fromNameString(row['category'] as String));
+      }
+
+      rows = await tx
+          .query('point_list_checked_attributes', columns: ['attribute']);
+      _pointListCheckedAttributes.clear();
+      for (var row in rows) {
+        _pointListCheckedAttributes
+            .add(PointAttribute.fromNameString(row['attribute'] as String));
       }
 
       rows = await tx.query('point_list_checked_users', columns: ['id']);
@@ -391,6 +424,8 @@ class Storage {
       'orig_description',
       'point_category',
       'orig_point_category',
+      'attributes',
+      'orig_attributes',
       'geom',
       'orig_geom',
       'deleted'
@@ -407,17 +442,23 @@ class Storage {
       String? origDescription = row['orig_description'] as String?;
       String? pointCategory = row['point_category'] as String?;
       String? origPointCategory = row['orig_point_category'] as String?;
+      String attributes = (row['attributes'] ?? '[]') as String;
+      String origAttributes = (row['orig_attributes'] ?? '[]') as String;
       String geom = row['geom'] as String;
       String origGeom = row['orig_geom'] as String;
       int deleted = row['deleted'] as int;
 
+      List<dynamic> parsedAttributes = jsonDecode(attributes);
+      List<dynamic> parsedOrigAttributes = jsonDecode(origAttributes);
       Map<String, dynamic> parsedGeom = jsonDecode(geom);
       Map<String, dynamic> parsedOrigGeom = jsonDecode(origGeom);
       Feature f;
       if (Feature.isGeojsonPoint(parsedGeom)) {
-        PointCategory category = PointCategory.fromNameString(pointCategory);
-        PointCategory origCategory =
+        PointCategory cat = PointCategory.fromNameString(pointCategory);
+        PointCategory origCat =
             PointCategory.fromNameString(origPointCategory);
+        Set<PointAttribute> attrs = parsedAttributes.map((attr) => PointAttribute.fromNameString(attr)).toSet();
+        Set<PointAttribute> origAttrs = parsedOrigAttributes.map((attr) => PointAttribute.fromNameString(attr)).toSet();
         f = Point.fromGeojson(
             id,
             ownerId,
@@ -426,8 +467,10 @@ class Storage {
             origName,
             description,
             origDescription,
-            category,
-            origCategory,
+            cat,
+            origCat,
+            attrs,
+            origAttrs,
             deleted != 0,
             parsedGeom,
             parsedOrigGeom);

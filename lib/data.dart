@@ -1,6 +1,8 @@
 import 'dart:convert';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:collection/collection.dart';
 import 'package:oko/utils.dart';
@@ -66,29 +68,26 @@ class MapState {
   }
 }
 
-class PointCategory {
+class PointCategory implements Comparable {
   static const PointCategory general =
-      PointCategory._('general', Icons.place, .5, .075);
+      PointCategory._(0, 'general', Icons.place, .5, .075);
   static const PointCategory camp =
-      PointCategory._('camp', Icons.deck, .5, .075);
+      PointCategory._(1, 'camp', Icons.deck, .5, .075);
   static const PointCategory animal =
-      PointCategory._('animal', Icons.pets, .5, .5);
+      PointCategory._(2, 'animal', Icons.pets, .5, .5);
   static const PointCategory holySite =
-      PointCategory._('holy_site', Icons.brightness_medium, .5, .5);
+      PointCategory._(3, 'holy_site', Icons.brightness_medium, .5, .5);
   static const PointCategory treasure =
-      PointCategory._('treasure', Icons.vpn_key, .5, .5);
-  static const PointCategory important =
-      PointCategory._('important', Icons.warning, .5, .5);
+      PointCategory._(4, 'treasure', Icons.vpn_key, .5, .5);
   static const PointCategory unknown =
-      PointCategory._('unknown', Icons.live_help, .5, .5);
+      PointCategory._(1000000000, 'unknown', Icons.live_help, .5, .5);
 
   static final List<PointCategory> defaultCategories = [
     general,
     camp,
     animal,
     holySite,
-    treasure,
-    important
+    treasure
   ];
   static final List<PointCategory> allCategories =
       defaultCategories + [unknown];
@@ -104,24 +103,96 @@ class PointCategory {
       return holySite;
     } else if (s == treasure.name) {
       return treasure;
-    } else if (s == important.name) {
-      return important;
     } else {
       return unknown;
     }
   }
 
+  final int _key;
   final String name;
   final IconData iconData;
   final double xAlign;
   final double yAlign;
 
-  const PointCategory._(this.name, this.iconData, this.xAlign, this.yAlign);
+  const PointCategory._(
+      this._key, this.name, this.iconData, this.xAlign, this.yAlign);
 
   @override
   String toString() {
     return 'PointCategory{$name}';
   }
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is PointCategory &&
+          runtimeType == other.runtimeType &&
+          _key == other._key;
+
+  @override
+  int get hashCode => _key.hashCode;
+
+  @override
+  int compareTo(other) {
+    if (other is! PointCategory) {
+      return -1;
+    }
+    return _key.compareTo(other._key);
+  }
+
+  AnchorPos anchorPos(double w, double h) =>
+      AnchorPos.exactly(Anchor(w * xAlign, h * yAlign));
+  Alignment rotationAlignment() => Alignment(-2 * xAlign + 1, -2 * yAlign + 1);
+}
+
+class PointAttribute implements Comparable {
+  static const PointAttribute important =
+      PointAttribute._(0, 'important', Icons.warning, -1, -1, Colors.red);
+
+  static final List<PointAttribute> attributes = [important];
+
+  static PointAttribute fromNameString(String? s) {
+    if (s == important.name) {
+      return important;
+    } else {
+      throw IllegalStateException('unsupported attribute name');
+    }
+  }
+
+  final int _key;
+  final String name;
+  final IconData iconData;
+  final double xAlign;
+  final double yAlign;
+  final Color color;
+
+  const PointAttribute._(this._key, this.name, this.iconData, this.xAlign,
+      this.yAlign, this.color);
+
+  @override
+  String toString() {
+    return 'PointAttribute{$name}';
+  }
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is PointAttribute &&
+          runtimeType == other.runtimeType &&
+          _key == other._key;
+
+  @override
+  int get hashCode => _key.hashCode;
+
+  @override
+  int compareTo(other) {
+    if (other is! PointCategory) {
+      return -1;
+    }
+    return _key.compareTo(other._key);
+  }
+
+  Alignment badgeAlignment() => Alignment(xAlign, yAlign);
 }
 
 abstract class Feature {
@@ -150,8 +221,26 @@ abstract class Feature {
     if (Feature.isGeojsonPoint(geometry)) {
       String? category = properties['category'];
       PointCategory cat = PointCategory.fromNameString(category);
-      return Point.fromGeojson(id, ownerId, ownerId, name, name, description,
-          description, cat, cat, false, geometry, geometry);
+      List<dynamic> attrList = properties['attributes'] ?? [];
+      Set<PointAttribute> attributes = attrList
+          .map((e) => e as String)
+          .map((String attrName) => PointAttribute.fromNameString(attrName))
+          .toSet();
+      return Point.fromGeojson(
+          id,
+          ownerId,
+          ownerId,
+          name,
+          name,
+          description,
+          description,
+          cat,
+          cat,
+          attributes,
+          Set.of(attributes),
+          false,
+          geometry,
+          geometry);
     } else if (Feature.isGeojsonLineString(geometry)) {
       return LineString.fromGeojson(id, ownerId, ownerId, name, name,
           description, description, false, geometry, geometry);
@@ -195,15 +284,50 @@ class Point extends Feature {
   LatLng origCoords;
   PointCategory category;
   PointCategory origCategory;
+  Set<PointAttribute> attributes;
+  Set<PointAttribute> origAttributes;
 
-  Point(id, ownerId, origOwnerId, name, origName, description, origDescription,
-      this.coords, this.origCoords, this.category, this.origCategory, deleted)
+  Point(
+      id,
+      ownerId,
+      origOwnerId,
+      name,
+      origName,
+      description,
+      origDescription,
+      this.coords,
+      this.origCoords,
+      this.category,
+      this.origCategory,
+      this.attributes,
+      this.origAttributes,
+      deleted)
       : super._(id, ownerId, origOwnerId, name, origName, description,
             origDescription, deleted);
-  Point.origSame(int id, int ownerId, String name, String? description,
-      LatLng coords, PointCategory category, bool deleted)
-      : this(id, ownerId, ownerId, name, name, description, description, coords,
-            coords, category, category, deleted);
+  Point.origSame(
+      int id,
+      int ownerId,
+      String name,
+      String? description,
+      LatLng coords,
+      PointCategory category,
+      Set<PointAttribute> attributes,
+      bool deleted)
+      : this(
+            id,
+            ownerId,
+            ownerId,
+            name,
+            name,
+            description,
+            description,
+            coords,
+            coords,
+            category,
+            category,
+            attributes,
+            Set.of(attributes),
+            deleted);
 
   factory Point.fromGeojson(
       int id,
@@ -215,6 +339,8 @@ class Point extends Feature {
       String? origDescription,
       PointCategory category,
       PointCategory origCategory,
+      Set<PointAttribute> attributes,
+      Set<PointAttribute> origAttributes,
       bool deleted,
       Map<String, dynamic> geom,
       Map<String, dynamic> origGeom) {
@@ -233,6 +359,8 @@ class Point extends Feature {
         LatLng(origGeom['coordinates'][1], origGeom['coordinates'][0]),
         category,
         origCategory,
+        attributes,
+        origAttributes,
         deleted);
   }
 
@@ -256,7 +384,10 @@ class Point extends Feature {
 
   @override
   bool isEdited() {
-    return super.isEdited() || coords != origCoords || category != origCategory;
+    return super.isEdited() ||
+        coords != origCoords ||
+        category != origCategory ||
+        !setEquals(attributes, origAttributes);
   }
 
   @override
@@ -264,6 +395,7 @@ class Point extends Feature {
     super.revert();
     category = origCategory;
     coords = origCoords;
+    attributes = origAttributes;
   }
 
   Map<String, dynamic> _geometry() => {
@@ -281,7 +413,12 @@ class Point extends Feature {
         'id': id,
         'owner_id': ownerId,
         'name': name,
-        'properties': {'description': description, 'category': category.name},
+        'properties': {
+          'description': description,
+          'category': category.name,
+          'attributes':
+              attributes.map((attr) => attr.name).toList(growable: false)
+        },
         'geometry': _geometry()
       };
 
@@ -297,6 +434,10 @@ class Point extends Feature {
       if (origDescription != null) 'orig_description': origDescription!,
       'point_category': category.name,
       'orig_point_category': origCategory.name,
+      'attributes': jsonEncode(
+          attributes.map((attr) => attr.name).toList(growable: false)),
+      'orig_attributes': jsonEncode(
+          origAttributes.map((attr) => attr.name).toList(growable: false)),
       'geom': jsonEncode(_geometry()),
       'orig_geom': jsonEncode(_origGeometry()),
       'deleted': deleted ? 1 : 0
@@ -316,6 +457,8 @@ class Point extends Feature {
         LatLng(origCoords.latitude, origCoords.longitude),
         category,
         origCategory,
+        Set.of(attributes),
+        Set.of(origAttributes),
         deleted);
   }
 }
