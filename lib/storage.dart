@@ -77,10 +77,12 @@ class Storage {
         'lng_sw_bound real,'
         'zoom_min integer,'
         'zoom_max integer)');
-    await db.execute('CREATE TABLE point_list_sort ('
-        'what text not null,'
-        'dir integer not null)');
-    await db.insert('point_list_sort', {'what': 'name', 'dir': 1});
+    await db.execute('CREATE TABLE point_list_settings ('
+        'sort_key text not null,'
+        'sort_direction integer not null,'
+        'attribute_filter_exact integer not null)');
+    await db.insert('point_list_settings',
+        {'sort_key': 'name', 'sort_direction': 1, 'attribute_filter_exact': 0});
     await db.execute('CREATE TABLE point_list_checked_categories ('
         'category text not null)');
     var batch = db.batch();
@@ -246,13 +248,15 @@ class Storage {
   }
 
   // point list sorts and filters
-  late Sort _pointListSort;
+  late Sort _pointListSortKey;
   late int _pointListSortDir;
+  late bool _pointListAttributeFilterExact;
   final Set<int> _pointListCheckedUsers = {};
   final Set<PointCategory> _pointListCheckedCategories = {};
   final Set<PointAttribute> _pointListCheckedAttributes = {};
-  Sort get pointListSort => _pointListSort;
+  Sort get pointListSortKey => _pointListSortKey;
   int get pointListSortDir => _pointListSortDir;
+  bool get pointListAttributeFilterExact => _pointListAttributeFilterExact;
   UnmodifiableSetView<int> get pointListCheckedUsers =>
       UnmodifiableSetView(_pointListCheckedUsers);
   UnmodifiableSetView<PointCategory> get pointListCheckedCategories =>
@@ -260,14 +264,19 @@ class Storage {
   UnmodifiableSetView<PointAttribute> get pointListCheckedAttributes =>
       UnmodifiableSetView(_pointListCheckedAttributes);
 
-  Future<void> setPointListSort(Sort sort) async {
-    _pointListSort = sort;
-    await _db.update('point_list_sort', {'what': sort.name()});
+  Future<void> setPointListSortKey(Sort sort) async {
+    _pointListSortKey = sort;
+    await _db.update('point_list_settings', {'sort_key': sort.name()});
   }
 
   Future<void> setPointListSortDir(int dir) async {
     _pointListSortDir = dir;
-    await _db.update('point_list_sort', {'dir': dir});
+    await _db.update('point_list_settings', {'sort_direction': dir});
+  }
+
+  Future<void> setPointListAttributeFilterExact(bool exact) async {
+    _pointListAttributeFilterExact = exact;
+    await _db.update('point_list_settings', {'attribute_filter_exact': exact ? 1 : 0});
   }
 
   Future<void> setPointListCheckedUsers(Iterable<int> userIds) async {
@@ -311,10 +320,11 @@ class Storage {
   Future<void> _loadPointListSettings([Transaction? txn]) async {
     Future<void> f(Transaction tx) async {
       var rows =
-          await tx.query('point_list_sort', columns: ['what', 'dir'], limit: 1);
+          await tx.query('point_list_settings', columns: ['sort_key', 'sort_direction', 'attribute_filter_exact'], limit: 1);
       for (var row in rows) {
-        _pointListSort = SortExt.parse(row['what'] as String);
-        _pointListSortDir = row['dir'] as int;
+        _pointListSortKey = SortExt.parse(row['sort_key'] as String);
+        _pointListSortDir = row['sort_direction'] as int;
+        _pointListAttributeFilterExact = row['attribute_filter_exact'] == 1;
       }
 
       rows = await tx
@@ -455,10 +465,13 @@ class Storage {
       Feature f;
       if (Feature.isGeojsonPoint(parsedGeom)) {
         PointCategory cat = PointCategory.fromNameString(pointCategory);
-        PointCategory origCat =
-            PointCategory.fromNameString(origPointCategory);
-        Set<PointAttribute> attrs = parsedAttributes.map((attr) => PointAttribute.fromNameString(attr)).toSet();
-        Set<PointAttribute> origAttrs = parsedOrigAttributes.map((attr) => PointAttribute.fromNameString(attr)).toSet();
+        PointCategory origCat = PointCategory.fromNameString(origPointCategory);
+        Set<PointAttribute> attrs = parsedAttributes
+            .map((attr) => PointAttribute.fromNameString(attr))
+            .toSet();
+        Set<PointAttribute> origAttrs = parsedOrigAttributes
+            .map((attr) => PointAttribute.fromNameString(attr))
+            .toSet();
         f = Point.fromGeojson(
             id,
             ownerId,

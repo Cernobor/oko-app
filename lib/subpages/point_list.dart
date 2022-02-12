@@ -56,7 +56,8 @@ class _PointListState extends State<PointList> {
 
     getStorage().whenComplete(() => setState(() {
           asc = storage.pointListSortDir;
-          sort = storage.pointListSort;
+          sort = storage.pointListSortKey;
+          exact = storage.pointListAttributeFilterExact;
           checkedCategories.clear();
           checkedCategories.addAll(storage.pointListCheckedCategories);
           checkedUsers.clear();
@@ -298,6 +299,7 @@ class _PointListState extends State<PointList> {
     if (result == null) {
       return;
     }
+    await storage.setPointListAttributeFilterExact(result.switcher);
     await storage.setPointListCheckedAttributes(result.checked);
     setState(() {
       exact = result.switcher;
@@ -344,7 +346,7 @@ class _PointListState extends State<PointList> {
       return;
     }
     sort = s;
-    await storage.setPointListSort(sort);
+    await storage.setPointListSortKey(sort);
     doSort();
     setState(() {});
   }
