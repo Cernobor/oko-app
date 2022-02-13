@@ -150,7 +150,7 @@ class PointCategory implements Comparable {
 
 class PointAttribute implements Comparable {
   static const PointAttribute important =
-      PointAttribute._(0, 'important', Icons.warning, -1, -1, Colors.red);
+      PointAttribute._(0, 'important', Icons.warning, -1, -1, Color(0xffff0000));
 
   static final List<PointAttribute> attributes = [important];
 
@@ -217,11 +217,22 @@ abstract class Feature {
   String origName;
   String? description;
   String? origDescription;
+  Color color;
+  Color origColor;
 
   bool deleted;
 
-  Feature._(this.id, this.ownerId, this.origOwnerId, this.name, this.origName,
-      this.description, this.origDescription, this.deleted);
+  Feature._(
+      this.id,
+      this.ownerId,
+      this.origOwnerId,
+      this.name,
+      this.origName,
+      this.description,
+      this.origDescription,
+      this.color,
+      this.origColor,
+      this.deleted);
 
   factory Feature.fromJson(Map<String, dynamic> json) {
     int id = json['id'];
@@ -231,8 +242,10 @@ abstract class Feature {
     Map<String, dynamic> geometry = json['geometry'];
 
     String? description = properties['description'];
+    int? colorValue = properties['color'];
 
     if (Feature.isGeojsonPoint(geometry)) {
+      Color color = colorValue == null ? Point.defaultColor : Color(colorValue);
       String? category = properties['category'];
       PointCategory cat = PointCategory.fromNameString(category);
       List<dynamic> attrList = properties['attributes'] ?? [];
@@ -248,6 +261,8 @@ abstract class Feature {
           name,
           description,
           description,
+          color,
+          color,
           cat,
           cat,
           attributes,
@@ -256,8 +271,10 @@ abstract class Feature {
           geometry,
           geometry);
     } else if (Feature.isGeojsonLineString(geometry)) {
+      Color color =
+          colorValue == null ? LineString.defaultColor : Color(colorValue);
       return LineString.fromGeojson(id, ownerId, ownerId, name, name,
-          description, description, false, geometry, geometry);
+          description, description, color, color, false, geometry, geometry);
     }
     throw Exception('unsupported geometry type');
   }
@@ -278,7 +295,8 @@ abstract class Feature {
   bool get isEdited =>
       ownerId != origOwnerId ||
       name != origName ||
-      description != origDescription;
+      description != origDescription ||
+      color.value != origColor.value;
 
   void revert() {
     ownerId = origOwnerId;
@@ -293,6 +311,8 @@ abstract class Feature {
 }
 
 class Point extends Feature {
+  static final Color defaultColor = Colors.blue.shade500;
+
   LatLng coords;
   LatLng origCoords;
   PointCategory category;
@@ -301,13 +321,15 @@ class Point extends Feature {
   Set<PointAttribute> origAttributes;
 
   Point(
-      id,
-      ownerId,
-      origOwnerId,
-      name,
-      origName,
-      description,
-      origDescription,
+      int id,
+      int ownerId,
+      int origOwnerId,
+      String name,
+      String origName,
+      String? description,
+      String? origDescription,
+      Color color,
+      Color origColor,
       this.coords,
       this.origCoords,
       this.category,
@@ -316,12 +338,13 @@ class Point extends Feature {
       this.origAttributes,
       deleted)
       : super._(id, ownerId, origOwnerId, name, origName, description,
-            origDescription, deleted);
+            origDescription, color, origColor, deleted);
   Point.origSame(
       int id,
       int ownerId,
       String name,
       String? description,
+      Color color,
       LatLng coords,
       PointCategory category,
       Set<PointAttribute> attributes,
@@ -334,6 +357,8 @@ class Point extends Feature {
             name,
             description,
             description,
+            color,
+            color,
             coords,
             coords,
             category,
@@ -350,6 +375,8 @@ class Point extends Feature {
       String origName,
       String? description,
       String? origDescription,
+      Color color,
+      Color origColor,
       PointCategory category,
       PointCategory origCategory,
       Set<PointAttribute> attributes,
@@ -368,6 +395,8 @@ class Point extends Feature {
         origName,
         description,
         origDescription,
+        color,
+        origColor,
         LatLng(geom['coordinates'][1], geom['coordinates'][0]),
         LatLng(origGeom['coordinates'][1], origGeom['coordinates'][0]),
         category,
@@ -429,7 +458,8 @@ class Point extends Feature {
           'description': description,
           'category': category.name,
           'attributes':
-              attributes.map((attr) => attr.name).toList(growable: false)
+              attributes.map((attr) => attr.name).toList(growable: false),
+          'color': color.value
         },
         'geometry': _geometry()
       };
@@ -444,6 +474,8 @@ class Point extends Feature {
       'orig_name': origName,
       if (description != null) 'description': description!,
       if (origDescription != null) 'orig_description': origDescription!,
+      'color': color.value,
+      'orig_color': origColor.value,
       'point_category': category.name,
       'orig_point_category': origCategory.name,
       'attributes': jsonEncode(
@@ -465,6 +497,8 @@ class Point extends Feature {
         origName,
         description,
         origDescription,
+        color,
+        origColor,
         LatLng(coords.latitude, coords.longitude),
         LatLng(origCoords.latitude, origCoords.longitude),
         category,
@@ -476,13 +510,26 @@ class Point extends Feature {
 }
 
 class LineString extends Feature {
+  static const Color defaultColor = Colors.black;
+
   List<LatLng> coords;
   List<LatLng> origCoords;
 
-  LineString._(id, ownerId, origOwnerId, name, origName, description,
-      origDescription, this.coords, this.origCoords, deleted)
+  LineString._(
+      int id,
+      int ownerId,
+      int origOwnerId,
+      String name,
+      String origName,
+      String? description,
+      String? origDescription,
+      Color color,
+      Color origColor,
+      this.coords,
+      this.origCoords,
+      bool deleted)
       : super._(id, ownerId, origOwnerId, name, origName, description,
-            origDescription, deleted);
+            origDescription, color, origColor, deleted);
 
   factory LineString.fromGeojson(
       int id,
@@ -492,6 +539,8 @@ class LineString extends Feature {
       String origName,
       String? description,
       String? origDescription,
+      Color color,
+      Color origColor,
       bool deleted,
       Map<String, dynamic> geom,
       Map<String, dynamic> origGeom) {
@@ -508,6 +557,8 @@ class LineString extends Feature {
         origName,
         description,
         origDescription,
+        color,
+        origColor,
         coords
             .map((List<double> c) => LatLng(c[1], c[0]))
             .toList(growable: false),
@@ -564,7 +615,7 @@ class LineString extends Feature {
         'id': id,
         'owner_id': ownerId,
         'name': name,
-        'properties': {'description': description},
+        'properties': {'description': description, 'color': color.value},
         'geometry': _geometry()
       };
 
@@ -578,6 +629,8 @@ class LineString extends Feature {
       'orig_name': origName,
       if (description != null) 'description': description!,
       if (origDescription != null) 'orig_description': origDescription!,
+      'color': color.value,
+      'orig_color': origColor.value,
       'geom': jsonEncode(_geometry()),
       'orig_geom': jsonEncode(_origGeometry()),
       'deleted': deleted ? 1 : 0

@@ -496,7 +496,6 @@ class MainWidgetState extends State<MainWidget> {
       var badgeSize = 12.0;
       var width = baseSize * (infoTarget.isSamePoint(point) ? 1.5 : 1);
       var height = baseSize * (infoTarget.isSamePoint(point) ? 1.5 : 1);
-      Color color = utils.getPoiColor(point, storage!.serverSettings!.id);
       return Marker(
         point: point.coords,
         anchorPos: point.category.anchorPos(width, height),
@@ -516,7 +515,7 @@ class MainWidgetState extends State<MainWidget> {
                       point.category.iconData,
                       size:
                           baseSize * (infoTarget.isSamePoint(point) ? 1.5 : 1),
-                      color: color,
+                      color: point.deleted ? point.color.withOpacity(0.5) : point.color,
                     ),
                     if (point.isEdited)
                       Align(

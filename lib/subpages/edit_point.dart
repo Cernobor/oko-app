@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_colorpicker/flutter_colorpicker.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:oko/data.dart';
 import 'package:oko/i18n.dart';
@@ -22,6 +23,30 @@ class EditPoint extends StatefulWidget {
 }
 
 class _EditPointState extends State<EditPoint> {
+  static final List<Color> _colors = [
+    Colors.red.shade500,
+    Colors.pink.shade500,
+    Colors.purple.shade500,
+    Colors.deepPurple.shade500,
+    Colors.indigo.shade500,
+    Colors.blue.shade500,
+    Colors.lightBlue.shade500,
+    Colors.cyan.shade500,
+    Colors.teal.shade500,
+    Colors.green.shade500,
+    Colors.lightGreen.shade500,
+    Colors.lime.shade500,
+    Colors.yellow.shade500,
+    Colors.amber.shade500,
+    Colors.orange.shade500,
+    Colors.deepOrange.shade500,
+    Colors.brown.shade500,
+    Colors.grey.shade500,
+    Colors.blueGrey.shade500,
+    Colors.black,
+  ];
+  static final Color _defaultColor = Colors.blue.shade500;
+
   late LatLng location;
   late PointCategory category;
   late int ownerId;
@@ -29,6 +54,7 @@ class _EditPointState extends State<EditPoint> {
   final TextEditingController nameInputController = TextEditingController();
   final TextEditingController descriptionInputController =
       TextEditingController();
+  late Color color;
 
   String? nameInputError;
 
@@ -41,6 +67,7 @@ class _EditPointState extends State<EditPoint> {
     nameInputController.text = widget.point?.name ?? '';
     descriptionInputController.text = widget.point?.description ?? '';
     attributes = Set.of(widget.point?.attributes ?? {});
+    color = widget.point?.color ?? _defaultColor;
   }
 
   @override
@@ -211,6 +238,47 @@ class _EditPointState extends State<EditPoint> {
                           .toList(growable: false),
                     )
                   ],
+                ),
+                Row(
+                  mainAxisSize: MainAxisSize.max,
+                  mainAxisAlignment: MainAxisAlignment.start,
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    Text(I18N.of(context).color),
+                    IconButton(
+                      icon: const Icon(Icons.circle),
+                      iconSize: 30,
+                      color: color,
+                      onPressed: () => showDialog(
+                          context: context,
+                          builder: (context) {
+                            return AlertDialog(
+                              content: SingleChildScrollView(
+                                child: BlockPicker(
+                                  availableColors: _colors,
+                                  pickerColor: color,
+                                  onColorChanged: (c) => setState(() {
+                                    color = c;
+                                  }),
+                                ),
+                              ),
+                              actionsAlignment: MainAxisAlignment.center,
+                              actions: [
+                                MaterialButton(
+                                    child: Text(I18N.of(context).ok,
+                                        style: TextStyle(
+                                            color: Theme.of(context)
+                                                .colorScheme
+                                                .onPrimary)),
+                                    color:
+                                        Theme.of(context).colorScheme.primary,
+                                    onPressed: () =>
+                                        Navigator.of(context).pop())
+                              ],
+                            );
+                          }),
+                    )
+                  ],
                 )
               ],
             ),
@@ -232,6 +300,7 @@ class _EditPointState extends State<EditPoint> {
           descriptionInputController.text.isEmpty
               ? null
               : descriptionInputController.text,
+          color,
           location,
           category,
           attributes,
@@ -244,6 +313,7 @@ class _EditPointState extends State<EditPoint> {
           descriptionInputController.text.isEmpty
               ? null
               : descriptionInputController.text,
+          color,
           location,
           category,
           attributes,
@@ -259,6 +329,8 @@ class _EditPointState extends State<EditPoint> {
               ? null
               : descriptionInputController.text,
           widget.point!.origDescription,
+          color,
+          widget.point!.origColor,
           location,
           widget.point!.origCoords,
           category,

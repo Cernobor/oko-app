@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:developer' as developer;
 
+import 'package:flutter/material.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:oko/data.dart';
 import 'package:oko/utils.dart';
@@ -110,6 +111,8 @@ class Storage {
         'orig_name text not null,'
         'description text,'
         'orig_description text,'
+        'color integer not null,'
+        'orig_color integer not null,'
         'point_category text,'
         'orig_point_category text,'
         'attributes text,'
@@ -446,6 +449,8 @@ class Storage {
       'orig_name',
       'description',
       'orig_description',
+      'color',
+      'orig_color',
       'point_category',
       'orig_point_category',
       'attributes',
@@ -464,6 +469,8 @@ class Storage {
       String origName = row['orig_name'] as String;
       String? description = row['description'] as String?;
       String? origDescription = row['orig_description'] as String?;
+      int color = row['color'] as int;
+      int origColor = row['orig_color'] as int;
       String? pointCategory = row['point_category'] as String?;
       String? origPointCategory = row['orig_point_category'] as String?;
       String attributes = (row['attributes'] ?? '[]') as String;
@@ -494,6 +501,8 @@ class Storage {
             origName,
             description,
             origDescription,
+            Color(color),
+            Color(origColor),
             cat,
             origCat,
             attrs,
@@ -510,6 +519,8 @@ class Storage {
             origName,
             description,
             origDescription,
+            Color(color),
+            Color(origColor),
             deleted != 0,
             parsedGeom,
             parsedOrigGeom);

@@ -226,7 +226,7 @@ class _PointListState extends State<PointList> {
                                     children: [
                                       Icon(
                                         point.category.iconData,
-                                        color: getPoiColor(point, widget.myId),
+                                        color: point.deleted ? point.color.withOpacity(0.5) : point.color,
                                         size: 40,
                                       ),
                                       if (point.isEdited)

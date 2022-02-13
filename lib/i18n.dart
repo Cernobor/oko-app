@@ -326,6 +326,10 @@ class I18N {
     'cs': 'Jakýkoliv',
     'en': 'Any state'
   }[locale.languageCode]!;
+  String get color => {
+    'cs': 'Barva',
+    'en': 'Colour'
+  }[locale.languageCode]!;
 }
 
 class I18NDelegate extends LocalizationsDelegate<I18N> {
