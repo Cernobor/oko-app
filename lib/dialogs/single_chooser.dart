@@ -62,7 +62,6 @@ class _SingleChooserState<T> extends State<SingleChooser<T>> {
                   secondary: widget.secondaryBuilder(item, selected == item),
                   isThreeLine:
                       widget.isThreeLinePredicate(item, selected == item),
-                  activeColor: Theme.of(context).colorScheme.secondary,
                   onChanged: (T? value) {
                     if (value != null) {
                       setState(() {
@@ -83,15 +82,11 @@ class _SingleChooserState<T> extends State<SingleChooser<T>> {
           mainAxisAlignment: MainAxisAlignment.spaceEvenly,
           crossAxisAlignment: CrossAxisAlignment.end,
           children: <Widget>[
-            MaterialButton(
-              color: Theme.of(context).colorScheme.primary,
-              textColor: Theme.of(context).colorScheme.onPrimary,
+            TextButton(
               child: Text(I18N.of(context).dialogCancel),
               onPressed: onCancel,
             ),
-            MaterialButton(
-              color: Theme.of(context).colorScheme.primary,
-              textColor: Theme.of(context).colorScheme.onPrimary,
+            TextButton(
               child: Text(I18N.of(context).ok),
               onPressed: onOk,
             )

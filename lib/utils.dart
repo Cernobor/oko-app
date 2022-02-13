@@ -46,43 +46,6 @@ String formatCoords(LatLng coords, bool onLines) {
   }
 }
 
-const Color myGlobalPoiColor = Colors.blue;
-const Color otherGlobalPoiColor = Colors.green;
-final Color myLocalPoiColor = Colors.blue.withAlpha(128);
-final Color otherLocalPoiColor = Colors.green.withAlpha(128);
-const Color myGlobalEditedPoiColor = Colors.blueGrey;
-const Color otherGlobalEditedPoiColor = Colors.teal;
-final Color myGlobalDeletedPoiColor = Colors.black.withAlpha(128);
-final Color otherGlobalDeletedPoiColor = Colors.black.withAlpha(128);
-
-Color getPoiColor(Point point, int? myId) {
-  if (point.isLocal) {
-    if (point.ownerId == myId) {
-      return myLocalPoiColor;
-    } else {
-      return otherLocalPoiColor;
-    }
-  } else {
-    if (point.ownerId == myId) {
-      if (point.deleted) {
-        return myGlobalDeletedPoiColor;
-      } else if (point.isEdited) {
-        return myGlobalEditedPoiColor;
-      } else {
-        return myGlobalPoiColor;
-      }
-    } else {
-      if (point.deleted) {
-        return otherGlobalDeletedPoiColor;
-      } else if (point.isEdited) {
-        return otherGlobalEditedPoiColor;
-      } else {
-        return otherGlobalPoiColor;
-      }
-    }
-  }
-}
-
 enum NotificationType { snackbar, dialog }
 enum NotificationLevel { error, info, success }
 
@@ -118,7 +81,7 @@ FutureOr<void> _notify(
     bool vibrate = true,
     int duration = 5}) async {
   FeedbackType vf;
-  final Color? sbbg, sbfg, dbg, dfg, dbbg, dbfg;
+  final Color? sbbg, sbfg, dbg, dfg, dbfg;
   switch (level) {
     case NotificationLevel.error:
       vf = FeedbackType.error;
@@ -126,8 +89,7 @@ FutureOr<void> _notify(
       sbfg = Theme.of(context).colorScheme.onError;
       dbg = Theme.of(context).colorScheme.error;
       dfg = Theme.of(context).colorScheme.onError;
-      dbbg = Theme.of(context).colorScheme.primary;
-      dbfg = Theme.of(context).colorScheme.onPrimary;
+      dbfg = Theme.of(context).colorScheme.onError;
       break;
     case NotificationLevel.info:
       vf = FeedbackType.medium;
@@ -135,16 +97,14 @@ FutureOr<void> _notify(
       sbfg = Theme.of(context).colorScheme.onSecondary;
       dbg = null;
       dfg = null;
-      dbbg = Theme.of(context).colorScheme.secondary;
       dbfg = Theme.of(context).colorScheme.onSecondary;
       break;
     case NotificationLevel.success:
       vf = FeedbackType.success;
-      sbbg = Theme.of(context).colorScheme.primary;
-      sbfg = Theme.of(context).colorScheme.onPrimary;
+      sbbg = Theme.of(context).colorScheme.primaryContainer;
+      sbfg = Theme.of(context).colorScheme.onPrimaryContainer;
       dbg = null;
       dfg = null;
-      dbbg = Theme.of(context).colorScheme.primary;
       dbfg = Theme.of(context).colorScheme.onPrimary;
       break;
   }
@@ -169,9 +129,11 @@ FutureOr<void> _notify(
                     : SingleChildScrollView(
                         child: Text(detail, style: TextStyle(color: dfg))),
                 actions: [
-                  MaterialButton(
-                      color: dbbg,
-                      textColor: dbfg,
+                  TextButton(
+                      style: ButtonStyle(
+                        foregroundColor: MaterialStateProperty.all(dbfg),
+                        //backgroundColor: MaterialStateProperty.all(dbbg)
+                      ),
                       child: Text(I18N.of(context).dismiss),
                       onPressed: () => Navigator.of(context).pop())
                 ]));

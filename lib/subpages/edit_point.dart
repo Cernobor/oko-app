@@ -85,8 +85,6 @@ class _EditPointState extends State<EditPoint> {
                 ? I18N.of(context).newPoint
                 : I18N.of(context).editPoint),
             primary: true,
-            backgroundColor: Theme.of(context).colorScheme.primary,
-            foregroundColor: Theme.of(context).colorScheme.onPrimary,
             leading: BackButton(
               onPressed: () => Navigator.of(context).pop(),
             ),
@@ -221,8 +219,8 @@ class _EditPointState extends State<EditPoint> {
                                 icon: Icon(
                                   attr.iconData,
                                   color: attributes.contains(attr)
-                                      ? Theme.of(context).colorScheme.secondary
-                                      : Theme.of(context).disabledColor,
+                                      ? Theme.of(context).colorScheme.onBackground
+                                      : Theme.of(context).colorScheme.onBackground.withOpacity(0.25),
                                 ),
                                 tooltip: I18N.of(context).attribute(attr),
                                 onPressed: () {
@@ -260,18 +258,40 @@ class _EditPointState extends State<EditPoint> {
                                   onColorChanged: (c) => setState(() {
                                     color = c;
                                   }),
+                                  itemBuilder: (Color color,
+                                      bool isCurrentColor,
+                                      void Function() changeColor) {
+                                    return Container(
+                                      margin: const EdgeInsets.all(7),
+                                      decoration: BoxDecoration(
+                                        shape: BoxShape.circle,
+                                        color: color,
+                                      ),
+                                      child: Material(
+                                        color: Colors.transparent,
+                                        child: InkWell(
+                                          onTap: changeColor,
+                                          borderRadius:
+                                              BorderRadius.circular(50),
+                                          child: AnimatedOpacity(
+                                            duration: const Duration(
+                                                milliseconds: 210),
+                                            opacity: isCurrentColor ? 1 : 0,
+                                            child: Icon(Icons.done,
+                                                color: useWhiteForeground(color)
+                                                    ? Colors.white
+                                                    : Colors.black),
+                                          ),
+                                        ),
+                                      ),
+                                    );
+                                  },
                                 ),
                               ),
                               actionsAlignment: MainAxisAlignment.center,
                               actions: [
-                                MaterialButton(
-                                    child: Text(I18N.of(context).ok,
-                                        style: TextStyle(
-                                            color: Theme.of(context)
-                                                .colorScheme
-                                                .onPrimary)),
-                                    color:
-                                        Theme.of(context).colorScheme.primary,
+                                TextButton(
+                                    child: Text(I18N.of(context).ok),
                                     onPressed: () =>
                                         Navigator.of(context).pop())
                               ],

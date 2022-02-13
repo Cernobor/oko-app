@@ -75,9 +75,7 @@ class _MultiCheckerState<T> extends State<MultiChecker<T>> {
           mainAxisAlignment: MainAxisAlignment.spaceEvenly,
           crossAxisAlignment: CrossAxisAlignment.end,
           children: <Widget>[
-            MaterialButton(
-              color: Theme.of(context).colorScheme.primary,
-              textColor: Theme.of(context).colorScheme.onPrimary,
+            TextButton(
               child: Text(I18N.of(context).allNothing),
               onPressed: () {
                 bool val = checked.contains(false);
@@ -86,9 +84,7 @@ class _MultiCheckerState<T> extends State<MultiChecker<T>> {
                 });
               },
             ),
-            MaterialButton(
-              color: Theme.of(context).colorScheme.primary,
-              textColor: Theme.of(context).colorScheme.onPrimary,
+            TextButton(
               child: Text(I18N.of(context).invert),
               onPressed: () {
                 setState(() {
@@ -106,6 +102,7 @@ class _MultiCheckerState<T> extends State<MultiChecker<T>> {
             children: [
               Text(widget.switcher!.offLabel),
               Switch.adaptive(
+                  /*
                   thumbColor: MaterialStateProperty.all(Theme.of(context)
                       .switchTheme
                       .thumbColor
@@ -114,6 +111,7 @@ class _MultiCheckerState<T> extends State<MultiChecker<T>> {
                       .switchTheme
                       .trackColor
                       ?.resolve({})),
+                  */
                   value: switcher,
                   onChanged: (value) => setState(() {
                         switcher = value;
@@ -141,7 +139,6 @@ class _MultiCheckerState<T> extends State<MultiChecker<T>> {
                       secondary: widget.secondaryBuilder(item, checked[idx]),
                       isThreeLine:
                           widget.isThreeLinePredicate(item, checked[idx]),
-                      activeColor: Theme.of(context).colorScheme.secondary,
                       onChanged: (bool? val) => onChanged(idx, val))))
               .values
               .toList(growable: false),
@@ -157,15 +154,11 @@ class _MultiCheckerState<T> extends State<MultiChecker<T>> {
           mainAxisAlignment: MainAxisAlignment.spaceEvenly,
           crossAxisAlignment: CrossAxisAlignment.end,
           children: <Widget>[
-            MaterialButton(
-              color: Theme.of(context).colorScheme.primary,
-              textColor: Theme.of(context).colorScheme.onPrimary,
+            TextButton(
               child: Text(I18N.of(context).dialogCancel),
               onPressed: onCancel,
             ),
-            MaterialButton(
-              color: Theme.of(context).colorScheme.primary,
-              textColor: Theme.of(context).colorScheme.onPrimary,
+            TextButton(
               child: Text(I18N.of(context).ok),
               onPressed: onOk,
             )

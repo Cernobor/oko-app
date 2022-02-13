@@ -8,6 +8,7 @@ import 'package:flutter_compass/flutter_compass.dart';
 import 'package:flutter_map/plugin_api.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:location/location.dart';
+import 'package:oko/main.dart';
 import 'package:oko/map.dart';
 import 'package:positioned_tap_detector_2/positioned_tap_detector_2.dart';
 import 'package:vector_tile_renderer/vector_tile_renderer.dart' hide Theme;
@@ -69,14 +70,6 @@ class MainWidgetState extends State<MainWidget> {
   // constants
   static const double fallbackMinZoom = 1;
   static const double fallbackMaxZoom = 18;
-  static const Color myGlobalPoiColor = Colors.blue;
-  static const Color otherGlobalPoiColor = Colors.green;
-  static final Color myLocalPoiColor = Colors.blue.withAlpha(128);
-  static final Color otherLocalPoiColor = Colors.green.withAlpha(128);
-  static const Color myGlobalEditedPoiColor = Colors.blueGrey;
-  static const Color otherGlobalEditedPoiColor = Colors.teal;
-  static final Color myGlobalDeletedPoiColor = Colors.black.withAlpha(128);
-  static final Color otherGlobalDeletedPoiColor = Colors.black.withAlpha(128);
   static const Color extraGeometryColor = Colors.deepPurple;
 
   // location and map
@@ -155,7 +148,7 @@ class MainWidgetState extends State<MainWidget> {
               ),
             ),
             decoration:
-                BoxDecoration(color: Theme.of(context).colorScheme.primary),
+                const BoxDecoration(color: cbGreen),
           );
         });
   }
@@ -178,8 +171,6 @@ class MainWidgetState extends State<MainWidget> {
       title: Text(I18N.of(context).appTitle),
       centerTitle: true,
       primary: true,
-      backgroundColor: Theme.of(context).colorScheme.primary,
-      foregroundColor: Theme.of(context).colorScheme.onPrimary,
       bottom: PreferredSize(
         preferredSize: const Size(double.infinity, 6.0),
         child: progressValue == -1
@@ -193,7 +184,6 @@ class MainWidgetState extends State<MainWidget> {
 
   Widget createDrawer(BuildContext context) {
     return Drawer(
-      backgroundColor: null,
       child: ListView(
         children: <Widget>[
           // pairing
@@ -461,9 +451,9 @@ class MainWidgetState extends State<MainWidget> {
                   if (currentHeading != null && locationSubscription != null) {
                     return Transform.rotate(
                       angle: currentHeading!,
-                      child: Icon(
+                      child: const Icon(
                         Icons.navigation,
-                        color: Theme.of(context).primaryColorLight,
+                        color: Color(0xffff0000),
                         size: 40,
                       ),
                     );
@@ -473,8 +463,8 @@ class MainWidgetState extends State<MainWidget> {
                       child: Icon(
                         Icons.my_location,
                         color: locationSubscription == null
-                            ? Theme.of(context).disabledColor
-                            : Theme.of(context).primaryColorLight,
+                            ? const Color(0xff000000)
+                            : const Color(0xffff0000),
                         size: 40,
                       ));
                 })
@@ -523,7 +513,7 @@ class MainWidgetState extends State<MainWidget> {
                         child: Icon(Icons.edit,
                             size: badgeSize *
                                 (infoTarget.isSamePoint(point) ? 1.5 : 1),
-                            color: Theme.of(context).colorScheme.secondary),
+                            color: Theme.of(context).colorScheme.primary),
                       ),
                     if (point.isLocal)
                       Align(
@@ -531,7 +521,7 @@ class MainWidgetState extends State<MainWidget> {
                         child: Icon(Icons.star,
                             size: badgeSize *
                                 (infoTarget.isSamePoint(point) ? 1.5 : 1),
-                            color: Theme.of(context).colorScheme.secondary),
+                            color: Theme.of(context).colorScheme.primary),
                       ),
                     for (var attr in point.attributes)
                       Align(
@@ -733,8 +723,8 @@ class MainWidgetState extends State<MainWidget> {
               size: 30,
             ),
             backgroundColor: !mapReady ||
-                    mapController.zoom <=
-                        (storage?.serverSettings?.minZoom ?? fallbackMinZoom)
+                mapController.zoom <=
+                    (storage?.serverSettings?.minZoom ?? fallbackMinZoom)
                 ? Theme.of(context).disabledColor
                 : null,
             onPressed: !mapReady ||
@@ -775,10 +765,10 @@ class MainWidgetState extends State<MainWidget> {
 
   Widget createBottomBar(BuildContext context) {
     TextStyle ts = TextStyle(
-        color: Theme.of(context).colorScheme.onPrimary,
+        //color: Theme.of(context).colorScheme.onPrimary,
         fontFamily: 'monospace');
     return BottomAppBar(
-      color: Theme.of(context).colorScheme.primaryVariant,
+      //color: Theme.of(context).colorScheme.primaryVariant,
       child: Padding(
           padding: const EdgeInsets.symmetric(vertical: 4),
           child: Row(
@@ -892,7 +882,6 @@ class MainWidgetState extends State<MainWidget> {
                           ? Icons.location_off
                           : Icons.location_on),
                       iconSize: 30.0,
-                      color: null,
                       onPressed: onToggleLocationContinuous,
                     ),
                     IconButton(
@@ -901,7 +890,6 @@ class MainWidgetState extends State<MainWidget> {
                           ? Icons.gps_fixed
                           : Icons.gps_not_fixed),
                       iconSize: 30.0,
-                      color: currentLocation == null ? null : null,
                       onPressed:
                           currentLocation == null ? null : onLockViewToLocation,
                     ),
@@ -1155,16 +1143,14 @@ class MainWidgetState extends State<MainWidget> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                     children: [
-                      MaterialButton(
+                      TextButton(
                         child: Text(I18N.of(context).dialogConfirm),
-                        color: Theme.of(context).colorScheme.primary,
                         onPressed: () {
                           Navigator.of(context).pop(true);
                         },
                       ),
-                      MaterialButton(
+                      TextButton(
                         child: Text(I18N.of(context).dialogCancel),
-                        color: Theme.of(context).colorScheme.primary,
                         onPressed: () {
                           Navigator.of(context).pop(false);
                         },
@@ -1356,11 +1342,8 @@ class MainWidgetState extends State<MainWidget> {
                   ..sort((Text a, Text b) => -a.data!.compareTo(b.data!)),
               ),
               actions: [
-                MaterialButton(
-                    child: Text(I18N.of(context).close,
-                        style: TextStyle(
-                            color: Theme.of(context).colorScheme.onPrimary)),
-                    color: Theme.of(context).colorScheme.primary,
+                TextButton(
+                    child: Text(I18N.of(context).close),
                     onPressed: () => Navigator.of(context).pop())
               ],
             ));
@@ -1529,14 +1512,12 @@ class MainWidgetState extends State<MainWidget> {
                 ))),
             actionsAlignment: MainAxisAlignment.center,
             actions: <Widget>[
-              MaterialButton(
+              TextButton(
                 child: Text(I18N.of(context).yes.toUpperCase()),
-                color: Theme.of(context).colorScheme.primary,
                 onPressed: () => Navigator.of(context).pop(true),
               ),
-              MaterialButton(
+              TextButton(
                 child: Text(I18N.of(context).no.toUpperCase()),
-                color: Theme.of(context).colorScheme.primary,
                 onPressed: () => Navigator.of(context).pop(false),
               )
             ],

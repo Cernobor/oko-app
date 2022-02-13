@@ -63,8 +63,6 @@ class _PairingState extends State<Pairing> {
         appBar: AppBar(
           title: Text(I18N.of(context).pairing),
           primary: true,
-          backgroundColor: Theme.of(context).colorScheme.primary,
-          foregroundColor: Theme.of(context).colorScheme.onPrimary,
           leading: BackButton(
             onPressed: () => Navigator.of(context).pop(),
           ),
@@ -92,7 +90,7 @@ class _PairingState extends State<Pairing> {
                               ? Icons.qr_code_2
                               : Icons.qr_code_2_outlined),
                           color: scanning
-                              ? Theme.of(context).colorScheme.secondary
+                              ? const Color(0xffff0000)
                               : null,
                           onPressed: () {
                             if (scanning) {
@@ -134,14 +132,12 @@ class _PairingState extends State<Pairing> {
                           children: [
                             IconButton(
                               icon: const Icon(Icons.switch_camera),
-                              color: Theme.of(context).colorScheme.secondary,
                               onPressed: () {
                                 controller!.flipCamera();
                               },
                             ),
                             IconButton(
                               icon: const Icon(Icons.flash_on),
-                              color: Theme.of(context).colorScheme.secondary,
                               onPressed: () {
                                 controller!.toggleFlash();
                               },
