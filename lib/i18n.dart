@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:oko/data.dart';
 import 'package:sprintf/sprintf.dart';
 import 'package:filesize/filesize.dart';
@@ -329,6 +330,26 @@ class I18N {
   String get color => {
     'cs': 'Barva',
     'en': 'Colour'
+  }[locale.languageCode]!;
+  String get deadline => {
+    'cs': 'Automaticky smazat',
+    'en': 'Automatically delete'
+  }[locale.languageCode]!;
+  String get chooseTime => {
+    'cs': 'Vyberte čas',
+    'en': 'Choose a time'
+  }[locale.languageCode]!;
+  String get dialogNext => {
+    'cs': 'Dále',
+    'en': 'Next'
+  }[locale.languageCode]!;
+  String get dialogBack => {
+    'cs': 'Zpět',
+    'en': 'Back'
+  }[locale.languageCode]!;
+  DateFormat get dateFormat => {
+    'cs': DateFormat('d.M. HH:mm', 'cs'),
+    'en': DateFormat('M/d HH:mm', 'en'),
   }[locale.languageCode]!;
 }
 

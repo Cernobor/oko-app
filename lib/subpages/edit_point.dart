@@ -55,6 +55,8 @@ class _EditPointState extends State<EditPoint> {
   final TextEditingController descriptionInputController =
       TextEditingController();
   late Color color;
+  late bool hasDeadline;
+  DateTime? deadline;
 
   String? nameInputError;
 
@@ -68,6 +70,8 @@ class _EditPointState extends State<EditPoint> {
     descriptionInputController.text = widget.point?.description ?? '';
     attributes = Set.of(widget.point?.attributes ?? {});
     color = widget.point?.color ?? _defaultColor;
+    hasDeadline = widget.point?.deadline != null;
+    deadline = widget.point?.deadline;
   }
 
   @override
@@ -150,6 +154,9 @@ class _EditPointState extends State<EditPoint> {
                 ),
                 TextField(
                   controller: nameInputController,
+                  keyboardAppearance: Theme.of(context).brightness,
+                  keyboardType: TextInputType.text,
+                  textCapitalization: TextCapitalization.sentences,
                   decoration: InputDecoration(
                       labelText: I18N.of(context).nameLabel,
                       errorText: nameInputError),
@@ -165,6 +172,9 @@ class _EditPointState extends State<EditPoint> {
                 ),
                 TextField(
                   controller: descriptionInputController,
+                  keyboardAppearance: Theme.of(context).brightness,
+                  keyboardType: TextInputType.text,
+                  textCapitalization: TextCapitalization.sentences,
                   decoration: InputDecoration(
                     labelText: I18N.of(context).descriptionLabel,
                   ),
@@ -219,8 +229,13 @@ class _EditPointState extends State<EditPoint> {
                                 icon: Icon(
                                   attr.iconData,
                                   color: attributes.contains(attr)
-                                      ? Theme.of(context).colorScheme.onBackground
-                                      : Theme.of(context).colorScheme.onBackground.withOpacity(0.25),
+                                      ? Theme.of(context)
+                                          .colorScheme
+                                          .onBackground
+                                      : Theme.of(context)
+                                          .colorScheme
+                                          .onBackground
+                                          .withOpacity(0.25),
                                 ),
                                 tooltip: I18N.of(context).attribute(attr),
                                 onPressed: () {
@@ -299,6 +314,48 @@ class _EditPointState extends State<EditPoint> {
                           }),
                     )
                   ],
+                ),
+                Row(
+                  mainAxisSize: MainAxisSize.max,
+                  mainAxisAlignment: MainAxisAlignment.start,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  textBaseline: TextBaseline.alphabetic,
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.only(top: 0),
+                      child: Row(children: [
+                        Text(I18N.of(context).deadline),
+                        Checkbox(
+                          value: hasDeadline,
+                          onChanged: (value) => setState(() {
+                                hasDeadline = value ?? false;
+                              }))
+                        ]
+                      )
+                    ),
+                    Expanded(
+                        child: TextField(
+                          style: TextStyle(
+                            color: hasDeadline ? null : Theme.of(context).disabledColor
+                          ),
+                            controller: TextEditingController(
+                                text: deadline == null
+                                    ? null
+                                    : I18N
+                                        .of(context)
+                                        .dateFormat
+                                        .format(deadline!)),
+                            decoration: InputDecoration(
+                              suffixIcon: const Icon(Icons.calendar_today),
+                              errorText: hasDeadline && deadline == null
+                                  ? I18N.of(context).chooseTime
+                                  : null,
+                              //counterText: ' '
+                            ),
+                            enabled: hasDeadline,
+                            readOnly: true,
+                            onTap: onChooseTime)),
+                  ],
                 )
               ],
             ),
@@ -306,8 +363,42 @@ class _EditPointState extends State<EditPoint> {
         ));
   }
 
+  void onChooseTime() async {
+    DateTime? date;
+    TimeOfDay? time;
+    while (true) {
+      date = await showDatePicker(
+        context: context,
+        initialDate: date ?? deadline ?? DateTime.now(),
+        firstDate: DateTime.now(),
+        lastDate: DateTime(2100),
+        confirmText: I18N.of(context).dialogNext.toUpperCase(),
+      );
+      if (date == null) {
+        return;
+      }
+      time = await showTimePicker(
+        context: context,
+        initialTime: time ??
+            (deadline == null
+                ? TimeOfDay.fromDateTime(date)
+                : TimeOfDay.fromDateTime(deadline!)),
+        cancelText: I18N.of(context).dialogBack.toUpperCase(),
+      );
+      if (time == null) {
+        continue;
+      }
+      break;
+    }
+    setState(() {
+      deadline =
+          DateTime(date!.year, date.month, date.day, time!.hour, time.minute);
+    });
+  }
+
   bool _isValid() {
-    return nameInputController.text.isNotEmpty;
+    return nameInputController.text.isNotEmpty &&
+        (!hasDeadline || deadline != null);
   }
 
   void _save() {
@@ -317,6 +408,7 @@ class _EditPointState extends State<EditPoint> {
           0,
           ownerId,
           nameInputController.text,
+          hasDeadline ? deadline : null,
           descriptionInputController.text.isEmpty
               ? null
               : descriptionInputController.text,
@@ -330,6 +422,7 @@ class _EditPointState extends State<EditPoint> {
           widget.point!.id,
           ownerId,
           nameInputController.text,
+          hasDeadline ? deadline : null,
           descriptionInputController.text.isEmpty
               ? null
               : descriptionInputController.text,
@@ -345,6 +438,8 @@ class _EditPointState extends State<EditPoint> {
           widget.point!.origOwnerId,
           nameInputController.text,
           widget.point!.origName,
+          hasDeadline ? deadline : null,
+          widget.point!.origDeadline,
           descriptionInputController.text.isEmpty
               ? null
               : descriptionInputController.text,

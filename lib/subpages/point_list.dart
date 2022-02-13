@@ -111,7 +111,7 @@ class _PointListState extends State<PointList> {
                             icon: Icon(
                               Icons.people,
                               color: checkedUsers.length < widget.users.length
-                                  ? const Color(0xffff0000)
+                                  ? Theme.of(context).colorScheme.primary
                                   : null,
                             ),
                             onPressed: onUsersButtonPressed,
@@ -125,7 +125,7 @@ class _PointListState extends State<PointList> {
                               Icons.category,
                               color: checkedCategories.length <
                                       PointCategory.allCategories.length
-                                  ? const Color(0xffff0000)
+                                  ? Theme.of(context).colorScheme.primary
                                   : null,
                             ),
                             onPressed: onCategoryButtonPressed,
@@ -138,7 +138,7 @@ class _PointListState extends State<PointList> {
                             icon: Icon(
                               Icons.edit_attributes,
                               color: (exact || checkedAttributes.isNotEmpty)
-                                  ? const Color(0xffff0000)
+                                  ? Theme.of(context).colorScheme.primary
                                   : null,
                             ),
                             onPressed: onAttributesButtonPressed,
@@ -151,7 +151,7 @@ class _PointListState extends State<PointList> {
                             icon: Icon(
                               Icons.edit,
                               color: editState != EditState.anyState
-                                  ? const Color(0xffff0000)
+                                  ? Theme.of(context).colorScheme.primary
                                   : null,
                             ),
                             onPressed: onEditStateButtonPressed,
@@ -224,22 +224,28 @@ class _PointListState extends State<PointList> {
                                     children: [
                                       Icon(
                                         point.category.iconData,
-                                        color: point.deleted ? point.color.withOpacity(0.5) : point.color,
+                                        color: point.deleted
+                                            ? point.color.withOpacity(0.5)
+                                            : point.color,
                                         size: 40,
                                       ),
                                       if (point.isEdited)
-                                        const Align(
-                                          alignment: Alignment(1, -1),
+                                        Align(
+                                          alignment: const Alignment(1, -1),
                                           child: Icon(Icons.edit,
                                               size: badgeSize,
-                                              color: Color(0xffff0000)),
+                                              color: Theme.of(context)
+                                                  .colorScheme
+                                                  .primary),
                                         ),
                                       if (point.isLocal)
-                                        const Align(
-                                          alignment: Alignment(1, -1),
+                                        Align(
+                                          alignment: const Alignment(1, -1),
                                           child: Icon(Icons.star,
                                               size: badgeSize,
-                                              color: Color(0xffff0000)),
+                                              color: Theme.of(context)
+                                                  .colorScheme
+                                                  .primary),
                                         ),
                                       for (var attr in point.attributes)
                                         Align(

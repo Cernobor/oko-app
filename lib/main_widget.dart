@@ -704,7 +704,7 @@ class MainWidgetState extends State<MainWidget> {
           backgroundColor: !mapReady ||
                   mapController.zoom >=
                       (storage?.mapState?.zoomMax ?? fallbackMaxZoom)
-              ? Theme.of(context).disabledColor
+              ? Theme.of(context).colorScheme.secondary.withOpacity(.35)
               : null,
           onPressed: !mapReady ||
                   mapController.zoom >=
@@ -725,7 +725,7 @@ class MainWidgetState extends State<MainWidget> {
             backgroundColor: !mapReady ||
                 mapController.zoom <=
                     (storage?.serverSettings?.minZoom ?? fallbackMinZoom)
-                ? Theme.of(context).disabledColor
+                ? Theme.of(context).colorScheme.secondary.withOpacity(.35)
                 : null,
             onPressed: !mapReady ||
                     mapController.zoom <=
@@ -748,7 +748,7 @@ class MainWidgetState extends State<MainWidget> {
               ),
             ),
             backgroundColor: !mapReady || mapController.rotation == 0.0
-                ? Theme.of(context).disabledColor
+                ? Theme.of(context).colorScheme.secondary.withOpacity(.35)
                 : null,
             onPressed: () {
               if (mapReady) {
@@ -764,9 +764,7 @@ class MainWidgetState extends State<MainWidget> {
   }
 
   Widget createBottomBar(BuildContext context) {
-    TextStyle ts = TextStyle(
-        //color: Theme.of(context).colorScheme.onPrimary,
-        fontFamily: 'monospace');
+    TextStyle ts = const TextStyle(fontFamily: 'monospace');
     return BottomAppBar(
       //color: Theme.of(context).colorScheme.primaryVariant,
       child: Padding(
@@ -1507,7 +1505,12 @@ class MainWidgetState extends State<MainWidget> {
                                         ))
                                     .toList(growable: false),
                               ),
-                        subtitle: Text(I18N.of(context).attributes))
+                        subtitle: Text(I18N.of(context).attributes)),
+                    if (point.deadline != null)
+                      ListTile(
+                        title: Text(I18N.of(context).dateFormat.format(point.deadline!)),
+                        subtitle: Text(I18N.of(context).deadline),
+                      ),
                   ],
                 ))),
             actionsAlignment: MainAxisAlignment.center,

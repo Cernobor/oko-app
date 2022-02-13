@@ -54,7 +54,7 @@ class Home extends StatelessWidget {
       theme: ThemeData(
         useMaterial3: true,
         colorScheme: colorScheme,
-        disabledColor: colorScheme.secondary.withOpacity(.5), // disabled items text/foreground
+        disabledColor: colorScheme.onSurface.withOpacity(.35), // disabled items text/foreground
         bottomAppBarColor: colorScheme.surface, // bottom bar
         errorColor: colorScheme.error, // errors
         scaffoldBackgroundColor: colorScheme.background, // background of subpages

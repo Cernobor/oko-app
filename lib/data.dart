@@ -149,8 +149,8 @@ class PointCategory implements Comparable {
 }
 
 class PointAttribute implements Comparable {
-  static const PointAttribute important =
-      PointAttribute._(0, 'important', Icons.warning, -1, -1, Color(0xffff0000));
+  static const PointAttribute important = PointAttribute._(
+      0, 'important', Icons.warning, -1, -1, Color(0xffff0000));
 
   static final List<PointAttribute> attributes = [important];
 
@@ -215,6 +215,8 @@ abstract class Feature {
   int origOwnerId;
   String name;
   String origName;
+  DateTime? deadline;
+  DateTime? origDeadline;
   String? description;
   String? origDescription;
   Color color;
@@ -228,6 +230,8 @@ abstract class Feature {
       this.origOwnerId,
       this.name,
       this.origName,
+      this.deadline,
+      this.origDeadline,
       this.description,
       this.origDescription,
       this.color,
@@ -240,6 +244,11 @@ abstract class Feature {
     String name = json['name'];
     Map<String, dynamic> properties = json['properties'];
     Map<String, dynamic> geometry = json['geometry'];
+    String? deadlineValue = json['deadline'];
+    DateTime? deadline;
+    if (deadlineValue != null) {
+      deadline = DateTime.parse(deadlineValue).toLocal();
+    }
 
     String? description = properties['description'];
     int? colorValue = properties['color'];
@@ -259,6 +268,8 @@ abstract class Feature {
           ownerId,
           name,
           name,
+          deadline,
+          deadline,
           description,
           description,
           color,
@@ -273,8 +284,21 @@ abstract class Feature {
     } else if (Feature.isGeojsonLineString(geometry)) {
       Color color =
           colorValue == null ? LineString.defaultColor : Color(colorValue);
-      return LineString.fromGeojson(id, ownerId, ownerId, name, name,
-          description, description, color, color, false, geometry, geometry);
+      return LineString.fromGeojson(
+          id,
+          ownerId,
+          ownerId,
+          name,
+          name,
+          deadline,
+          deadline,
+          description,
+          description,
+          color,
+          color,
+          false,
+          geometry,
+          geometry);
     }
     throw Exception('unsupported geometry type');
   }
@@ -296,18 +320,47 @@ abstract class Feature {
       ownerId != origOwnerId ||
       name != origName ||
       description != origDescription ||
-      color.value != origColor.value;
+      color.value != origColor.value ||
+      (deadline == null && origDeadline != null) ||
+      (deadline != null && origDeadline == null) ||
+      (deadline != null &&
+          origDeadline != null &&
+          !deadline!.isAtSameMomentAs(origDeadline!));
 
   void revert() {
     ownerId = origOwnerId;
     name = origName;
+    deadline = origDeadline;
     description = origDescription;
   }
 
   bool get isLocal => id < 0;
 
-  Map<String, dynamic> toJson();
-  Map<String, Object> toDbEntry();
+  @mustCallSuper
+  Map<String, dynamic> toJson() => {
+        'id': id,
+        'owner_id': ownerId,
+        'name': name,
+        if (deadline != null) 'deadline': deadline!.toUtc().toIso8601String(),
+        'properties': {'description': description, 'color': color.value}
+      };
+
+  @mustCallSuper
+  Map<String, Object> toDbEntry() => {
+        'id': id,
+        'owner_id': ownerId,
+        'orig_owner_id': origOwnerId,
+        'name': name,
+        'orig_name': origName,
+        if (deadline != null) 'deadline': deadline!.toUtc().toIso8601String(),
+        if (origDeadline != null)
+          'orig_deadline': origDeadline!.toUtc().toIso8601String(),
+        if (description != null) 'description': description!,
+        if (origDescription != null) 'orig_description': origDescription!,
+        'color': color.value,
+        'orig_color': origColor.value,
+        'deleted': deleted ? 1 : 0
+      };
 }
 
 class Point extends Feature {
@@ -326,6 +379,8 @@ class Point extends Feature {
       int origOwnerId,
       String name,
       String origName,
+      DateTime? deadline,
+      DateTime? origDeadline,
       String? description,
       String? origDescription,
       Color color,
@@ -337,12 +392,24 @@ class Point extends Feature {
       this.attributes,
       this.origAttributes,
       deleted)
-      : super._(id, ownerId, origOwnerId, name, origName, description,
-            origDescription, color, origColor, deleted);
+      : super._(
+            id,
+            ownerId,
+            origOwnerId,
+            name,
+            origName,
+            deadline,
+            origDeadline,
+            description,
+            origDescription,
+            color,
+            origColor,
+            deleted);
   Point.origSame(
       int id,
       int ownerId,
       String name,
+      DateTime? deadline,
       String? description,
       Color color,
       LatLng coords,
@@ -355,6 +422,8 @@ class Point extends Feature {
             ownerId,
             name,
             name,
+            deadline,
+            deadline,
             description,
             description,
             color,
@@ -373,6 +442,8 @@ class Point extends Feature {
       int origOwnerId,
       String name,
       String origName,
+      DateTime? deadline,
+      DateTime? origDeadline,
       String? description,
       String? origDescription,
       Color color,
@@ -393,6 +464,8 @@ class Point extends Feature {
         origOwnerId,
         name,
         origName,
+        deadline,
+        origDeadline,
         description,
         origDescription,
         color,
@@ -450,32 +523,20 @@ class Point extends Feature {
       };
 
   @override
-  Map<String, dynamic> toJson() => {
-        'id': id,
-        'owner_id': ownerId,
-        'name': name,
-        'properties': {
-          'description': description,
-          'category': category.name,
-          'attributes':
-              attributes.map((attr) => attr.name).toList(growable: false),
-          'color': color.value
-        },
-        'geometry': _geometry()
-      };
+  Map<String, dynamic> toJson() {
+    var js = super.toJson();
+    js['properties'].addAll({
+      'category': category.name,
+      'attributes': attributes.map((attr) => attr.name).toList(growable: false),
+    });
+    js.addAll({'geometry': _geometry()});
+    return js;
+  }
 
   @override
   Map<String, Object> toDbEntry() {
-    return {
-      'id': id,
-      'owner_id': ownerId,
-      'orig_owner_id': origOwnerId,
-      'name': name,
-      'orig_name': origName,
-      if (description != null) 'description': description!,
-      if (origDescription != null) 'orig_description': origDescription!,
-      'color': color.value,
-      'orig_color': origColor.value,
+    var entry = super.toDbEntry();
+    entry.addAll({
       'point_category': category.name,
       'orig_point_category': origCategory.name,
       'attributes': jsonEncode(
@@ -484,8 +545,8 @@ class Point extends Feature {
           origAttributes.map((attr) => attr.name).toList(growable: false)),
       'geom': jsonEncode(_geometry()),
       'orig_geom': jsonEncode(_origGeometry()),
-      'deleted': deleted ? 1 : 0
-    };
+    });
+    return entry;
   }
 
   Point copy() {
@@ -495,6 +556,8 @@ class Point extends Feature {
         origOwnerId,
         name,
         origName,
+        deadline,
+        origDeadline,
         description,
         origDescription,
         color,
@@ -521,6 +584,8 @@ class LineString extends Feature {
       int origOwnerId,
       String name,
       String origName,
+      DateTime? deadline,
+      DateTime? origDeadline,
       String? description,
       String? origDescription,
       Color color,
@@ -528,8 +593,19 @@ class LineString extends Feature {
       this.coords,
       this.origCoords,
       bool deleted)
-      : super._(id, ownerId, origOwnerId, name, origName, description,
-            origDescription, color, origColor, deleted);
+      : super._(
+            id,
+            ownerId,
+            origOwnerId,
+            name,
+            origName,
+            deadline,
+            origDeadline,
+            description,
+            origDescription,
+            color,
+            origColor,
+            deleted);
 
   factory LineString.fromGeojson(
       int id,
@@ -537,6 +613,8 @@ class LineString extends Feature {
       int origOwnerId,
       String name,
       String origName,
+      DateTime? deadline,
+      DateTime? origDeadline,
       String? description,
       String? origDescription,
       Color color,
@@ -555,6 +633,8 @@ class LineString extends Feature {
         origOwnerId,
         name,
         origName,
+        deadline,
+        origDeadline,
         description,
         origDescription,
         color,
@@ -611,30 +691,20 @@ class LineString extends Feature {
       };
 
   @override
-  Map<String, dynamic> toJson() => {
-        'id': id,
-        'owner_id': ownerId,
-        'name': name,
-        'properties': {'description': description, 'color': color.value},
-        'geometry': _geometry()
-      };
+  Map<String, dynamic> toJson() {
+    var js = super.toJson();
+    js.addAll({'geometry': _geometry()});
+    return js;
+  }
 
   @override
   Map<String, Object> toDbEntry() {
-    return {
-      'id': id,
-      'owner_id': ownerId,
-      'orig_owner_id': origOwnerId,
-      'name': name,
-      'orig_name': origName,
-      if (description != null) 'description': description!,
-      if (origDescription != null) 'orig_description': origDescription!,
-      'color': color.value,
-      'orig_color': origColor.value,
+    var entry = super.toDbEntry();
+    entry.addAll({
       'geom': jsonEncode(_geometry()),
       'orig_geom': jsonEncode(_origGeometry()),
-      'deleted': deleted ? 1 : 0
-    };
+    });
+    return entry;
   }
 }
 

@@ -109,6 +109,8 @@ class Storage {
         'orig_owner_id integer,'
         'name text not null,'
         'orig_name text not null,'
+        'deadline text,'
+        'orig_deadline text,'
         'description text,'
         'orig_description text,'
         'color integer not null,'
@@ -447,6 +449,8 @@ class Storage {
       'orig_owner_id',
       'name',
       'orig_name',
+      'deadline',
+      'orig_deadline',
       'description',
       'orig_description',
       'color',
@@ -467,6 +471,8 @@ class Storage {
       int origOwnerId = row['orig_owner_id'] as int;
       String name = row['name'] as String;
       String origName = row['orig_name'] as String;
+      String? deadline = row['deadline'] as String?;
+      String? origDeadline = row['orig_deadline'] as String?;
       String? description = row['description'] as String?;
       String? origDescription = row['orig_description'] as String?;
       int color = row['color'] as int;
@@ -499,6 +505,8 @@ class Storage {
             origOwnerId,
             name,
             origName,
+            deadline == null ? null : DateTime.parse(deadline),
+            origDeadline == null ? null : DateTime.parse(origDeadline),
             description,
             origDescription,
             Color(color),
@@ -517,6 +525,8 @@ class Storage {
             origOwnerId,
             name,
             origName,
+            deadline == null ? null : DateTime.parse(deadline),
+            origDeadline == null ? null : DateTime.parse(origDeadline),
             description,
             origDescription,
             Color(color),
