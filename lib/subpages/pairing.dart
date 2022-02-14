@@ -2,12 +2,11 @@ import 'dart:developer' as developer;
 import 'dart:io';
 
 import 'package:flutter/material.dart';
-import 'package:qr_code_scanner/qr_code_scanner.dart';
-
-import 'package:oko/data.dart';
-import 'package:oko/utils.dart' as utils;
 import 'package:oko/communication.dart' as comm;
+import 'package:oko/data.dart';
 import 'package:oko/i18n.dart';
+import 'package:oko/utils.dart' as utils;
+import 'package:qr_code_scanner/qr_code_scanner.dart';
 
 class Pairing extends StatefulWidget {
   final GlobalKey<ScaffoldState> scaffoldKey;
@@ -213,6 +212,7 @@ class _PairingState extends State<Pairing> {
   void _pair() async {
     String serverAddress = addressInputController.text;
     serverAddress = comm.ensureNoTrailingSlash(serverAddress);
+    nameInputController.text = nameInputController.text.trim();
     ServerSettings ss;
     try {
       ss =
@@ -227,8 +227,8 @@ class _PairingState extends State<Pairing> {
       await utils.notifyDialog(
           context, e.getMessage(context), null, utils.NotificationLevel.error);
       return;
-    } catch (e) {
-      developer.log('exception: ${e.toString()}');
+    } catch (e, stack) {
+      developer.log('exception: ${e.toString()} $stack');
       await utils.notifyDialog(context, I18N.of(context).serverUnavailable,
           e.toString(), utils.NotificationLevel.error);
       return;

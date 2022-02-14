@@ -1,8 +1,8 @@
 import 'dart:async';
 import 'dart:collection';
 import 'dart:convert';
-import 'dart:io';
 import 'dart:developer' as developer;
+import 'dart:io';
 
 import 'package:flutter/cupertino.dart';
 import 'package:http/http.dart' as http;
@@ -92,8 +92,9 @@ class UnexpectedStatusCode extends DetailedCommException {
   }
 }
 
-String ensureNoTrailingSlash(String baseAddr) =>
-    baseAddr.endsWith('/') ? baseAddr.substring(0, baseAddr.length - 1) : baseAddr;
+String ensureNoTrailingSlash(String baseAddr) => baseAddr.endsWith('/')
+    ? baseAddr.substring(0, baseAddr.length - 1)
+    : baseAddr;
 
 String ensureTrailingSlash(String baseAddr) =>
     baseAddr.endsWith('/') ? baseAddr : (baseAddr + '/');
@@ -138,8 +139,9 @@ Future<ServerSettings> handshake(
     mapPackSize: data['map_info']['map_pack_size'],
     tilePathTemplate: data['map_info']['tile_path_template'],
     minZoom: data['map_info']['min_zoom'],
-    defaultCenter: LatLng(data['map_info']['default_center']['lat'],
-        data['map_info']['default_center']['lng']),
+    defaultCenter: LatLng(
+        (data['map_info']['default_center']['lat'] as num).toDouble(),
+        (data['map_info']['default_center']['lng'] as num).toDouble()),
   );
 }
 
