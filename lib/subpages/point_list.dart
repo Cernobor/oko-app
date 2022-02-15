@@ -209,8 +209,14 @@ class _PointListState extends State<PointList> {
                                     point.isEdited) ||
                                 (editState == EditState.pristineState &&
                                     !point.isEdited &&
-                                    !point.isLocal) ||
-                                (editState == EditState.anyState)) &&
+                                    !point.isLocal &&
+                                    !point.deleted) ||
+                                (editState == EditState.anyState) ||
+                                (editState == EditState.deletedState &&
+                                    point.deleted) ||
+                                (editState == EditState.editedDeletedState &&
+                                    point.deleted &&
+                                    point.isEdited)) &&
                             (exact
                                 ? setEquals(point.attributes, checkedAttributes)
                                 : (point.attributes.any((attr) =>
@@ -224,11 +230,18 @@ class _PointListState extends State<PointList> {
                                     children: [
                                       Icon(
                                         point.category.iconData,
-                                        color: point.deleted
-                                            ? point.color.withOpacity(0.5)
-                                            : point.color,
+                                        color: point.color,
                                         size: 40,
                                       ),
+                                      if (point.isLocal)
+                                        Align(
+                                          alignment: const Alignment(1, -1),
+                                          child: Icon(Icons.star,
+                                              size: badgeSize,
+                                              color: Theme.of(context)
+                                                  .colorScheme
+                                                  .primary),
+                                        ),
                                       if (point.isEdited)
                                         Align(
                                           alignment: const Alignment(1, -1),
@@ -238,10 +251,12 @@ class _PointListState extends State<PointList> {
                                                   .colorScheme
                                                   .primary),
                                         ),
-                                      if (point.isLocal)
+                                      if (point.deleted)
                                         Align(
-                                          alignment: const Alignment(1, -1),
-                                          child: Icon(Icons.star,
+                                          alignment: point.isEdited
+                                              ? const Alignment(1, 0)
+                                              : const Alignment(1, -1),
+                                          child: Icon(Icons.delete,
                                               size: badgeSize,
                                               color: Theme.of(context)
                                                   .colorScheme
@@ -354,14 +369,26 @@ class _PointListState extends State<PointList> {
     var titles = {
       EditState.newState: I18N.of(context).newState,
       EditState.editedState: I18N.of(context).editedState,
+      EditState.deletedState: I18N.of(context).deletedState,
+      EditState.editedDeletedState: I18N.of(context).editedDeletedState,
       EditState.pristineState: I18N.of(context).pristineState,
       EditState.anyState: I18N.of(context).anyState,
     };
-    var secondaries = const {
-      EditState.newState: Icon(Icons.star),
-      EditState.editedState: Icon(Icons.edit),
-      EditState.pristineState: SizedBox(),
-      EditState.anyState: SizedBox()
+    var secondaries = {
+      EditState.newState: const Icon(Icons.star),
+      EditState.editedState: const Icon(Icons.edit),
+      EditState.deletedState: const Icon(Icons.delete),
+      EditState.editedDeletedState: SizedBox(
+          width: 35,
+          height: 35,
+          child: Stack(
+            children: const [
+              Align(alignment: Alignment.topLeft, child: Icon(Icons.delete)),
+              Align(alignment: Alignment.bottomRight, child: Icon(Icons.edit)),
+            ],
+          )),
+      EditState.pristineState: const SizedBox(),
+      EditState.anyState: const SizedBox()
     };
     EditState? result = await showDialog<EditState>(
       context: context,

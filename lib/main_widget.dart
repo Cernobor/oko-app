@@ -503,10 +503,16 @@ class MainWidgetState extends State<MainWidget> {
                       point.category.iconData,
                       size:
                           baseSize * (infoTarget.isSamePoint(point) ? 1.5 : 1),
-                      color: point.deleted
-                          ? point.color.withOpacity(0.5)
-                          : point.color,
+                      color: point.color,
                     ),
+                    if (point.isLocal)
+                      Align(
+                        alignment: const Alignment(1, -1),
+                        child: Icon(Icons.star,
+                            size: badgeSize *
+                                (infoTarget.isSamePoint(point) ? 1.5 : 1),
+                            color: Theme.of(context).colorScheme.primary),
+                      ),
                     if (point.isEdited)
                       Align(
                         alignment: const Alignment(1, -1),
@@ -515,10 +521,12 @@ class MainWidgetState extends State<MainWidget> {
                                 (infoTarget.isSamePoint(point) ? 1.5 : 1),
                             color: Theme.of(context).colorScheme.primary),
                       ),
-                    if (point.isLocal)
+                    if (point.deleted)
                       Align(
-                        alignment: const Alignment(1, -1),
-                        child: Icon(Icons.star,
+                        alignment: point.isEdited
+                            ? const Alignment(1, 0)
+                            : const Alignment(1, -1),
+                        child: Icon(Icons.delete,
                             size: badgeSize *
                                 (infoTarget.isSamePoint(point) ? 1.5 : 1),
                             color: Theme.of(context).colorScheme.primary),
@@ -529,9 +537,7 @@ class MainWidgetState extends State<MainWidget> {
                         child: Icon(attr.iconData,
                             size: badgeSize *
                                 (infoTarget.isSamePoint(point) ? 1.5 : 1),
-                            color: point.deleted
-                                ? attr.color.withOpacity(0.5)
-                                : attr.color),
+                            color: attr.color),
                       )
                   ],
                 ))),

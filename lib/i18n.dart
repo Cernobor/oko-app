@@ -306,6 +306,12 @@ class I18N {
   String get newState => {'cs': 'Nový', 'en': 'New'}[locale.languageCode]!;
   String get editedState =>
       {'cs': 'Upravený', 'en': 'Edited'}[locale.languageCode]!;
+  String get deletedState =>
+      {'cs': 'Ke smazání', 'en': 'To be deleted'}[locale.languageCode]!;
+  String get editedDeletedState => {
+        'cs': 'Upravený + ke smazání',
+        'en': 'Edited + to be deleted'
+      }[locale.languageCode]!;
   String get pristineState =>
       {'cs': 'Nedotčený', 'en': 'Pristine'}[locale.languageCode]!;
   String get anyState =>

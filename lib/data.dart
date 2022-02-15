@@ -196,7 +196,14 @@ class PointAttribute implements Comparable {
   Alignment badgeAlignment() => Alignment(xAlign, yAlign);
 }
 
-enum EditState { anyState, pristineState, newState, editedState }
+enum EditState {
+  anyState,
+  pristineState,
+  newState,
+  editedState,
+  deletedState,
+  editedDeletedState
+}
 
 EditState parseEditState(String str) {
   return {
