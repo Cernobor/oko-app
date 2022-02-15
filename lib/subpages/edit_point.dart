@@ -322,29 +322,28 @@ class _EditPointState extends State<EditPoint> {
                   textBaseline: TextBaseline.alphabetic,
                   children: [
                     Padding(
-                      padding: const EdgeInsets.only(top: 0),
-                      child: Row(children: [
-                        Text(I18N.of(context).deadline),
-                        Checkbox(
-                          value: hasDeadline,
-                          onChanged: (value) => setState(() {
-                                hasDeadline = value ?? false;
-                              }))
-                        ]
-                      )
-                    ),
+                        padding: const EdgeInsets.only(top: 0),
+                        child: Row(children: [
+                          Text(I18N.of(context).deadline),
+                          Checkbox(
+                              value: hasDeadline,
+                              onChanged: (value) => setState(() {
+                                    hasDeadline = value ?? false;
+                                  }))
+                        ])),
                     Expanded(
                         child: TextField(
-                          style: TextStyle(
-                            color: hasDeadline ? null : Theme.of(context).disabledColor
-                          ),
+                            style: TextStyle(
+                                color: hasDeadline
+                                    ? null
+                                    : Theme.of(context).disabledColor),
                             controller: TextEditingController(
                                 text: deadline == null
                                     ? null
                                     : I18N
                                         .of(context)
                                         .dateFormat
-                                        .format(deadline!)),
+                                        .format(deadline!.toLocal())),
                             decoration: InputDecoration(
                               suffixIcon: const Icon(Icons.calendar_today),
                               errorText: hasDeadline && deadline == null
@@ -369,7 +368,7 @@ class _EditPointState extends State<EditPoint> {
     while (true) {
       date = await showDatePicker(
         context: context,
-        initialDate: date ?? deadline ?? DateTime.now(),
+        initialDate: date ?? deadline?.toLocal() ?? DateTime.now(),
         firstDate: DateTime.now(),
         lastDate: DateTime(2100),
         confirmText: I18N.of(context).dialogNext.toUpperCase(),
@@ -382,7 +381,7 @@ class _EditPointState extends State<EditPoint> {
         initialTime: time ??
             (deadline == null
                 ? TimeOfDay.fromDateTime(date)
-                : TimeOfDay.fromDateTime(deadline!)),
+                : TimeOfDay.fromDateTime(deadline!.toLocal())),
         cancelText: I18N.of(context).dialogBack.toUpperCase(),
       );
       if (time == null) {
@@ -392,7 +391,8 @@ class _EditPointState extends State<EditPoint> {
     }
     setState(() {
       deadline =
-          DateTime(date!.year, date.month, date.day, time!.hour, time.minute);
+          DateTime(date!.year, date.month, date.day, time!.hour, time.minute)
+              .toUtc();
     });
   }
 

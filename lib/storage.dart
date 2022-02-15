@@ -1,9 +1,7 @@
 import 'dart:collection';
 import 'dart:convert';
 import 'dart:io';
-import 'dart:developer' as developer;
 
-import 'package:flutter/material.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:oko/data.dart';
 import 'package:oko/utils.dart';
@@ -84,8 +82,12 @@ class Storage {
         'sort_direction integer not null,'
         'attribute_filter_exact integer not null,'
         'edit_state_filter text not null)');
-    await db.insert('point_list_settings',
-        {'sort_key': 'name', 'sort_direction': 1, 'attribute_filter_exact': 0, 'edit_state_filter': EditState.anyState.name});
+    await db.insert('point_list_settings', {
+      'sort_key': 'name',
+      'sort_direction': 1,
+      'attribute_filter_exact': 0,
+      'edit_state_filter': EditState.anyState.name
+    });
     await db.execute('CREATE TABLE point_list_checked_categories ('
         'category text not null)');
     var batch = db.batch();
@@ -105,23 +107,7 @@ class Storage {
     await db.insert('next_local_id', {'id': -1});
     await db.execute('CREATE TABLE features ('
         'id integer primary key,'
-        'owner_id integer,'
-        'orig_owner_id integer,'
-        'name text not null,'
-        'orig_name text not null,'
-        'deadline text,'
-        'orig_deadline text,'
-        'description text,'
-        'orig_description text,'
-        'color integer not null,'
-        'orig_color integer not null,'
-        'point_category text,'
-        'orig_point_category text,'
-        'attributes text,'
-        'orig_attributes text,'
-        'geom text not null,'
-        'orig_geom text not null,'
-        'deleted integer not null)');
+        'data text not null)');
   }
 
   static void _onConfigure(Database db) async {
@@ -132,7 +118,7 @@ class Storage {
 
   Storage._(this._db);
 
-  // server settings
+  //region server settings
   ServerSettings? _serverSettings;
   ServerSettings? get serverSettings => _serverSettings;
 
@@ -191,8 +177,9 @@ class Storage {
       await f(tx);
     }
   }
+  //endregion
 
-  // map state
+  //region map state
   MapState? _mapState;
   MapState? get mapState => _mapState;
 
@@ -257,8 +244,9 @@ class Storage {
       row['zoom_max'] == null ? null : row['zoom_max']! as int,
     );
   }
+  //endregion
 
-  // point list sorts and filters
+  //region point list sorts and filters
   late Sort _pointListSortKey;
   late int _pointListSortDir;
   late bool _pointListAttributeFilterExact;
@@ -289,12 +277,14 @@ class Storage {
 
   Future<void> setPointListAttributeFilterExact(bool exact) async {
     _pointListAttributeFilterExact = exact;
-    await _db.update('point_list_settings', {'attribute_filter_exact': exact ? 1 : 0});
+    await _db.update(
+        'point_list_settings', {'attribute_filter_exact': exact ? 1 : 0});
   }
 
   Future<void> setPointListEditStateFilter(EditState editState) async {
     _pointListEditStateFilter = editState;
-    await _db.update('point_list_settings', {'edit_state_filter': editState.name});
+    await _db
+        .update('point_list_settings', {'edit_state_filter': editState.name});
   }
 
   Future<void> setPointListCheckedUsers(Iterable<int> userIds) async {
@@ -337,13 +327,20 @@ class Storage {
 
   Future<void> _loadPointListSettings([Transaction? txn]) async {
     Future<void> f(Transaction tx) async {
-      var rows =
-          await tx.query('point_list_settings', columns: ['sort_key', 'sort_direction', 'attribute_filter_exact', 'edit_state_filter'], limit: 1);
+      var rows = await tx.query('point_list_settings',
+          columns: [
+            'sort_key',
+            'sort_direction',
+            'attribute_filter_exact',
+            'edit_state_filter'
+          ],
+          limit: 1);
       for (var row in rows) {
         _pointListSortKey = SortExt.parse(row['sort_key'] as String);
         _pointListSortDir = row['sort_direction'] as int;
         _pointListAttributeFilterExact = row['attribute_filter_exact'] != 0;
-        _pointListEditStateFilter = parseEditState(row['edit_state_filter'] as String);
+        _pointListEditStateFilter =
+            parseEditState(row['edit_state_filter'] as String);
       }
 
       rows = await tx
@@ -375,8 +372,9 @@ class Storage {
       await f(txn);
     }
   }
+  //endregion
 
-  // users
+  //region users
   final Users _users = HashMap();
   UsersView get users => UnmodifiableMapView(_users);
 
@@ -399,8 +397,9 @@ class Storage {
       _users[row['id']! as int] = row['name']! as String;
     }
   }
+  //endregion
 
-  // next local id
+  //region next local id
   Future<int> nextLocalId() async {
     return await _db.transaction((Transaction tx) async {
       await tx.execute('update next_local_id set id = id - 1');
@@ -408,8 +407,9 @@ class Storage {
       return row[0]['id'] as int;
     });
   }
+  //endregion
 
-  // features
+  //region features
   final List<Feature> _features = List.empty(growable: true);
   final Map<int, Feature> _featuresMap = HashMap();
   FeaturesView get features => UnmodifiableListView(_features);
@@ -420,7 +420,8 @@ class Storage {
       await tx.execute('delete from features');
       Batch batch = tx.batch();
       for (var feature in features) {
-        batch.insert('features', feature.toDbEntry());
+        batch.insert(
+            'features', {'id': feature.id, 'data': jsonEncode(feature)});
       }
       await batch.commit(noResult: true);
       await _loadFeatures(tx);
@@ -429,7 +430,8 @@ class Storage {
 
   Future<void> upsertFeature(Feature feature) async {
     await _db.transaction((Transaction tx) async {
-      await tx.insert('features', feature.toDbEntry(),
+      await tx.insert(
+          'features', {'id': feature.id, 'data': jsonEncode(feature)},
           conflictAlgorithm: ConflictAlgorithm.replace);
       await _loadFeatures(tx);
     });
@@ -443,103 +445,21 @@ class Storage {
   }
 
   Future<void> _loadFeatures([Transaction? tx]) async {
-    var rows = await (tx ?? _db).query('features', columns: [
-      'id',
-      'owner_id',
-      'orig_owner_id',
-      'name',
-      'orig_name',
-      'deadline',
-      'orig_deadline',
-      'description',
-      'orig_description',
-      'color',
-      'orig_color',
-      'point_category',
-      'orig_point_category',
-      'attributes',
-      'orig_attributes',
-      'geom',
-      'orig_geom',
-      'deleted'
-    ]);
+    var rows = await (tx ?? _db).query('features', columns: ['id', 'data']);
     _features.clear();
     _featuresMap.clear();
     for (var row in rows) {
       int id = row['id'] as int;
-      int ownerId = row['owner_id'] as int;
-      int origOwnerId = row['orig_owner_id'] as int;
-      String name = row['name'] as String;
-      String origName = row['orig_name'] as String;
-      String? deadline = row['deadline'] as String?;
-      String? origDeadline = row['orig_deadline'] as String?;
-      String? description = row['description'] as String?;
-      String? origDescription = row['orig_description'] as String?;
-      int color = row['color'] as int;
-      int origColor = row['orig_color'] as int;
-      String? pointCategory = row['point_category'] as String?;
-      String? origPointCategory = row['orig_point_category'] as String?;
-      String attributes = (row['attributes'] ?? '[]') as String;
-      String origAttributes = (row['orig_attributes'] ?? '[]') as String;
-      String geom = row['geom'] as String;
-      String origGeom = row['orig_geom'] as String;
-      int deleted = row['deleted'] as int;
-
-      List<dynamic> parsedAttributes = jsonDecode(attributes);
-      List<dynamic> parsedOrigAttributes = jsonDecode(origAttributes);
-      Map<String, dynamic> parsedGeom = jsonDecode(geom);
-      Map<String, dynamic> parsedOrigGeom = jsonDecode(origGeom);
-      Feature f;
-      if (Feature.isGeojsonPoint(parsedGeom)) {
-        PointCategory cat = PointCategory.fromNameString(pointCategory);
-        PointCategory origCat = PointCategory.fromNameString(origPointCategory);
-        Set<PointAttribute> attrs = parsedAttributes
-            .map((attr) => PointAttribute.fromNameString(attr))
-            .toSet();
-        Set<PointAttribute> origAttrs = parsedOrigAttributes
-            .map((attr) => PointAttribute.fromNameString(attr))
-            .toSet();
-        f = Point.fromGeojson(
-            id,
-            ownerId,
-            origOwnerId,
-            name,
-            origName,
-            deadline == null ? null : DateTime.parse(deadline),
-            origDeadline == null ? null : DateTime.parse(origDeadline),
-            description,
-            origDescription,
-            Color(color),
-            Color(origColor),
-            cat,
-            origCat,
-            attrs,
-            origAttrs,
-            deleted != 0,
-            parsedGeom,
-            parsedOrigGeom);
-      } else if (Feature.isGeojsonLineString(parsedGeom)) {
-        f = LineString.fromGeojson(
-            id,
-            ownerId,
-            origOwnerId,
-            name,
-            origName,
-            deadline == null ? null : DateTime.parse(deadline),
-            origDeadline == null ? null : DateTime.parse(origDeadline),
-            description,
-            origDescription,
-            Color(color),
-            Color(origColor),
-            deleted != 0,
-            parsedGeom,
-            parsedOrigGeom);
-      } else {
-        developer.log('Unsupported geometry type (id=$id).');
-        continue;
+      String data = row['data'] as String;
+      Map<String, dynamic> json = jsonDecode(data);
+      Feature f = Feature.fromJson(json, false);
+      if (id != f.id) {
+        throw IllegalStateException(
+            'feature id $id does not match its data id ${f.id}');
       }
       _features.add(f);
       _featuresMap[f.id] = f;
     }
   }
+  //endregion
 }

@@ -195,7 +195,7 @@ Future<Data> downloadData(String serverAddress) async {
       .map((m) => MapEntry<int, String>(m['id'], m['name'])));
   List<Feature> features = (data['features'] as List)
       .cast<Map<String, dynamic>>()
-      .map((Map<String, dynamic> feature) => Feature.fromJson(feature))
+      .map((Map<String, dynamic> feature) => Feature.fromJson(feature, true))
       .toList(growable: false);
   return Data(users, features);
 }

@@ -8,21 +8,20 @@ import 'package:flutter_compass/flutter_compass.dart';
 import 'package:flutter_map/plugin_api.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:location/location.dart';
+import 'package:oko/communication.dart' as comm;
+import 'package:oko/data.dart' as data;
+import 'package:oko/i18n.dart';
 import 'package:oko/main.dart';
 import 'package:oko/map.dart';
-import 'package:positioned_tap_detector_2/positioned_tap_detector_2.dart';
-import 'package:vector_tile_renderer/vector_tile_renderer.dart' hide Theme;
-import 'package:rxdart/rxdart.dart';
-
 import 'package:oko/storage.dart';
 import 'package:oko/subpages/edit_point.dart';
 import 'package:oko/subpages/pairing.dart';
-import 'package:oko/communication.dart' as comm;
-import 'package:oko/utils.dart' as utils;
-import 'package:oko/data.dart' as data;
-import 'package:oko/i18n.dart';
 import 'package:oko/subpages/point_list.dart';
+import 'package:oko/utils.dart' as utils;
+import 'package:positioned_tap_detector_2/positioned_tap_detector_2.dart';
+import 'package:rxdart/rxdart.dart';
 import 'package:vector_map_tiles/vector_map_tiles.dart';
+import 'package:vector_tile_renderer/vector_tile_renderer.dart' hide Theme;
 
 enum PointLogType { currentLocation, crosshair }
 
@@ -147,8 +146,7 @@ class MainWidgetState extends State<MainWidget> {
                 height: 147.0,
               ),
             ),
-            decoration:
-                const BoxDecoration(color: cbGreen),
+            decoration: const BoxDecoration(color: cbGreen),
           );
         });
   }
@@ -262,7 +260,7 @@ class MainWidgetState extends State<MainWidget> {
                           enabled: storage?.serverSettings != null,
                           onTap: () {
                             Navigator.of(context).pop();
-                            onDownload(true, context);
+                            onDownload(context);
                           },
                         ),
                         ListTile(
@@ -410,9 +408,8 @@ class MainWidgetState extends State<MainWidget> {
                         mapThemeData(),
                         layerPredicate: defaultBackgroundLayerPredicate)))
           else
-            SolidColorLayerWidget(options: SolidColorLayerOptions(
-              color: mapBackgroundColor
-            ))
+            SolidColorLayerWidget(
+                options: SolidColorLayerOptions(color: mapBackgroundColor))
       ],
       layers: [
         // limits
@@ -505,7 +502,9 @@ class MainWidgetState extends State<MainWidget> {
                       point.category.iconData,
                       size:
                           baseSize * (infoTarget.isSamePoint(point) ? 1.5 : 1),
-                      color: point.deleted ? point.color.withOpacity(0.5) : point.color,
+                      color: point.deleted
+                          ? point.color.withOpacity(0.5)
+                          : point.color,
                     ),
                     if (point.isEdited)
                       Align(
@@ -723,8 +722,8 @@ class MainWidgetState extends State<MainWidget> {
               size: 30,
             ),
             backgroundColor: !mapReady ||
-                mapController.zoom <=
-                    (storage?.serverSettings?.minZoom ?? fallbackMinZoom)
+                    mapController.zoom <=
+                        (storage?.serverSettings?.minZoom ?? fallbackMinZoom)
                 ? Theme.of(context).colorScheme.secondary.withOpacity(.35)
                 : null,
             onPressed: !mapReady ||
@@ -1007,7 +1006,7 @@ class MainWidgetState extends State<MainWidget> {
           null,
           null,
           null));
-      await onDownload(false);
+      await download();
       setState(() {});
       mapController.move(storage!.serverSettings!.defaultCenter,
           storage!.serverSettings!.minZoom.toDouble());
@@ -1126,54 +1125,21 @@ class MainWidgetState extends State<MainWidget> {
     */
   }
 
-  Future<void> onDownload(bool only, [BuildContext? ctx]) async {
-    developer.log('onDownload');
-    if (only) {
-      bool? confirm = await showDialog<bool>(
-          context: ctx!,
-          builder: (context) => AlertDialog(
-                title: Text(I18N.of(context).downloadConfirm),
-                content: SingleChildScrollView(
-                  child: Text(I18N.of(context).downloadConfirmDetail),
-                ),
-                actionsAlignment: MainAxisAlignment.center,
-                actions: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                    children: [
-                      TextButton(
-                        child: Text(I18N.of(context).dialogConfirm),
-                        onPressed: () {
-                          Navigator.of(context).pop(true);
-                        },
-                      ),
-                      TextButton(
-                        child: Text(I18N.of(context).dialogCancel),
-                        onPressed: () {
-                          Navigator.of(context).pop(false);
-                        },
-                      )
-                    ],
-                  )
-                ],
-              ));
-      if (confirm != true) {
-        return;
-      }
-    }
+  Future<bool> download() async {
+    developer.log('download');
     late comm.Data data;
     try {
       data = await comm.downloadData(storage!.serverSettings!.serverAddress);
     } on comm.UnexpectedStatusCode catch (e, stack) {
-      developer.log('exception: ${e.toString()} $stack');
+      developer.log('exception: ${e.toString()}\n$stack');
       await utils.notifyDialog(context, e.getMessage(context), e.detail,
           utils.NotificationLevel.error);
-      return;
+      return false;
     } catch (e, stack) {
-      developer.log('exception: ${e.toString()} $stack');
+      developer.log('exception: ${e.toString()}\n$stack');
       await utils.notifyDialog(context, I18N.of(context).error, e.toString(),
           utils.NotificationLevel.error);
-      return;
+      return false;
     }
     bool usersChanged =
         !setEquals(data.users.keys.toSet(), storage!.users.keys.toSet());
@@ -1182,14 +1148,51 @@ class MainWidgetState extends State<MainWidget> {
     if (usersChanged) {
       await storage!.setPointListCheckedUsers(storage!.users.keys);
     }
-    setState(() {
-      infoTarget = Target.none();
-    });
-    if (only) {
-      Navigator.of(context).pop();
+    return true;
+  }
+
+  Future<void> onDownload(BuildContext ctx) async {
+    developer.log('onDownload');
+    bool? confirm = await showDialog<bool>(
+        context: ctx,
+        builder: (context) => AlertDialog(
+              title: Text(I18N.of(context).downloadConfirm),
+              content: SingleChildScrollView(
+                child: Text(I18N.of(context).downloadConfirmDetail),
+              ),
+              actionsAlignment: MainAxisAlignment.center,
+              actions: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  children: [
+                    TextButton(
+                      child: Text(I18N.of(context).dialogConfirm),
+                      onPressed: () {
+                        Navigator.of(context).pop(true);
+                      },
+                    ),
+                    TextButton(
+                      child: Text(I18N.of(context).dialogCancel),
+                      onPressed: () {
+                        Navigator.of(context).pop(false);
+                      },
+                    )
+                  ],
+                )
+              ],
+            ));
+    if (confirm != true) {
+      return;
+    }
+    bool success = await download();
+    Navigator.of(context).pop();
+    if (success) {
       utils.notifySnackbar(context, I18N.of(context).downloaded,
           utils.NotificationLevel.success);
     }
+    setState(() {
+      infoTarget = Target.none();
+    });
   }
 
   Future<bool> upload() async {
@@ -1207,12 +1210,12 @@ class MainWidgetState extends State<MainWidget> {
       await comm.uploadData(
           storage!.serverSettings!.serverAddress, created, edited, deleted);
     } on comm.DetailedCommException catch (e, stack) {
-      developer.log('exception: ${e.toString()} $stack');
+      developer.log('exception: ${e.toString()}\n$stack');
       await utils.notifyDialog(context, e.getMessage(context), e.detail,
           utils.NotificationLevel.error);
       return false;
     } on Exception catch (e, stack) {
-      developer.log('exception: ${e.toString()} $stack');
+      developer.log('exception: ${e.toString()}\n$stack');
       utils.notifySnackbar(context, I18N.of(context).serverUnavailable,
           utils.NotificationLevel.error);
       return false;
@@ -1237,7 +1240,10 @@ class MainWidgetState extends State<MainWidget> {
       Navigator.of(context).pop();
       return;
     }
-    await onDownload(false);
+    if (!await download()) {
+      Navigator.of(context).pop();
+      return;
+    }
     Navigator.of(context).pop();
     utils.notifySnackbar(context, I18N.of(context).syncSuccessful,
         utils.NotificationLevel.success);
@@ -1376,6 +1382,7 @@ class MainWidgetState extends State<MainWidget> {
   }
 
   void onDeletePoint(data.Point toDelete) async {
+    developer.log('onDeletePoint');
     if (toDelete.isLocal) {
       bool confirmed = await pointDataConfirm(
           (context) => I18N.of(context).aboutToDeleteLocalPoi, toDelete);
@@ -1508,7 +1515,10 @@ class MainWidgetState extends State<MainWidget> {
                         subtitle: Text(I18N.of(context).attributes)),
                     if (point.deadline != null)
                       ListTile(
-                        title: Text(I18N.of(context).dateFormat.format(point.deadline!)),
+                        title: Text(I18N
+                            .of(context)
+                            .dateFormat
+                            .format(point.deadline!)),
                         subtitle: Text(I18N.of(context).deadline),
                       ),
                   ],
