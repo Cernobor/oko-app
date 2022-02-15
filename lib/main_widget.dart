@@ -1249,6 +1249,7 @@ class MainWidgetState extends State<MainWidget> {
       Navigator.of(context).pop();
       return;
     }
+    setState(() {});
     Navigator.of(context).pop();
     utils.notifySnackbar(context, I18N.of(context).syncSuccessful,
         utils.NotificationLevel.success);

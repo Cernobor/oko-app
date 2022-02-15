@@ -209,24 +209,16 @@ Future<void> uploadData(String serverAddress, List<Feature> created,
     'delete': deleted.map((Feature f) => f.id).toList(growable: false)
   };
 
-  var res = await http.post(uri,
-      headers: {'Content-Type': 'application/json'}, body: jsonEncode(data));
-  var body = res.body;
+  var req = http.MultipartRequest('POST', uri)
+    ..fields['data'] = jsonEncode(data);
+  var res = await req.send();
 
   switch (res.statusCode) {
     case HttpStatus.badRequest:
-      throw BadRequest(body);
+      throw BadRequest(await res.stream.bytesToString());
     case HttpStatus.noContent:
       return;
     default:
-      throw InternalServerError(body);
+      throw InternalServerError(await res.stream.bytesToString());
   }
 }
-/*
-Future<List<Geometry>> downloadExtraGeometry(String serverAddress) async {
-  var uri = uriCreator.extraGeometry(serverAddress);
-  var data = await _handle(uri) as List;
-  List<Map<String, dynamic>> castData = data.cast<Map<String, dynamic>>();
-  return castData.map((d) => Geometry.fromGeoJson(d)).toList(growable: false);
-}
-*/
