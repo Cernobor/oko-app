@@ -1,9 +1,9 @@
+import 'package:filesize/filesize.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:oko/data.dart';
 import 'package:sprintf/sprintf.dart';
-import 'package:filesize/filesize.dart';
 
 class I18N {
   I18N(this.locale);
@@ -211,18 +211,18 @@ class I18N {
         'en': 'Filter by attributes'
       }[locale.languageCode]!;
   String get filterByEditState => {
-    'cs': 'Filtrovat podle stavu úprav',
-    'en': 'Filter by edit state'
-  }[locale.languageCode]!;
+        'cs': 'Filtrovat podle stavu úprav',
+        'en': 'Filter by edit state'
+      }[locale.languageCode]!;
   String get downloadConfirm => {
         'cs': 'Opravdu stáhnout?',
         'en': 'Really download?'
       }[locale.languageCode]!;
   String get downloadConfirmDetail => {
         'cs':
-            'Pouhé stažení nezapíše lokální změny na server. Stav serveru nahradí lokální stav, čímž dojde ke smazání všech změn a nových bodů.',
+            'Pouhé stažení nezapíše lokální změny na server. Nově vytvořené body zůstanou, ale úpravy na bodech ze serveru budou ztraceny.',
         'en':
-            'Mere download does not write local changes to the server. The server state will replace the local state, causing deletion of all changes and new points.'
+            'Mere download does not write local changes to the server. Newly created points will be kept, but edits to points from the server will be lost.'
       }[locale.languageCode]!;
   String get downloaded =>
       {'cs': 'Staženo', 'en': 'Downloaded'}[locale.languageCode]!;
@@ -295,62 +295,34 @@ class I18N {
               'en': 'Important'
             },
           }[attribute.name]![locale.languageCode]!);
-  String get intersection => {
-    'cs': 'průnik',
-    'en': 'intersection'
-  }[locale.languageCode]!;
-  String get exact => {
-    'cs': 'shoda',
-    'en': 'match'
-  }[locale.languageCode]!;
-  String get close => {
-    'cs': 'Zavřít',
-    'en': 'Close'
-  }[locale.languageCode]!;
+  String get intersection =>
+      {'cs': 'průnik', 'en': 'intersection'}[locale.languageCode]!;
+  String get exact => {'cs': 'shoda', 'en': 'match'}[locale.languageCode]!;
+  String get close => {'cs': 'Zavřít', 'en': 'Close'}[locale.languageCode]!;
   String get renderBaseMap => {
-    'cs': 'Vykreslovat podkladovou mapu',
-    'en': 'Draw base map'
-  }[locale.languageCode]!;
-  String get newState => {
-    'cs': 'Nový',
-    'en': 'New'
-  }[locale.languageCode]!;
-  String get editedState => {
-    'cs': 'Upravený',
-    'en': 'Edited'
-  }[locale.languageCode]!;
-  String get pristineState => {
-    'cs': 'Nedotčený',
-    'en': 'Pristine'
-  }[locale.languageCode]!;
-  String get anyState => {
-    'cs': 'Jakýkoliv',
-    'en': 'Any state'
-  }[locale.languageCode]!;
-  String get color => {
-    'cs': 'Barva',
-    'en': 'Colour'
-  }[locale.languageCode]!;
+        'cs': 'Vykreslovat podkladovou mapu',
+        'en': 'Draw base map'
+      }[locale.languageCode]!;
+  String get newState => {'cs': 'Nový', 'en': 'New'}[locale.languageCode]!;
+  String get editedState =>
+      {'cs': 'Upravený', 'en': 'Edited'}[locale.languageCode]!;
+  String get pristineState =>
+      {'cs': 'Nedotčený', 'en': 'Pristine'}[locale.languageCode]!;
+  String get anyState =>
+      {'cs': 'Jakýkoliv', 'en': 'Any state'}[locale.languageCode]!;
+  String get color => {'cs': 'Barva', 'en': 'Colour'}[locale.languageCode]!;
   String get deadline => {
-    'cs': 'Automaticky smazat',
-    'en': 'Automatically delete'
-  }[locale.languageCode]!;
-  String get chooseTime => {
-    'cs': 'Vyberte čas',
-    'en': 'Choose a time'
-  }[locale.languageCode]!;
-  String get dialogNext => {
-    'cs': 'Dále',
-    'en': 'Next'
-  }[locale.languageCode]!;
-  String get dialogBack => {
-    'cs': 'Zpět',
-    'en': 'Back'
-  }[locale.languageCode]!;
+        'cs': 'Automaticky smazat',
+        'en': 'Automatically delete'
+      }[locale.languageCode]!;
+  String get chooseTime =>
+      {'cs': 'Vyberte čas', 'en': 'Choose a time'}[locale.languageCode]!;
+  String get dialogNext => {'cs': 'Dále', 'en': 'Next'}[locale.languageCode]!;
+  String get dialogBack => {'cs': 'Zpět', 'en': 'Back'}[locale.languageCode]!;
   DateFormat get dateFormat => {
-    'cs': DateFormat('d.M. HH:mm', 'cs'),
-    'en': DateFormat('M/d HH:mm', 'en'),
-  }[locale.languageCode]!;
+        'cs': DateFormat('d.M. HH:mm', 'cs'),
+        'en': DateFormat('M/d HH:mm', 'en'),
+      }[locale.languageCode]!;
 }
 
 class I18NDelegate extends LocalizationsDelegate<I18N> {

@@ -10,6 +10,7 @@ import 'package:latlong2/latlong.dart';
 import 'package:location/location.dart';
 import 'package:oko/communication.dart' as comm;
 import 'package:oko/data.dart' as data;
+import 'package:oko/data.dart';
 import 'package:oko/i18n.dart';
 import 'package:oko/main.dart';
 import 'package:oko/map.dart';
@@ -1144,7 +1145,10 @@ class MainWidgetState extends State<MainWidget> {
     bool usersChanged =
         !setEquals(data.users.keys.toSet(), storage!.users.keys.toSet());
     await storage!.setUsers(data.users);
-    await storage!.setFeatures(data.features);
+
+    List<Feature> features = storage!.features.where((f) => f.isLocal).toList();
+    features.addAll(data.features);
+    await storage!.setFeatures(features);
     if (usersChanged) {
       await storage!.setPointListCheckedUsers(storage!.users.keys);
     }
@@ -1240,6 +1244,7 @@ class MainWidgetState extends State<MainWidget> {
       Navigator.of(context).pop();
       return;
     }
+    await storage!.setFeatures([]);
     if (!await download()) {
       Navigator.of(context).pop();
       return;
