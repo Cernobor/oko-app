@@ -95,7 +95,7 @@ class _EditPointState extends State<EditPoint> {
             actions: [
               IconButton(
                 icon: const Icon(Icons.check),
-                tooltip: I18N.of(context).dialogPair,
+                tooltip: I18N.of(context).dialogSave,
                 onPressed: _isValid() ? _save : null,
               )
             ],
@@ -355,7 +355,7 @@ class _EditPointState extends State<EditPoint> {
                             readOnly: true,
                             onTap: onChooseTime)),
                   ],
-                )
+                ),
               ],
             ),
           ),
@@ -413,6 +413,7 @@ class _EditPointState extends State<EditPoint> {
               ? null
               : descriptionInputController.text,
           color,
+          Set.identity(),
           location,
           category,
           attributes,
@@ -427,6 +428,7 @@ class _EditPointState extends State<EditPoint> {
               ? null
               : descriptionInputController.text,
           color,
+          widget.point!.photoIDs,
           location,
           category,
           attributes,
@@ -446,6 +448,8 @@ class _EditPointState extends State<EditPoint> {
           widget.point!.origDescription,
           color,
           widget.point!.origColor,
+          widget.point!.photoIDs,
+          widget.point!.origPhotoIDs,
           location,
           widget.point!.origCoords,
           category,

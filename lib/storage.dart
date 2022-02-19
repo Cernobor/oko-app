@@ -1,6 +1,7 @@
 import 'dart:collection';
 import 'dart:convert';
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:latlong2/latlong.dart';
 import 'package:oko/data.dart';
@@ -9,14 +10,9 @@ import 'package:path/path.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:sqflite/sqflite.dart';
 
-// ignore: unused_element
-Future<String> get _localPath async {
-  final dir = await getApplicationDocumentsDirectory();
-  return dir.path;
-}
-
 class Storage {
   static const String _storageDbFile = 'storage.db';
+  static const String _featurePhotosDirname = 'feature-photos';
   static Storage? _instance;
 
   static Future<String> _storageFilePath() async {
@@ -32,6 +28,7 @@ class Storage {
         await _instance!._db.close();
         var dbFile = File(path);
         await dbFile.delete();
+        await _instance!._localDir.delete(recursive: true);
         _instance = null;
       }
     }
@@ -40,7 +37,9 @@ class Storage {
       await Directory(dirname(path)).create(recursive: true);
       Database db = await openDatabase(path,
           version: 1, onConfigure: _onConfigure, onCreate: _onCreate);
-      Storage s = Storage._(db);
+      Directory localDir = await getApplicationDocumentsDirectory();
+      await localDir.create(recursive: true);
+      Storage s = Storage._(db, localDir);
 
       // load all data
       await s._loadServerSettings();
@@ -108,6 +107,16 @@ class Storage {
     await db.execute('CREATE TABLE features ('
         'id integer primary key,'
         'data text not null)');
+    await db.execute('CREATE TABLE next_local_photo_id ('
+        'id integer not null)');
+    await db.insert('next_local_photo_id', {'id': -1});
+    await db.execute('CREATE TABLE feature_photos ('
+        'id integer primary key,'
+        'feature_id integer,'
+        'content_type text not null,'
+        'thumbnail blob not null,'
+        'photo_file_path blob not null,'
+        'photo_size integer not null)');
   }
 
   static void _onConfigure(Database db) async {
@@ -115,8 +124,13 @@ class Storage {
   }
 
   final Database _db;
+  final Directory _localDir;
 
-  Storage._(this._db);
+  Storage._(this._db, this._localDir);
+
+  Directory createTempDir() {
+    return _localDir.createTempSync();
+  }
 
   //region server settings
   ServerSettings? _serverSettings;
@@ -460,6 +474,155 @@ class Storage {
       _features.add(f);
       _featuresMap[f.id] = f;
     }
+  }
+  //endregion
+
+  //region feature photos
+  Future<void> setPhotos(
+      Iterable<FeaturePhoto> photos, Iterable<int> keep) async {
+    await _db.transaction((Transaction tx) async {
+      await tx
+          .execute('create table _tmp_keep_photos (id integer primary key)');
+      var batch = tx.batch();
+      for (var id in keep) {
+        batch.insert('_tmp_keep_photos', {'id': id});
+      }
+      await batch.commit(noResult: true);
+
+      var rows = await tx.rawQuery('select fp.photo_file_path as pfp '
+          'from feature_photos fp '
+          'left join _tmp_keep_photos tkp '
+          'on fp.id = tkp.id '
+          'where tkp.id is null');
+      for (var row in rows) {
+        String filename = _fullPhotoFileName(row['pfp'] as String);
+        File(filename).deleteSync();
+      }
+
+      await tx.rawDelete(
+          'delete from feature_photos where id in (select fp.id as fpid from feature_photos fp left join _tmp_keep_photos tkp on fp.id = tkp.id where tkp.id is null)');
+      await tx.execute('drop table _tmp_keep_photos');
+
+      batch = tx.batch();
+      for (var photo in photos) {
+        String photoFileName =
+            await _writePhoto(photo.id, await photo.photoData);
+        batch.insert('feature_photos', {
+          'id': photo.id,
+          'feature_id': photo.featureID,
+          'content_type': photo.contentType,
+          'thumbnail': await photo.thumbnailData,
+          'photo_file_path': photoFileName,
+          'photo_size': photo.photoDataSize
+        });
+      }
+      await batch.commit();
+    });
+  }
+
+  String _fullPhotoFileName(String photoBasename) =>
+      join(_localDir.path, _featurePhotosDirname, photoBasename);
+
+  ThumbnailMemoryPhotoFileFeaturePhoto _rowToPhoto(Map<String, Object?> row) {
+    return ThumbnailMemoryPhotoFileFeaturePhoto(row['thumbnail'] as Uint8List,
+        File(_fullPhotoFileName(row['photo_file_path'] as String)),
+        id: row['id'] as int,
+        featureID: row['feature_id'] as int,
+        contentType: row['content_type'] as String,
+        photoDataSize: row['photo_size'] as int);
+  }
+
+  Future<List<ThumbnailMemoryPhotoFileFeaturePhoto>> getPhotos(
+      int featureID) async {
+    var rows = await _db.query('feature_photos',
+        columns: [
+          'id',
+          'feature_id',
+          'content_type',
+          'thumbnail',
+          'photo_file_path',
+          'photo_size'
+        ],
+        where: 'feature_id = ?',
+        whereArgs: [featureID]);
+    return rows.map((e) => _rowToPhoto(e)).toList(growable: false);
+  }
+
+  Future<List<FeaturePhoto>> getPhotosByID(Iterable<int> photoIDs) async {
+    Set<int> ids = photoIDs.toSet();
+    return await _db.transaction((Transaction tx) async {
+      List<Map<String, Object?>> rows = [];
+      for (var id in ids) {
+        var rs = await tx.query('feature_photos',
+            columns: [
+              'id',
+              'feature_id',
+              'content_type',
+              'thumbnail',
+              'photo_file_path',
+              'photo_size'
+            ],
+            where: 'id = ?',
+            whereArgs: [id]);
+        rows.addAll(rs);
+      }
+      return rows.map((e) => _rowToPhoto(e)).toList(growable: false);
+    });
+  }
+
+  Future<int> addPhoto(int featureID, String contentType, Uint8List thumbnail,
+      Uint8List photo) async {
+    int photoID = await _db.transaction((Transaction tx) async {
+      await tx.execute('update next_local_photo_id set id = id - 1');
+      var row =
+          await tx.query('next_local_photo_id', columns: ['id'], limit: 1);
+      int id = row[0]['id'] as int;
+      String photoFileName = await _writePhoto(id, photo);
+      await tx.insert('feature_photos', {
+        'id': id,
+        'feature_id': featureID,
+        'content_type': contentType,
+        'thumbnail': thumbnail,
+        'photo_file_path': photoFileName,
+        'photo_size': photo.length
+      });
+      return id;
+    });
+    return photoID;
+  }
+
+  Future<void> deletePhoto(int photoID) async {
+    await _db.delete('feature_photos', where: 'id = ?', whereArgs: [photoID]);
+    File photoFile = await _getPhotoFile(photoID);
+    await photoFile.delete();
+  }
+
+  Future<void> deletePhotos(Set<int> photoIDs) async {
+    await _db.transaction((Transaction tx) async {
+      var batch = tx.batch();
+      for (var id in photoIDs) {
+        batch.delete('feature_photos', where: 'id = ?', whereArgs: [id]);
+      }
+      await batch.commit(noResult: true);
+      for (var id in photoIDs) {
+        File photoFile = await _getPhotoFile(id);
+        await photoFile.delete();
+      }
+    });
+  }
+
+  Future<File> _getPhotoFile(int photoID) async {
+    String photoFileName = join(_featurePhotosDirname, 'P$photoID');
+    Directory photoDir =
+        Directory(dirname(join(_localDir.path, photoFileName)));
+    await photoDir.create(recursive: true);
+    return File(join(_localDir.path, photoFileName));
+  }
+
+  Future<String> _writePhoto(int featureID, Uint8List bytes) async {
+    File photoFile = await _getPhotoFile(featureID);
+    await photoFile.writeAsBytes(bytes, flush: true);
+    return photoFile.path;
   }
   //endregion
 }

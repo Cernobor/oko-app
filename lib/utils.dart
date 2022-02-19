@@ -1,9 +1,10 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_archive/flutter_archive.dart';
 import 'package:flutter_vibrate/flutter_vibrate.dart';
 import 'package:latlong2/latlong.dart';
-import 'package:oko/data.dart';
 import 'package:oko/i18n.dart';
 
 const Distance _distance = Distance();
@@ -50,7 +51,7 @@ enum NotificationType { snackbar, dialog }
 enum NotificationLevel { error, info, success }
 
 void notifySnackbar(BuildContext context, String msg, NotificationLevel level,
-    [int seconds = 5, bool vibrate = true]) {
+    {int seconds = 5, bool vibrate = true}) {
   _notify(
       context: context,
       message: msg,
@@ -62,7 +63,7 @@ void notifySnackbar(BuildContext context, String msg, NotificationLevel level,
 
 Future<void> notifyDialog(BuildContext context, String title, String? content,
     NotificationLevel level,
-    [bool vibrate = true]) async {
+    {bool vibrate = true}) async {
   return _notify(
       context: context,
       message: title,
@@ -170,4 +171,15 @@ class _BaseException implements Exception {
 
 class IllegalStateException extends _BaseException {
   IllegalStateException(String msg) : super(msg);
+}
+
+Future<void> unzip(
+    File src, Directory dest, void Function(double progress) onProgress) async {
+  return ZipFile.extractToDirectory(
+      zipFile: src,
+      destinationDir: dest,
+      onExtracting: (zipEntry, progress) {
+        onProgress(progress);
+        return ZipFileOperation.includeItem;
+      });
 }

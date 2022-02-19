@@ -92,10 +92,10 @@ class I18N {
       }[locale.languageCode]!;
   String mapSizeWarning(int size) =>
       sprintf({'cs': '%s', 'en': '%s'}[locale.languageCode]!, [filesize(size)]);
-  String get downloadingMapSnackBar =>
-      {'cs': 'Stahuji...', 'en': 'Downloading...'}[locale.languageCode]!;
-  String get unpackingMapSnackBar =>
-      {'cs': 'Rozbaluji...', 'en': 'Unpacking...'}[locale.languageCode]!;
+  String get downloading =>
+      {'cs': 'Stahování...', 'en': 'Downloading...'}[locale.languageCode]!;
+  String get unpacking =>
+      {'cs': 'Rozbalování...', 'en': 'Unpacking...'}[locale.languageCode]!;
   String get doneMapSnackBar =>
       {'cs': 'Hotovo!', 'en': 'Done!'}[locale.languageCode]!;
   String get download => {
@@ -124,9 +124,8 @@ class I18N {
       }[locale.languageCode]!;
   String get navigateToButton =>
       {'cs': 'Navigovat', 'en': 'Navigate'}[locale.languageCode]!;
-  String get deleteButton =>
-      {'cs': 'Smazat', 'en': 'Delete'}[locale.languageCode]!;
-  String get undeleteButton =>
+  String get delete => {'cs': 'Smazat', 'en': 'Delete'}[locale.languageCode]!;
+  String get undelete =>
       {'cs': 'Odsmazat', 'en': 'Undelete'}[locale.languageCode]!;
   String get distance =>
       {'cs': 'Vzdálenost', 'en': 'Distance'}[locale.languageCode]!;
@@ -325,6 +324,8 @@ class I18N {
       {'cs': 'Vyberte čas', 'en': 'Choose a time'}[locale.languageCode]!;
   String get dialogNext => {'cs': 'Dále', 'en': 'Next'}[locale.languageCode]!;
   String get dialogBack => {'cs': 'Zpět', 'en': 'Back'}[locale.languageCode]!;
+  String get managePhotos =>
+      {'cs': 'Spravovat fotky', 'en': 'Manage photos'}[locale.languageCode]!;
   DateFormat get dateFormat => {
         'cs': DateFormat('d.M. HH:mm', 'cs'),
         'en': DateFormat('M/d HH:mm', 'en'),

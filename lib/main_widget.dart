@@ -1,5 +1,7 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:developer' as developer;
+import 'dart:io';
 import 'dart:math' as math;
 
 import 'package:flutter/foundation.dart';
@@ -16,9 +18,11 @@ import 'package:oko/main.dart';
 import 'package:oko/map.dart';
 import 'package:oko/storage.dart';
 import 'package:oko/subpages/edit_point.dart';
+import 'package:oko/subpages/gallery.dart';
 import 'package:oko/subpages/pairing.dart';
 import 'package:oko/subpages/point_list.dart';
 import 'package:oko/utils.dart' as utils;
+import 'package:path/path.dart' show join;
 import 'package:positioned_tap_detector_2/positioned_tap_detector_2.dart';
 import 'package:rxdart/rxdart.dart';
 import 'package:vector_map_tiles/vector_map_tiles.dart';
@@ -81,7 +85,7 @@ class MainWidgetState extends State<MainWidget> {
 
   // handling flags and values
   bool mapReady = false;
-  double progressValue = -1;
+  double? progressValue;
   bool pinging = false;
   bool serverAvailable = false;
   StreamSubscription<LocationData>? locationSubscription;
@@ -172,10 +176,10 @@ class MainWidgetState extends State<MainWidget> {
       primary: true,
       bottom: PreferredSize(
         preferredSize: const Size(double.infinity, 6.0),
-        child: progressValue == -1
+        child: progressValue == null
             ? Container(height: 6.0)
             : LinearProgressIndicator(
-                value: progressValue,
+                value: progressValue == -1 ? null : progressValue,
               ),
       ),
     );
@@ -666,14 +670,14 @@ class MainWidgetState extends State<MainWidget> {
                             if (infoTarget.point.deleted)
                               IconButton(
                                 icon: const Icon(Icons.restore_from_trash),
-                                tooltip: I18N.of(context).undeleteButton,
+                                tooltip: I18N.of(context).undelete,
                                 onPressed: () =>
                                     onUndeletePoint(infoTarget.point),
                               )
                             else
                               IconButton(
                                 icon: const Icon(Icons.delete),
-                                tooltip: I18N.of(context).deleteButton,
+                                tooltip: I18N.of(context).delete,
                                 onPressed: () =>
                                     onDeletePoint(infoTarget.point),
                               ),
@@ -687,7 +691,11 @@ class MainWidgetState extends State<MainWidget> {
                             IconButton(
                                 icon: const Icon(Icons.restore),
                                 tooltip: I18N.of(context).revert,
-                                onPressed: () => onRevertPoi(infoTarget.point))
+                                onPressed: () => onRevertPoi(infoTarget.point)),
+                          IconButton(
+                            icon: const Icon(Icons.photo_library),
+                            onPressed: () => onOpenGallery(infoTarget.point),
+                          )
                         ],
                       ),
                     ]))));
@@ -1013,7 +1021,8 @@ class MainWidgetState extends State<MainWidget> {
           null,
           null,
           null));
-      await download();
+      // TODO with photos?
+      //await download(true);
       setState(() {});
       mapController.move(storage!.serverSettings!.defaultCenter,
           storage!.serverSettings!.minZoom.toDouble());
@@ -1132,11 +1141,16 @@ class MainWidgetState extends State<MainWidget> {
     */
   }
 
-  Future<bool> download() async {
-    developer.log('download');
-    late comm.Data data;
+  Future<bool> download(bool withPhotos) async {
+    return withPhotos ? downloadWithPhotos() : downloadBare();
+  }
+
+  Future<bool> downloadBare() async {
+    developer.log('downloadBare');
+    late data.ServerData serverData;
     try {
-      data = await comm.downloadData(storage!.serverSettings!.serverAddress);
+      serverData =
+          await comm.downloadData(storage!.serverSettings!.serverAddress);
     } on comm.UnexpectedStatusCode catch (e, stack) {
       developer.log('exception: ${e.toString()}\n$stack');
       await utils.notifyDialog(context, e.getMessage(context), e.detail,
@@ -1149,16 +1163,112 @@ class MainWidgetState extends State<MainWidget> {
       return false;
     }
     bool usersChanged =
-        !setEquals(data.users.keys.toSet(), storage!.users.keys.toSet());
-    await storage!.setUsers(data.users);
+        !setEquals(serverData.users.keys.toSet(), storage!.users.keys.toSet());
+    await storage!.setUsers(serverData.users);
 
     List<Feature> features = storage!.features.where((f) => f.isLocal).toList();
-    features.addAll(data.features);
+    features.addAll(serverData.features);
     await storage!.setFeatures(features);
     if (usersChanged) {
       await storage!.setPointListCheckedUsers(storage!.users.keys);
     }
     return true;
+  }
+
+  Future<bool> downloadWithPhotos() async {
+    developer.log('downloadWithPhotos');
+    var tempDir = storage!.createTempDir();
+    var downloadFile = File(join(tempDir.path, 'data.zip'));
+    utils.notifySnackbar(
+        context, I18N.of(context).downloading, utils.NotificationLevel.info,
+        vibrate: false);
+    try {
+      try {
+        bool indeterminateSet = false;
+        await comm.downloadDataWithPhotos(
+            storage!.serverSettings!.serverAddress, downloadFile,
+            (read, total) {
+          if (total == null) {
+            if (!indeterminateSet) {
+              indeterminateSet = true;
+              setState(() {
+                progressValue = -1;
+              });
+            }
+          } else {
+            setState(() {
+              progressValue = read / total;
+              developer.log('download progress: $progressValue');
+            });
+          }
+        });
+      } on comm.UnexpectedStatusCode catch (e, stack) {
+        developer.log('exception: ${e.toString()}\n$stack');
+        await utils.notifyDialog(context, e.getMessage(context), e.detail,
+            utils.NotificationLevel.error);
+        return false;
+      } catch (e, stack) {
+        developer.log('exception: ${e.toString()}\n$stack');
+        await utils.notifyDialog(context, I18N.of(context).error, e.toString(),
+            utils.NotificationLevel.error);
+        return false;
+      }
+
+      var unpackDir = tempDir.createTempSync();
+      utils.notifySnackbar(
+          context, I18N.of(context).unpacking, utils.NotificationLevel.info,
+          vibrate: false);
+      await utils.unzip(downloadFile, unpackDir, (progress) {
+        if (progress.isNaN || progress.isInfinite) {
+          developer.log('unpack NaN/infinite progress');
+          return;
+        }
+        setState(() {
+          progressValue = progress;
+          developer.log('unpack progress: $progressValue');
+        });
+      });
+
+      var dataJson = File(join(unpackDir.path, 'data.json'));
+      Map<String, dynamic> dataRaw = jsonDecode(dataJson.readAsStringSync());
+      data.ServerData serverData = data.ServerData(dataRaw);
+
+      bool usersChanged = !setEquals(
+          serverData.users.keys.toSet(), storage!.users.keys.toSet());
+      await storage!.setUsers(serverData.users);
+      if (usersChanged) {
+        await storage!.setPointListCheckedUsers(storage!.users.keys);
+      }
+
+      List<Feature> localFeatures =
+          storage!.features.where((f) => f.isLocal).toList();
+      List<Feature> features = List.of(localFeatures);
+      features.addAll(serverData.features);
+      await storage!.setFeatures(features);
+
+      Map<int, int> photo2feature = Map.fromEntries(serverData.features
+          .expand((f) => f.photoIDs.map((pid) => MapEntry(pid, f.id))));
+
+      var photos = serverData.photoMetadata.entries.map((e) {
+        String photoFilename = e.key;
+        data.PhotoMetadata photoMetadata = e.value;
+        return FileFeaturePhoto(
+            File(join(unpackDir.path, photoMetadata.thumbnailFilename)),
+            File(join(unpackDir.path, photoFilename)),
+            id: photoMetadata.id,
+            contentType: photoMetadata.contentType,
+            photoDataSize: photoMetadata.size,
+            featureID: photo2feature[photoMetadata.id]!);
+      });
+      var keep = localFeatures.expand((f) => f.photoIDs).toSet();
+      await storage!.setPhotos(photos, keep);
+      return true;
+    } finally {
+      tempDir.deleteSync(recursive: true);
+      setState(() {
+        progressValue = null;
+      });
+    }
   }
 
   Future<void> onDownload(BuildContext ctx) async {
@@ -1194,7 +1304,8 @@ class MainWidgetState extends State<MainWidget> {
     if (confirm != true) {
       return;
     }
-    bool success = await download();
+    // TODO with photos?
+    bool success = await download(true);
     Navigator.of(context).pop();
     if (success) {
       utils.notifySnackbar(context, I18N.of(context).downloaded,
@@ -1216,15 +1327,40 @@ class MainWidgetState extends State<MainWidget> {
     var deleted = storage!.features
         .where((data.Feature f) => f.deleted)
         .toList(growable: false);
+    var createdPhotos = <int, List<data.FeaturePhoto>>{};
+    for (var f in created) {
+      if (f.photoIDs.isEmpty) {
+        continue;
+      }
+      createdPhotos[f.id] = await storage!.getPhotos(f.id);
+    }
+    var addedPhotos = <int, List<data.FeaturePhoto>>{};
+    for (var f in edited) {
+      var addedPhotoIDs = f.photoIDs.difference(f.origPhotoIDs);
+      if (addedPhotoIDs.isEmpty) {
+        continue;
+      }
+      addedPhotos[f.id] = await storage!.getPhotosByID(addedPhotoIDs);
+    }
+    List<int> deletedPhotoIDs = storage!.features
+        .expand((data.Feature f) => f.origPhotoIDs.difference(f.photoIDs))
+        .toList(growable: false);
     try {
       await comm.uploadData(
-          storage!.serverSettings!.serverAddress, created, edited, deleted);
+        serverAddress: storage!.serverSettings!.serverAddress,
+        created: created,
+        edited: edited,
+        deleted: deleted,
+        createdPhotos: createdPhotos,
+        addedPhotos: addedPhotos,
+        deletedPhotoIDs: deletedPhotoIDs,
+      );
     } on comm.DetailedCommException catch (e, stack) {
       developer.log('exception: ${e.toString()}\n$stack');
       await utils.notifyDialog(context, e.getMessage(context), e.detail,
           utils.NotificationLevel.error);
       return false;
-    } on Exception catch (e, stack) {
+    } catch (e, stack) {
       developer.log('exception: ${e.toString()}\n$stack');
       utils.notifySnackbar(context, I18N.of(context).serverUnavailable,
           utils.NotificationLevel.error);
@@ -1246,17 +1382,18 @@ class MainWidgetState extends State<MainWidget> {
 
   Future<void> onSync() async {
     developer.log('onSync');
+    Navigator.of(context).pop();
     if (!await upload()) {
-      Navigator.of(context).pop();
       return;
     }
     await storage!.setFeatures([]);
-    if (!await download()) {
-      Navigator.of(context).pop();
+    // TODO with photos?
+    if (!await download(true)) {
       return;
     }
-    setState(() {});
-    Navigator.of(context).pop();
+    setState(() {
+      infoTarget = Target.none();
+    });
     utils.notifySnackbar(context, I18N.of(context).syncSuccessful,
         utils.NotificationLevel.success);
   }
@@ -1450,6 +1587,7 @@ class MainWidgetState extends State<MainWidget> {
       return;
     }
     var replacement = toRevert.copy();
+    //await storage!.delete
     replacement.revert();
     await storage!.upsertFeature(replacement);
     if (infoTarget.isSamePoint(toRevert)) {
@@ -1460,6 +1598,29 @@ class MainWidgetState extends State<MainWidget> {
     setState(() {});
   }
 
+  void onOpenGallery(data.Point point) async {
+    developer.log('onOpenGallery $point');
+    if (storage == null) {
+      utils.notifySnackbar(
+          context, 'TODO no storage', utils.NotificationLevel.error);
+      return;
+    }
+    data.Point? replacement = await Navigator.of(context).push(
+        MaterialPageRoute<data.Point>(
+            builder: (context) =>
+                Gallery(storage: storage!, feature: point, editable: true)));
+    if (replacement == null) {
+      return;
+    }
+    await storage!.upsertFeature(replacement);
+    setState(() {});
+    if (infoTarget.isSamePoint(point)) {
+      setState(() {
+        infoTarget = Target(storage!.featuresMap[point.id]! as data.Point);
+      });
+    }
+  }
+
   void onReset() async {
     developer.log('Resetting app.');
     if (storage == null) {
@@ -1467,6 +1628,8 @@ class MainWidgetState extends State<MainWidget> {
       return;
     }
     storage = await Storage.getInstance(reset: true);
+    infoTarget = Target.none();
+    progressValue = null;
     setState(() {});
     Navigator.of(context).pop();
     utils.notifySnackbar(

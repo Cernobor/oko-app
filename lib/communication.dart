@@ -1,11 +1,11 @@
 import 'dart:async';
-import 'dart:collection';
 import 'dart:convert';
 import 'dart:developer' as developer;
 import 'dart:io';
 
 import 'package:flutter/cupertino.dart';
 import 'package:http/http.dart' as http;
+import 'package:http_parser/http_parser.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:oko/data.dart';
 import 'package:oko/i18n.dart';
@@ -155,11 +155,11 @@ Future<bool> ping(String serverAddress) async {
   }
 }
 
-class MapData {
+class StreamData {
   int? contentLength;
   http.ByteStream dataStream;
 
-  MapData(this.contentLength, this.dataStream);
+  StreamData(this.contentLength, this.dataStream);
 }
 
 /*
@@ -175,42 +175,96 @@ Future<MapData> downloadMap(String serverAddress, String tilePackPath) async {
 }
 */
 
-class Data {
-  Map<int, String> users;
-  List<Feature> features;
-
-  Data(this.users, this.features);
-}
-
-Future<Data> downloadData(String serverAddress) async {
+Future<ServerData> downloadData(String serverAddress) async {
   Uri uri = _dataUri(serverAddress);
-  var res = await http.get(uri);
+  var res = await http.get(uri, headers: {'Accept': 'application/json'});
   var body = res.body;
   if (res.statusCode != HttpStatus.ok) {
     throw UnexpectedStatusCode(res.statusCode, body);
   }
   Map<String, dynamic> data = jsonDecode(body);
-  Map<int, String> users = HashMap.fromEntries((data['users'] as List)
-      .cast<Map<String, dynamic>>()
-      .map((m) => MapEntry<int, String>(m['id'], m['name'])));
-  List<Feature> features = (data['features'] as List)
-      .cast<Map<String, dynamic>>()
-      .map((Map<String, dynamic> feature) => Feature.fromJson(feature, true))
-      .toList(growable: false);
-  return Data(users, features);
+  return ServerData(data);
 }
 
-Future<void> uploadData(String serverAddress, List<Feature> created,
-    List<Feature> edited, List<Feature> deleted) async {
+Future<void> downloadDataWithPhotos(String serverAddress, File dest,
+    void Function(int read, int? total) onProgress) async {
+  Uri uri = _dataUri(serverAddress);
+  var req = http.Request('GET', uri);
+  req.headers['Accept'] = 'application/zip';
+  var res = await req.send();
+  if (res.statusCode >= 500) {
+    throw InternalServerError(await res.stream.bytesToString());
+  }
+  if (res.statusCode != HttpStatus.ok) {
+    throw UnexpectedStatusCode(
+        res.statusCode, await res.stream.bytesToString());
+  }
+
+  var ioSink = dest.openWrite();
+  int received = 0;
+  await res.stream.transform(
+      StreamTransformer<List<int>, List<int>>.fromHandlers(
+          handleData: (data, sink) {
+    received += data.length;
+    developer
+        .log('Chunk: ${data.length}; Received: $received/${res.contentLength}');
+    onProgress(received, res.contentLength);
+    sink.add(data);
+  })).pipe(ioSink);
+  return;
+}
+
+Future<void> uploadData(
+    {required String serverAddress,
+    required List<Feature> created,
+    required List<Feature> edited,
+    required List<Feature> deleted,
+    Map<int, List<FeaturePhoto>> createdPhotos = const {},
+    Map<int, List<FeaturePhoto>> addedPhotos = const {},
+    List<int> deletedPhotoIDs = const []}) async {
   var uri = _dataUri(serverAddress);
+  Map<String, FeaturePhoto> photos = {};
+  Map<String, List<String>> createdNames = {};
+  for (var entry in createdPhotos.entries) {
+    for (var photo in entry.value) {
+      String name = 'img${photo.id}';
+      photos[name] = photo;
+      createdNames[entry.key.toString()] ??= [];
+      createdNames[entry.key.toString()]!.add(name);
+    }
+  }
+  Map<String, List<String>> addedNames = {};
+  for (var entry in addedPhotos.entries) {
+    for (var photo in entry.value) {
+      String name = 'img${photo.id}';
+      photos[name] = photo;
+      addedNames[entry.key.toString()] ??= [];
+      addedNames[entry.key.toString()]!.add(name);
+    }
+  }
   Map<String, dynamic> data = {
     'create': created.map((Feature f) => f.toJson()).toList(growable: false),
+    'created_photos': createdNames,
+    'add_photos': addedNames,
     'update': edited.map((Feature f) => f.toJson()).toList(growable: false),
-    'delete': deleted.map((Feature f) => f.id).toList(growable: false)
+    'delete': deleted.map((Feature f) => f.id).toList(growable: false),
+    'delete_photos': deletedPhotoIDs
   };
 
-  var req = http.MultipartRequest('POST', uri)
-    ..fields['data'] = jsonEncode(data);
+  var req = http.MultipartRequest('POST', uri);
+  req.fields['data'] = jsonEncode(data);
+  for (var entry in photos.entries) {
+    req.files.add(http.MultipartFile(
+        'thumb_${entry.key}',
+        Stream.value(await entry.value.thumbnailData),
+        (await entry.value.thumbnailData).length,
+        filename: 'thumb_${entry.key}',
+        contentType: MediaType.parse(entry.value.contentType)));
+    req.files.add(http.MultipartFile(
+        entry.key, entry.value.photoDataStream, entry.value.photoDataSize,
+        filename: entry.key,
+        contentType: MediaType.parse(entry.value.contentType)));
+  }
   var res = await req.send();
 
   switch (res.statusCode) {

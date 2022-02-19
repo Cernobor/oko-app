@@ -1,3 +1,6 @@
+import 'dart:io';
+import 'dart:typed_data';
+
 import 'package:collection/collection.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -67,6 +70,41 @@ class MapState {
   String toString() {
     return 'MapState{render: $render, usingOffline: $usingOffline, center: $center, zoom: $zoom, neBound: $neBound, swBound: $swBound, zoomMax: $zoomMax}';
   }
+}
+
+class ServerData {
+  final Map<int, String> users;
+  final List<Feature> features;
+  final Map<String, PhotoMetadata> photoMetadata;
+
+  ServerData._(this.users, this.features, this.photoMetadata);
+
+  factory ServerData(Map<String, dynamic> data) {
+    Map<int, String> users = Map.fromEntries((data['users'] as List)
+        .cast<Map<String, dynamic>>()
+        .map((m) => MapEntry<int, String>(m['id'], m['name'])));
+    List<Feature> features = (data['features'] as List)
+        .cast<Map<String, dynamic>>()
+        .map((Map<String, dynamic> feature) => Feature.fromJson(feature, true))
+        .toList(growable: false);
+    Map<String, PhotoMetadata> photoMetadata =
+        (data['photo_metadata'] as Map?)?.map((key, value) {
+      return MapEntry(
+          key as String,
+          PhotoMetadata._(value['content_type'] as String, value['size'] as int,
+              value['id'] as int, value['thumbnail_filename'] as String));
+    }) ?? {};
+    return ServerData._(users, features, photoMetadata);
+  }
+}
+
+class PhotoMetadata {
+  final String contentType;
+  final int size;
+  final int id;
+  final String thumbnailFilename;
+
+  PhotoMetadata._(this.contentType, this.size, this.id, this.thumbnailFilename);
 }
 
 class PointCategory implements Comparable {
@@ -226,6 +264,8 @@ abstract class Feature {
   String? origDescription;
   Color color;
   Color origColor;
+  Set<int> photoIDs;
+  Set<int> origPhotoIDs;
 
   bool deleted;
 
@@ -241,6 +281,8 @@ abstract class Feature {
       this.origDescription,
       this.color,
       this.origColor,
+      this.photoIDs,
+      this.origPhotoIDs,
       this.deleted);
 
   factory Feature.fromJson(Map<String, dynamic> json, bool origFromCurrent) {
@@ -263,6 +305,11 @@ abstract class Feature {
     } else if (origFromCurrent) {
       origDeadline = deadline;
     }
+    List<dynamic> photoIDsList = json['photo_ids'] ?? [];
+    Set<int> photoIDs = photoIDsList.map((e) => e as int).toSet();
+    List<dynamic> origPhotoIDsList =
+        json['orig_photo_ids'] ?? (origFromCurrent ? photoIDsList : []);
+    Set<int> origPhotoIDs = origPhotoIDsList.map((e) => e as int).toSet();
     bool deleted = json['deleted'] ?? false;
 
     Map<String, dynamic> properties = json['properties'];
@@ -307,6 +354,8 @@ abstract class Feature {
           origDescription,
           color,
           origColor,
+          photoIDs,
+          origPhotoIDs,
           cat,
           origCat,
           attributes,
@@ -332,6 +381,8 @@ abstract class Feature {
           origDescription,
           color,
           origColor,
+          photoIDs,
+          origPhotoIDs,
           deleted,
           geometry,
           origGeometry);
@@ -361,13 +412,16 @@ abstract class Feature {
       (deadline != null && origDeadline == null) ||
       (deadline != null &&
           origDeadline != null &&
-          !deadline!.isAtSameMomentAs(origDeadline!));
+          !deadline!.isAtSameMomentAs(origDeadline!)) ||
+      !setEquals(photoIDs, origPhotoIDs);
 
   void revert() {
     ownerId = origOwnerId;
     name = origName;
     deadline = origDeadline;
     description = origDescription;
+    color = origColor;
+    photoIDs = origPhotoIDs;
   }
 
   bool get isLocal => id < 0;
@@ -382,6 +436,8 @@ abstract class Feature {
         if (deadline != null) 'deadline': deadline!.toUtc().toIso8601String(),
         if (origDeadline != null)
           'orig_deadline': origDeadline!.toUtc().toIso8601String(),
+        'photo_ids': photoIDs.toList(growable: false),
+        'orig_photo_ids': origPhotoIDs.toList(growable: false),
         'properties': {
           if (description != null) 'description': description,
           'color': color.value,
@@ -416,6 +472,8 @@ class Point extends Feature {
       String? origDescription,
       Color color,
       Color origColor,
+      Set<int> photoIDs,
+      Set<int> origPhotoIDs,
       this.coords,
       this.origCoords,
       this.category,
@@ -435,6 +493,8 @@ class Point extends Feature {
             origDescription,
             color,
             origColor,
+            photoIDs,
+            origPhotoIDs,
             deleted);
   Point.origSame(
       int id,
@@ -443,6 +503,7 @@ class Point extends Feature {
       DateTime? deadline,
       String? description,
       Color color,
+      Set<int> photoIDs,
       LatLng coords,
       PointCategory category,
       Set<PointAttribute> attributes,
@@ -459,6 +520,8 @@ class Point extends Feature {
             description,
             color,
             color,
+            photoIDs,
+            Set.of(photoIDs),
             coords,
             coords,
             category,
@@ -479,6 +542,8 @@ class Point extends Feature {
       String? origDescription,
       Color color,
       Color origColor,
+      Set<int> photoIDs,
+      Set<int> origPhotoIDs,
       PointCategory category,
       PointCategory origCategory,
       Set<PointAttribute> attributes,
@@ -501,6 +566,8 @@ class Point extends Feature {
         origDescription,
         color,
         origColor,
+        photoIDs,
+        origPhotoIDs,
         LatLng(geom['coordinates'][1], geom['coordinates'][0]),
         LatLng(origGeom['coordinates'][1], origGeom['coordinates'][0]),
         category,
@@ -509,6 +576,49 @@ class Point extends Feature {
         origAttributes,
         deleted);
   }
+
+  Point.from(Point other,
+      {int? id,
+      int? ownerId,
+      int? origOwnerId,
+      String? name,
+      String? origName,
+      DateTime? deadline,
+      DateTime? origDeadline,
+      String? description,
+      String? origDescription,
+      Color? color,
+      Color? origColor,
+      Set<int>? photoIDs,
+      Set<int>? origPhotoIDs,
+      LatLng? coords,
+      LatLng? origCoords,
+      PointCategory? category,
+      PointCategory? origCategory,
+      Set<PointAttribute>? attributes,
+      Set<PointAttribute>? origAttributes,
+      bool? deleted})
+      : this(
+            id ?? other.id,
+            ownerId ?? other.ownerId,
+            origOwnerId ?? other.origOwnerId,
+            name ?? other.name,
+            origName ?? other.origName,
+            deadline ?? other.deadline,
+            origDeadline ?? other.origDeadline,
+            description ?? other.description,
+            origDescription ?? other.origDescription,
+            color ?? other.color,
+            origColor ?? other.origColor,
+            photoIDs ?? other.photoIDs,
+            origPhotoIDs ?? other.origPhotoIDs,
+            coords ?? other.coords,
+            origCoords ?? other.origCoords,
+            category ?? other.category,
+            origCategory ?? other.origCategory,
+            attributes ?? other.attributes,
+            origAttributes ?? other.origAttributes,
+            deleted ?? other.deleted);
 
   @override
   bool isPoint() {
@@ -582,6 +692,8 @@ class Point extends Feature {
         origDescription,
         color,
         origColor,
+        Set.of(photoIDs),
+        Set.of(origPhotoIDs),
         LatLng(coords.latitude, coords.longitude),
         LatLng(origCoords.latitude, origCoords.longitude),
         category,
@@ -610,6 +722,8 @@ class LineString extends Feature {
       String? origDescription,
       Color color,
       Color origColor,
+      Set<int> photoIDs,
+      Set<int> origPhotoIDs,
       this.coords,
       this.origCoords,
       bool deleted)
@@ -625,6 +739,8 @@ class LineString extends Feature {
             origDescription,
             color,
             origColor,
+            photoIDs,
+            origPhotoIDs,
             deleted);
 
   factory LineString.fromGeojson(
@@ -639,6 +755,8 @@ class LineString extends Feature {
       String? origDescription,
       Color color,
       Color origColor,
+      Set<int> photoIDs,
+      Set<int> origPhotoIDs,
       bool deleted,
       Map<String, dynamic> geom,
       Map<String, dynamic> origGeom) {
@@ -659,6 +777,8 @@ class LineString extends Feature {
         origDescription,
         color,
         origColor,
+        photoIDs,
+        origPhotoIDs,
         coords
             .map((List<double> c) => LatLng(c[1], c[0]))
             .toList(growable: false),
@@ -667,6 +787,45 @@ class LineString extends Feature {
             .toList(growable: false),
         deleted);
   }
+
+  LineString.from(LineString other,
+      {int? id,
+      int? ownerId,
+      int? origOwnerId,
+      String? name,
+      String? origName,
+      DateTime? deadline,
+      DateTime? origDeadline,
+      String? description,
+      String? origDescription,
+      Color? color,
+      Color? origColor,
+      Set<int>? photoIDs,
+      Set<int>? origPhotoIDs,
+      List<LatLng>? coords,
+      List<LatLng>? origCoords,
+      PointCategory? category,
+      PointCategory? origCategory,
+      Set<PointAttribute>? attributes,
+      Set<PointAttribute>? origAttributes,
+      bool? deleted})
+      : this._(
+            id ?? other.id,
+            ownerId ?? other.ownerId,
+            origOwnerId ?? other.origOwnerId,
+            name ?? other.name,
+            origName ?? other.origName,
+            deadline ?? other.deadline,
+            origDeadline ?? other.origDeadline,
+            description ?? other.description,
+            origDescription ?? other.origDescription,
+            color ?? other.color,
+            origColor ?? other.origColor,
+            photoIDs ?? other.photoIDs,
+            origPhotoIDs ?? other.origPhotoIDs,
+            coords ?? other.coords,
+            origCoords ?? other.origCoords,
+            deleted ?? other.deleted);
 
   @override
   bool isPoint() {
@@ -716,6 +875,104 @@ class LineString extends Feature {
     js.addAll({'geometry': _geometry(), 'orig_geometry': _origGeometry()});
     return js;
   }
+}
+
+abstract class FeaturePhoto implements Comparable<FeaturePhoto> {
+  final int id;
+  final int featureID;
+  final String contentType;
+  final int photoDataSize;
+
+  FeaturePhoto(this.id, this.featureID, this.contentType, this.photoDataSize);
+
+  Future<Uint8List> get thumbnailData;
+  Stream<List<int>> get thumbnailDataStream;
+
+  Future<Uint8List> get photoData;
+  Stream<List<int>> get photoDataStream;
+
+  bool get isLocal => id < 0;
+
+  @override
+  int compareTo(FeaturePhoto other) {
+    if (isLocal && other.isLocal) {
+      return -id.compareTo(other.id);
+    }
+    if (isLocal && !other.isLocal) {
+      return 1;
+    }
+    if (!isLocal && other.isLocal) {
+      return -1;
+    }
+    return id.compareTo(other.id);
+  }
+}
+
+class FileFeaturePhoto extends FeaturePhoto {
+  final File _thumbnailFile;
+  final File _photoFile;
+
+  FileFeaturePhoto(this._thumbnailFile, this._photoFile,
+      {required int id,
+      required int featureID,
+      required String contentType,
+      required int photoDataSize})
+      : super(id, featureID, contentType, photoDataSize);
+
+  @override
+  Future<Uint8List> get thumbnailData => _thumbnailFile.readAsBytes();
+  @override
+  Stream<List<int>> get thumbnailDataStream => _thumbnailFile.openRead();
+
+  @override
+  Future<Uint8List> get photoData => _photoFile.readAsBytes();
+  @override
+  Stream<List<int>> get photoDataStream => _photoFile.openRead();
+}
+
+class MemoryFeaturePhoto extends FeaturePhoto {
+  final Uint8List _thumbnailData;
+  final Uint8List _photoData;
+
+  MemoryFeaturePhoto(this._photoData, this._thumbnailData,
+      {required int id,
+      required int featureID,
+      required String contentType,
+      required Uint8List thumbnail})
+      : super(id, featureID, contentType, _photoData.length);
+
+  @override
+  Future<Uint8List> get thumbnailData => Future.value(_thumbnailData);
+  @override
+  Stream<List<int>> get thumbnailDataStream => Stream.value(_thumbnailData);
+
+  @override
+  Future<Uint8List> get photoData => Future.value(_photoData);
+  @override
+  Stream<List<int>> get photoDataStream => Stream.value(_photoData);
+}
+
+class ThumbnailMemoryPhotoFileFeaturePhoto extends FeaturePhoto {
+  final Uint8List _thumbnailData;
+  final File _photoFile;
+
+  ThumbnailMemoryPhotoFileFeaturePhoto(this._thumbnailData, this._photoFile,
+      {required int id,
+      required int featureID,
+      required String contentType,
+      required int photoDataSize})
+      : super(id, featureID, contentType, photoDataSize);
+
+  Uint8List get thumbnailDataSync => _thumbnailData;
+  @override
+  Future<Uint8List> get thumbnailData => Future.value(_thumbnailData);
+  @override
+  Stream<List<int>> get thumbnailDataStream => Stream.value(_thumbnailData);
+
+  @override
+  Future<Uint8List> get photoData => _photoFile.readAsBytes();
+  @override
+  Stream<List<int>> get photoDataStream => _photoFile.openRead();
 }
 
 typedef Users = Map<int, String>;
