@@ -536,6 +536,14 @@ class MainWidgetState extends State<MainWidget> {
                                 (infoTarget.isSamePoint(point) ? 1.5 : 1),
                             color: Theme.of(context).colorScheme.primary),
                       ),
+                    if (point.ownerId == 0)
+                      Align(
+                        alignment: const Alignment(1, -1),
+                        child: Icon(Icons.lock,
+                            size: badgeSize *
+                                (infoTarget.isSamePoint(point) ? 1.5 : 1),
+                            color: Theme.of(context).colorScheme.primary),
+                      ),
                     for (var attr in point.attributes)
                       Align(
                         alignment: Alignment(attr.xAlign, attr.yAlign),
@@ -697,11 +705,12 @@ class MainWidgetState extends State<MainWidget> {
                                 icon: const Icon(Icons.restore),
                                 tooltip: I18N.of(context).revert,
                                 onPressed: () => onRevertPoi(infoTarget.point)),
-                          IconButton(
-                            icon: const Icon(Icons.photo_library),
-                            tooltip: I18N.of(context).managePhotos,
-                            onPressed: () => onOpenGallery(infoTarget.point),
-                          )
+                          if (infoTarget.point.ownerId != 0)
+                            IconButton(
+                              icon: const Icon(Icons.photo_library),
+                              tooltip: I18N.of(context).managePhotos,
+                              onPressed: () => onOpenGallery(infoTarget.point),
+                            )
                         ],
                       ),
                     ]))));

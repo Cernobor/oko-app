@@ -262,6 +262,15 @@ class _PointListState extends State<PointList> {
                                                   .colorScheme
                                                   .primary),
                                         ),
+                                      if (point.ownerId == 0)
+                                        Align(
+                                          alignment: const Alignment(1, -1),
+                                          child: Icon(Icons.lock,
+                                              size: badgeSize,
+                                              color: Theme.of(context)
+                                                  .colorScheme
+                                                  .primary),
+                                        ),
                                       for (var attr in point.attributes)
                                         Align(
                                             alignment: Alignment(
