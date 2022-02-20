@@ -326,6 +326,22 @@ class I18N {
   String get dialogBack => {'cs': 'Zpět', 'en': 'Back'}[locale.languageCode]!;
   String get managePhotos =>
       {'cs': 'Spravovat fotky', 'en': 'Manage photos'}[locale.languageCode]!;
+  String get takePhoto =>
+      {'cs': 'Vyfotit', 'en': 'Take a photo'}[locale.languageCode]!;
+  String get pickPhoto =>
+      {'cs': 'Vybrat fotku', 'en': 'Pick a photo'}[locale.languageCode]!;
+  String get deletedPhoto =>
+      {'cs': 'Smazaná fotka', 'en': 'Deleted photo'}[locale.languageCode]!;
+  String get deletedPhotoDetail => {
+        'cs': 'Bude smazána ze serveru při příští synchronizaci',
+        'en': 'Will be deleted from the server upon next synchronization'
+      }[locale.languageCode]!;
+  String get addedPhoto =>
+      {'cs': 'Přidaná fotka', 'en': 'Added photo'}[locale.languageCode]!;
+  String get addedPhotoDetail => {
+        'cs': 'Bude nahrána na server při příští synchronizaci',
+        'en': 'Will be uploaded to server upon next synchronization'
+      }[locale.languageCode]!;
   DateFormat get dateFormat => {
         'cs': DateFormat('d.M. HH:mm', 'cs'),
         'en': DateFormat('M/d HH:mm', 'en'),

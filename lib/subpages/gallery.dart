@@ -10,7 +10,7 @@ import 'package:oko/storage.dart';
 import 'package:oko/utils.dart';
 
 const _photoPopupHeroTag = 'photoPopup';
-const _thumbWidth = 80;
+const _thumbMaxDimen = 100;
 const _deletedColor = Color(0xff777777);
 
 class Gallery extends StatefulWidget {
@@ -57,66 +57,95 @@ class _GalleryState<T> extends State<Gallery> {
   }
 
   Widget? _thumbnail(ThumbnailMemoryPhotoFileFeaturePhoto photo) {
-    var image = Image(
-        image: MemoryImage(photo.thumbnailDataSync),
-        width: _thumbWidth.toDouble());
-    Color borderColor;
-    Widget w;
     if (current.contains(photo.id) &&
         widget.feature.origPhotoIDs.contains(photo.id)) {
-      borderColor = Colors.white;
-      w = image;
+      return GestureDetector(
+        child: Container(
+          decoration: BoxDecoration(border: Border.all(color: Colors.white)),
+          child: Hero(
+            tag: '$_photoPopupHeroTag-${photo.id}',
+            child: Image(image: MemoryImage(photo.thumbnailDataSync)),
+          ),
+        ),
+        onTap: () => onThumbnailTap(photo),
+      );
     } else if (!current.contains(photo.id) &&
         widget.feature.origPhotoIDs.contains(photo.id)) {
-      borderColor = _deletedColor;
-      w = Stack(
-        alignment: Alignment.topRight,
-        children: [
-          Image(
-              image: MemoryImage(photo.thumbnailDataSync),
-              width: _thumbWidth.toDouble(),
-              color: _deletedColor,
-              colorBlendMode: BlendMode.multiply),
-          Icon(
-            Icons.delete,
-            size: 24,
-            color: Theme.of(context).colorScheme.primary,
-          )
-        ],
-      );
+      return Tooltip(
+          richMessage: TextSpan(children: [
+            TextSpan(
+                text: I18N.of(context).deletedPhoto,
+                style: const TextStyle(fontWeight: FontWeight.bold)),
+            const TextSpan(text: '\n \n', style: TextStyle(height: 0.2)),
+            TextSpan(text: I18N.of(context).deletedPhotoDetail)
+          ]),
+          margin: const EdgeInsets.symmetric(horizontal: 36),
+          child: GestureDetector(
+            child: Container(
+              decoration:
+                  BoxDecoration(border: Border.all(color: _deletedColor)),
+              child: Hero(
+                tag: '$_photoPopupHeroTag-${photo.id}',
+                child: Stack(
+                  alignment: Alignment.topRight,
+                  children: [
+                    Image(
+                        image: MemoryImage(photo.thumbnailDataSync),
+                        color: _deletedColor,
+                        colorBlendMode: BlendMode.multiply),
+                    Icon(
+                      Icons.delete,
+                      size: 24,
+                      color: Theme.of(context).colorScheme.primary,
+                    )
+                  ],
+                ),
+              ),
+            ),
+            onTap: () => onThumbnailTap(photo),
+          ));
     } else if (current.contains(photo.id) &&
         !widget.feature.origPhotoIDs.contains(photo.id)) {
-      borderColor = Theme.of(context).colorScheme.primary;
-      w = Stack(
-        alignment: Alignment.topRight,
-        children: [
-          image,
-          Icon(
-            Icons.star,
-            size: 24,
-            color: Theme.of(context).colorScheme.primary,
-          ),
-          Icon(
-            Icons.star_border,
-            size: 24,
-            color: Theme.of(context).colorScheme.onPrimary,
-          )
-        ],
-      );
+      return Tooltip(
+          richMessage: TextSpan(children: [
+            TextSpan(
+                text: I18N.of(context).addedPhoto,
+                style: const TextStyle(fontWeight: FontWeight.bold)),
+            const TextSpan(text: '\n \n', style: TextStyle(height: 0.2)),
+            TextSpan(text: I18N.of(context).addedPhotoDetail)
+          ]),
+          margin: const EdgeInsets.symmetric(horizontal: 36),
+          child: GestureDetector(
+            child: Container(
+              decoration: BoxDecoration(
+                  border:
+                      Border.all(color: Theme.of(context).colorScheme.primary)),
+              child: Hero(
+                tag: '$_photoPopupHeroTag-${photo.id}',
+                child: Stack(
+                  alignment: Alignment.topRight,
+                  children: [
+                    Image(image: MemoryImage(photo.thumbnailDataSync)),
+                    Icon(
+                      Icons.star,
+                      size: 24,
+                      color: Theme.of(context).colorScheme.primary,
+                    ),
+                    Icon(
+                      Icons.star_border,
+                      size: 24,
+                      color: Theme.of(context).colorScheme.onPrimary,
+                    )
+                  ],
+                ),
+              ),
+            ),
+            onTap: () => onThumbnailTap(photo),
+          ));
     } else {
       developer.log('photo ID ${photo.id} neither in current nor in orig');
       return null;
     }
-    return InkWell(
-      child: Container(
-        decoration: BoxDecoration(border: Border.all(color: borderColor)),
-        child: Hero(
-          tag: '$_photoPopupHeroTag-${photo.id}',
-          child: w,
-        ),
-      ),
-      onTap: () => onThumbnailTap(photo),
-    );
   }
 
   @override
@@ -124,16 +153,23 @@ class _GalleryState<T> extends State<Gallery> {
     List<Widget> thumbs =
         photos.map(_thumbnail).where((w) => w != null).cast<Widget>().toList();
     if (widget.editable) {
-      thumbs.add(Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          IconButton(
-              icon: const Icon(Icons.add_a_photo),
-              onPressed: () => onPickPhoto(ImageSource.camera)),
-          IconButton(
-              icon: const Icon(Icons.add_photo_alternate),
-              onPressed: () => onPickPhoto(ImageSource.gallery)),
-        ],
+      thumbs.add(Container(
+        width: _thumbMaxDimen.toDouble() + 2,
+        height: _thumbMaxDimen.toDouble() + 2,
+        decoration: BoxDecoration(border: Border.all(color: Colors.white)),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            IconButton(
+                icon: const Icon(Icons.add_a_photo),
+                tooltip: I18N.of(context).takePhoto,
+                onPressed: () => onPickPhoto(ImageSource.camera)),
+            IconButton(
+                icon: const Icon(Icons.add_photo_alternate),
+                tooltip: I18N.of(context).pickPhoto,
+                onPressed: () => onPickPhoto(ImageSource.gallery)),
+          ],
+        ),
       ));
     }
     return Scaffold(
@@ -144,19 +180,22 @@ class _GalleryState<T> extends State<Gallery> {
           onPressed: _save,
         ),
       ),
-      body: Padding(
-          padding: const EdgeInsets.all(24),
-          child: SingleChildScrollView(
-              child: Wrap(
-            alignment: WrapAlignment.center,
-            direction: Axis.horizontal,
-            crossAxisAlignment: WrapCrossAlignment.center,
-            verticalDirection: VerticalDirection.down,
-            runAlignment: WrapAlignment.center,
-            spacing: 4,
-            runSpacing: 4,
-            children: thumbs,
-          ))),
+      body: Align(
+        alignment: Alignment.topCenter,
+        child: Padding(
+            padding: const EdgeInsets.fromLTRB(8, 8, 8, 0),
+            child: SingleChildScrollView(
+                child: Wrap(
+              //alignment: WrapAlignment.spaceBetween,
+              direction: Axis.horizontal,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              verticalDirection: VerticalDirection.down,
+              //runAlignment: WrapAlignment.center,
+              spacing: 4,
+              runSpacing: 4,
+              children: thumbs,
+            ))),
+      ),
     );
   }
 
@@ -306,7 +345,9 @@ class PhotoPopup extends StatelessWidget {
                                   icon: Icon(deleting
                                       ? Icons.delete
                                       : Icons.restore_from_trash),
-                                  tooltip: I18N.of(context).delete,
+                                  tooltip: deleting
+                                      ? I18N.of(context).delete
+                                      : I18N.of(context).undelete,
                                   onPressed: () {
                                     Navigator.pop(context, true);
                                   }),
@@ -325,7 +366,14 @@ class PhotoPopup extends StatelessWidget {
 }
 
 Future<Uint8List> _pngThumbnail(Uint8List full) async {
-  var codec = await ui.instantiateImageCodec(full, targetWidth: _thumbWidth);
+  var buffer = await ui.ImmutableBuffer.fromUint8List(full);
+  var descriptor = await ui.ImageDescriptor.encoded(buffer);
+  ui.Codec codec;
+  if (descriptor.width > descriptor.height) {
+    codec = await descriptor.instantiateCodec(targetWidth: _thumbMaxDimen);
+  } else {
+    codec = await descriptor.instantiateCodec(targetHeight: _thumbMaxDimen);
+  }
   var frameInfo = await codec.getNextFrame();
   var byteData =
       await frameInfo.image.toByteData(format: ui.ImageByteFormat.png);

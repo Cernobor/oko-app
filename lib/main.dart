@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 
-import 'main_widget.dart';
 import 'i18n.dart';
+import 'main_widget.dart';
 
 const cbBlack = Color(0xff191919);
 const cbGreen = Color(0xff153d24);
@@ -13,11 +13,12 @@ const cbWhite = Color(0xfff4f3ee);
 const colorScheme = ColorScheme(
   brightness: Brightness.dark,
   primary: cbYellow, // text field focus cursors, selection background
-                     // date picker bottom buttons, selected date and today date
-                     // time picker input box background (with alpha), text, clock hand, buttons
-                     // edited/new badges
+  // date picker bottom buttons, selected date and today date
+  // time picker input box background (with alpha), text, clock hand, buttons
+  // edited/new badges
   onPrimary: cbBlack, // date and time picker selected value text
-  surface: cbGreen, // time picker background, app bar, date picker header background
+  surface:
+      cbGreen, // time picker background, app bar, date picker header background
   background: cbBlack,
   onBackground: cbWhite, // time picker clock background - with alpha
   onSurface: cbWhite, // time picker non-selected values (both boxes and clock)
@@ -52,49 +53,52 @@ class Home extends StatelessWidget {
     return MaterialApp(
       onGenerateTitle: (BuildContext ctx) => I18N.of(ctx).appTitle,
       theme: ThemeData(
-        useMaterial3: true,
-        colorScheme: colorScheme,
-        disabledColor: colorScheme.onSurface.withOpacity(.35), // disabled items text/foreground
-        bottomAppBarColor: colorScheme.surface, // bottom bar
-        errorColor: colorScheme.error, // errors
-        scaffoldBackgroundColor: colorScheme.background, // background of subpages
-        cardColor: colorScheme.surfaceVariant, // info target background
-        toggleableActiveColor: colorScheme.primary, // active/selected radio buttons, switches, checkbox background
-        unselectedWidgetColor: null, // inactive/unselected radio buttons, checkbox outlines
-        dividerColor: null, // dividers
-        highlightColor: null, // scrollbar
-        hintColor: null, // text field top hint when unfocused
-        dialogBackgroundColor: null, // default background of dialogs
-        shadowColor: null, // shadows
-        secondaryHeaderColor: null,
-        indicatorColor: null,
-        focusColor: null,
-        primaryColorLight: null,
-        hoverColor: null,
-        backgroundColor: null,
-        primaryColor: null,
-        primaryColorDark: null,
-        canvasColor: null,
-        selectedRowColor: null, //
-        splashColor: null, //
-        cursorColor: null,
-        accentColor: null,
-        buttonColor: null,
-        textSelectionColor: null,
-        textSelectionHandleColor: null,
-        // themes
-        drawerTheme: DrawerThemeData(
-          backgroundColor: colorScheme.background,
-        ),
-        textButtonTheme: TextButtonThemeData(
-          style: ButtonStyle(
-            foregroundColor: MaterialStateProperty.all(colorScheme.primary)
-          )
-        ),
-        checkboxTheme: CheckboxThemeData(
-          checkColor: MaterialStateProperty.all(colorScheme.onPrimary)
-        )
-      ),
+          useMaterial3: true,
+          colorScheme: colorScheme,
+          disabledColor: colorScheme.onSurface
+              .withOpacity(.35), // disabled items text/foreground
+          bottomAppBarColor: colorScheme.surface, // bottom bar
+          errorColor: colorScheme.error, // errors
+          scaffoldBackgroundColor:
+              colorScheme.background, // background of subpages
+          cardColor: colorScheme.surfaceVariant, // info target background
+          toggleableActiveColor: colorScheme
+              .primary, // active/selected radio buttons, switches, checkbox background
+          unselectedWidgetColor:
+              null, // inactive/unselected radio buttons, checkbox outlines
+          dividerColor: null, // dividers
+          highlightColor: null, // scrollbar
+          hintColor: null, // text field top hint when unfocused
+          dialogBackgroundColor: null, // default background of dialogs
+          shadowColor: null, // shadows
+          secondaryHeaderColor: null,
+          indicatorColor: null,
+          focusColor: null,
+          primaryColorLight: null,
+          hoverColor: null,
+          backgroundColor: null,
+          primaryColor: null,
+          primaryColorDark: null,
+          canvasColor: null,
+          selectedRowColor: null, //
+          splashColor: null, //
+          cursorColor: null,
+          accentColor: null,
+          buttonColor: null,
+          textSelectionColor: null,
+          textSelectionHandleColor: null,
+          // themes
+          drawerTheme: DrawerThemeData(
+            backgroundColor: colorScheme.background,
+          ),
+          textButtonTheme: TextButtonThemeData(
+              style: ButtonStyle(
+                  foregroundColor:
+                      MaterialStateProperty.all(colorScheme.primary))),
+          checkboxTheme: CheckboxThemeData(
+              checkColor: MaterialStateProperty.all(colorScheme.onPrimary)),
+          tooltipTheme: const TooltipThemeData(
+              padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8))),
       home: const MainWidget(),
       localizationsDelegates: const [
         I18NDelegate(),

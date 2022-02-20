@@ -83,7 +83,7 @@ class _PointListState extends State<PointList> {
       onTap: () => FocusManager.instance.primaryFocus?.unfocus(),
       child: Scaffold(
         appBar: AppBar(
-          title: const Text('List of points'),
+          title: Text(I18N.of(context).poiListTitle),
           primary: true,
           leading: BackButton(
             onPressed: () => Navigator.of(context).pop(),

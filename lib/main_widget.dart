@@ -694,6 +694,7 @@ class MainWidgetState extends State<MainWidget> {
                                 onPressed: () => onRevertPoi(infoTarget.point)),
                           IconButton(
                             icon: const Icon(Icons.photo_library),
+                            tooltip: I18N.of(context).managePhotos,
                             onPressed: () => onOpenGallery(infoTarget.point),
                           )
                         ],
