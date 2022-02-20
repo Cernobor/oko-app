@@ -1037,6 +1037,7 @@ class MainWidgetState extends State<MainWidget> {
     data.ServerSettings? settings = await Navigator.of(context).push(
         MaterialPageRoute<data.ServerSettings>(
             builder: (context) => Pairing(scaffoldKey: scaffoldKey)));
+    Navigator.of(context).pop();
     if (settings == null) {
       developer.log('no settings');
     } else {
@@ -1051,11 +1052,14 @@ class MainWidgetState extends State<MainWidget> {
           null,
           null));
       // TODO with photos?
-      await download(true);
+      bool success = await download(true);
+      if (success) {
+        utils.notifySnackbar(context, I18N.of(context).syncSuccessful,
+            utils.NotificationLevel.success);
+      }
       setState(() {});
       mapController.move(storage!.serverSettings!.defaultCenter,
           storage!.serverSettings!.minZoom.toDouble());
-      Navigator.of(context).pop();
       startPinging();
     }
   }
