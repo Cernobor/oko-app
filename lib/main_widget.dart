@@ -1256,6 +1256,7 @@ class MainWidgetState extends State<MainWidget> {
             File(join(unpackDir.path, photoMetadata.thumbnailFilename)),
             File(join(unpackDir.path, photoFilename)),
             id: photoMetadata.id,
+            thumbnailContentType: photoMetadata.thumbnailContentType,
             contentType: photoMetadata.contentType,
             photoDataSize: photoMetadata.size,
             featureID: photo2feature[photoMetadata.id]!);

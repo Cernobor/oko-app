@@ -1,8 +1,8 @@
 import 'dart:developer' as developer;
 import 'dart:typed_data';
+import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
-import 'package:image/image.dart' as image;
 import 'package:image_picker/image_picker.dart';
 import 'package:oko/data.dart';
 import 'package:oko/i18n.dart';
@@ -193,33 +193,12 @@ class _GalleryState<T> extends State<Gallery> {
           NotificationLevel.error);
       return;
     }
-    image.Image? photo = image.decodeImage(photoBytes);
-    if (photo == null) {
-      await notifyDialog(
-          context, 'TODO could not decode image', '', NotificationLevel.error);
-      return;
-    }
-    developer.log('resizing file');
-    image.Image thumbnail = image.copyResize(photo,
-        width: _thumbWidth, interpolation: image.Interpolation.cubic);
-    List<int> thumbnailBytes;
-    if (contentType == 'image/jpeg') {
-      developer.log('encoding JPG thumbnail');
-      thumbnailBytes = image.encodeJpg(thumbnail, quality: 90);
-    } else if (contentType == 'image/png') {
-      developer.log('encoding PNG thumbnail');
-      thumbnailBytes = image.encodePng(thumbnail);
-    } else {
-      throw IllegalStateException('invalid content type $contentType');
-    }
+    developer.log('encoding PNG thumbnail');
+    Uint8List thumbnailBytes = await _pngThumbnail(photoBytes);
+
     developer.log('saving');
-    int photoID = await widget.storage.addPhoto(
-        widget.feature.id,
-        contentType,
-        (thumbnailBytes is Uint8List)
-            ? thumbnailBytes
-            : Uint8List.fromList(thumbnailBytes),
-        photoBytes);
+    int photoID = await widget.storage.addPhoto(widget.feature.id, 'image/png',
+        contentType, thumbnailBytes, photoBytes);
     await loadPhotos();
     current.add(photoID);
     setState(() {});
@@ -343,4 +322,12 @@ class PhotoPopup extends StatelessWidget {
       ),
     );
   }
+}
+
+Future<Uint8List> _pngThumbnail(Uint8List full) async {
+  var codec = await ui.instantiateImageCodec(full, targetWidth: _thumbWidth);
+  var frameInfo = await codec.getNextFrame();
+  var byteData =
+      await frameInfo.image.toByteData(format: ui.ImageByteFormat.png);
+  return byteData!.buffer.asUint8List();
 }

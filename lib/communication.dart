@@ -259,7 +259,7 @@ Future<void> uploadData(
         Stream.value(await entry.value.thumbnailData),
         (await entry.value.thumbnailData).length,
         filename: 'thumb_${entry.key}',
-        contentType: MediaType.parse(entry.value.contentType)));
+        contentType: MediaType.parse(entry.value.thumbnailContentType)));
     req.files.add(http.MultipartFile(
         entry.key, entry.value.photoDataStream, entry.value.photoDataSize,
         filename: entry.key,

@@ -89,22 +89,29 @@ class ServerData {
         .toList(growable: false);
     Map<String, PhotoMetadata> photoMetadata =
         (data['photo_metadata'] as Map?)?.map((key, value) {
-      return MapEntry(
-          key as String,
-          PhotoMetadata._(value['content_type'] as String, value['size'] as int,
-              value['id'] as int, value['thumbnail_filename'] as String));
-    }) ?? {};
+              return MapEntry(
+                  key as String,
+                  PhotoMetadata._(
+                      value['thumbnail_content_type'] as String,
+                      value['content_type'] as String,
+                      value['size'] as int,
+                      value['id'] as int,
+                      value['thumbnail_filename'] as String));
+            }) ??
+            {};
     return ServerData._(users, features, photoMetadata);
   }
 }
 
 class PhotoMetadata {
+  final String thumbnailContentType;
   final String contentType;
   final int size;
   final int id;
   final String thumbnailFilename;
 
-  PhotoMetadata._(this.contentType, this.size, this.id, this.thumbnailFilename);
+  PhotoMetadata._(this.thumbnailContentType, this.contentType, this.size,
+      this.id, this.thumbnailFilename);
 }
 
 class PointCategory implements Comparable {
@@ -880,10 +887,12 @@ class LineString extends Feature {
 abstract class FeaturePhoto implements Comparable<FeaturePhoto> {
   final int id;
   final int featureID;
+  final String thumbnailContentType;
   final String contentType;
   final int photoDataSize;
 
-  FeaturePhoto(this.id, this.featureID, this.contentType, this.photoDataSize);
+  FeaturePhoto(this.id, this.featureID, this.thumbnailContentType,
+      this.contentType, this.photoDataSize);
 
   Future<Uint8List> get thumbnailData;
   Stream<List<int>> get thumbnailDataStream;
@@ -915,9 +924,10 @@ class FileFeaturePhoto extends FeaturePhoto {
   FileFeaturePhoto(this._thumbnailFile, this._photoFile,
       {required int id,
       required int featureID,
+      required String thumbnailContentType,
       required String contentType,
       required int photoDataSize})
-      : super(id, featureID, contentType, photoDataSize);
+      : super(id, featureID, thumbnailContentType, contentType, photoDataSize);
 
   @override
   Future<Uint8List> get thumbnailData => _thumbnailFile.readAsBytes();
@@ -937,9 +947,11 @@ class MemoryFeaturePhoto extends FeaturePhoto {
   MemoryFeaturePhoto(this._photoData, this._thumbnailData,
       {required int id,
       required int featureID,
+      required String thumbnailContentType,
       required String contentType,
       required Uint8List thumbnail})
-      : super(id, featureID, contentType, _photoData.length);
+      : super(id, featureID, thumbnailContentType, contentType,
+            _photoData.length);
 
   @override
   Future<Uint8List> get thumbnailData => Future.value(_thumbnailData);
@@ -959,9 +971,10 @@ class ThumbnailMemoryPhotoFileFeaturePhoto extends FeaturePhoto {
   ThumbnailMemoryPhotoFileFeaturePhoto(this._thumbnailData, this._photoFile,
       {required int id,
       required int featureID,
+      required String thumbnailContentType,
       required String contentType,
       required int photoDataSize})
-      : super(id, featureID, contentType, photoDataSize);
+      : super(id, featureID, thumbnailContentType, contentType, photoDataSize);
 
   Uint8List get thumbnailDataSync => _thumbnailData;
   @override

@@ -113,6 +113,7 @@ class Storage {
     await db.execute('CREATE TABLE feature_photos ('
         'id integer primary key,'
         'feature_id integer,'
+        'thumbnail_content_type text not null,'
         'content_type text not null,'
         'thumbnail blob not null,'
         'photo_file_path blob not null,'
@@ -510,6 +511,7 @@ class Storage {
         batch.insert('feature_photos', {
           'id': photo.id,
           'feature_id': photo.featureID,
+          'thumbnail_content_type': photo.thumbnailContentType,
           'content_type': photo.contentType,
           'thumbnail': await photo.thumbnailData,
           'photo_file_path': photoFileName,
@@ -528,6 +530,7 @@ class Storage {
         File(_fullPhotoFileName(row['photo_file_path'] as String)),
         id: row['id'] as int,
         featureID: row['feature_id'] as int,
+        thumbnailContentType: row['thumbnail_content_type'] as String,
         contentType: row['content_type'] as String,
         photoDataSize: row['photo_size'] as int);
   }
@@ -538,6 +541,7 @@ class Storage {
         columns: [
           'id',
           'feature_id',
+          'thumbnail_content_type',
           'content_type',
           'thumbnail',
           'photo_file_path',
@@ -557,6 +561,7 @@ class Storage {
             columns: [
               'id',
               'feature_id',
+              'thumbnail_content_type',
               'content_type',
               'thumbnail',
               'photo_file_path',
@@ -570,8 +575,8 @@ class Storage {
     });
   }
 
-  Future<int> addPhoto(int featureID, String contentType, Uint8List thumbnail,
-      Uint8List photo) async {
+  Future<int> addPhoto(int featureID, String thumbnailContentType,
+      String contentType, Uint8List thumbnail, Uint8List photo) async {
     int photoID = await _db.transaction((Transaction tx) async {
       await tx.execute('update next_local_photo_id set id = id - 1');
       var row =
@@ -581,6 +586,7 @@ class Storage {
       await tx.insert('feature_photos', {
         'id': id,
         'feature_id': featureID,
+        'thumbnail_content_type': thumbnailContentType,
         'content_type': contentType,
         'thumbnail': thumbnail,
         'photo_file_path': photoFileName,
