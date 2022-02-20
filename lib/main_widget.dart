@@ -87,6 +87,7 @@ class MainWidgetState extends State<MainWidget> {
   bool mapReady = false;
   double? progressValue;
   bool pinging = false;
+  bool pingInProgress = false;
   bool serverAvailable = false;
   StreamSubscription<LocationData>? locationSubscription;
   StreamSubscription<CompassEvent>? compassSubscription;
@@ -212,7 +213,7 @@ class MainWidgetState extends State<MainWidget> {
           ListTile(
             title: Text(I18N.of(context).drawerServerAvailable),
             enabled: storage?.serverSettings != null,
-            trailing: storage?.serverSettings != null && pinging
+            trailing: storage?.serverSettings != null && pingInProgress
                 ? const SizedBox(
                     child: CircularProgressIndicator(
                         value: null, strokeWidth: 2.5),
@@ -662,10 +663,14 @@ class MainWidgetState extends State<MainWidget> {
                                 ? null
                                 : () => onInfoNavigate(infoTarget),
                           ),
-                          IconButton(
-                              icon: const Icon(Icons.center_focus_strong),
-                              tooltip: I18N.of(context).centerViewInfoButton,
-                              onPressed: () => onCenterView(infoTarget)),
+                          GestureDetector(
+                            child: IconButton(
+                                icon: const Icon(Icons.center_focus_strong),
+                                tooltip: I18N.of(context).centerViewInfoButton,
+                                onPressed: () =>
+                                    onCenterView(infoTarget, false)),
+                            onDoubleTap: () => onCenterView(infoTarget, true),
+                          ),
                           if (infoTarget.point.ownerId != 0)
                             if (infoTarget.point.deleted)
                               IconButton(
@@ -897,15 +902,21 @@ class MainWidgetState extends State<MainWidget> {
                       iconSize: 30.0,
                       onPressed: onToggleLocationContinuous,
                     ),
-                    IconButton(
-                      tooltip: I18N.of(context).lockViewToLocationButtonTooltip,
-                      icon: Icon(viewLockedToLocation
-                          ? Icons.gps_fixed
-                          : Icons.gps_not_fixed),
-                      iconSize: 30.0,
-                      onPressed:
-                          currentLocation == null ? null : onLockViewToLocation,
-                    ),
+                    GestureDetector(
+                        onDoubleTap: currentLocation == null
+                            ? null
+                            : () => onLockViewToLocation(true),
+                        child: IconButton(
+                          tooltip:
+                              I18N.of(context).lockViewToLocationButtonTooltip,
+                          icon: Icon(viewLockedToLocation
+                              ? Icons.gps_fixed
+                              : Icons.gps_not_fixed),
+                          iconSize: 30.0,
+                          onPressed: currentLocation == null
+                              ? null
+                              : () => onLockViewToLocation(false),
+                        )),
                   ],
                 ),
               ),
@@ -924,10 +935,16 @@ class MainWidgetState extends State<MainWidget> {
     });
   }
 
-  void onLockViewToLocation() {
+  void onLockViewToLocation(bool zoom) {
     setState(() {
-      viewLockedToLocation = true;
-      mapController.move(currentLocation!, mapController.zoom);
+      viewLockedToLocation = !viewLockedToLocation;
+      if (viewLockedToLocation) {
+        mapController.move(
+            currentLocation!,
+            zoom
+                ? (storage?.mapState?.zoomMax ?? fallbackMaxZoom).toDouble()
+                : mapController.zoom);
+      }
     });
   }
 
@@ -950,9 +967,6 @@ class MainWidgetState extends State<MainWidget> {
 
   void onMapEvent(MapEvent evt) {
     //developer.log('onMapEvent: $evt');
-    if (mapReady && evt.center != currentLocation) {
-      viewLockedToLocation = false;
-    }
     setState(() {});
     if (evt is MapEventWithMove || evt is MapEventMoveEnd) {
       mapStateStorageController.add(evt);
@@ -961,6 +975,11 @@ class MainWidgetState extends State<MainWidget> {
 
   void onMapEventStorage(MapEvent evt) async {
     //developer.log('onMapEventStorage: $evt');
+    if (evt is MapEventWithMove) {
+      if (mapReady && evt.targetCenter != currentLocation) {
+        viewLockedToLocation = false;
+      }
+    }
     if (storage?.mapState != null) {
       if (evt is MapEventWithMove) {
         await storage!.setMapState(storage!.mapState!
@@ -976,7 +995,7 @@ class MainWidgetState extends State<MainWidget> {
     if (locationSubscription == null) {
       locationSubscription =
           location.onLocationChanged.listen((LocationData loc) {
-        //developer.log('Continuous location: ${loc.latitude} ${loc.longitude}');
+        developer.log('Continuous location: ${loc.latitude} ${loc.longitude}');
         setState(() {
           currentLocation = LatLng(loc.latitude!, loc.longitude!);
           onCurrentLocation();
@@ -1032,18 +1051,17 @@ class MainWidgetState extends State<MainWidget> {
     }
   }
 
-  void onPing() {
+  void onPing() async {
+    if (storage?.serverSettings?.serverAddress == null) {
+      return;
+    }
     setState(() {
-      if (storage?.serverSettings?.serverAddress == null) {
-        return;
-      }
-      pinging = true;
-      comm.ping(storage!.serverSettings!.serverAddress).then((bool pong) {
-        setState(() {
-          pinging = false;
-          serverAvailable = pong;
-        });
-      });
+      pingInProgress = true;
+    });
+    var pong = await comm.ping(storage!.serverSettings!.serverAddress);
+    setState(() {
+      pingInProgress = false;
+      serverAvailable = pong;
     });
   }
 
@@ -1052,14 +1070,16 @@ class MainWidgetState extends State<MainWidget> {
       developer.log('No settings, cannot start pinging.');
       return;
     }
-    Future.doWhile(() {
+    if (pinging) {
+      return;
+    }
+    pinging = true;
+    Future.doWhile(() async {
       if (storage?.serverSettings == null) {
-        return Future.delayed(const Duration(seconds: 5), () => true);
+        return Future.delayed(const Duration(seconds: 5), () => pinging);
       }
-      return Future.delayed(const Duration(seconds: 5), () {
-        onPing();
-        return true;
-      });
+      await Future.delayed(const Duration(seconds: 5), onPing);
+      return pinging;
     });
   }
 
@@ -1715,8 +1735,12 @@ class MainWidgetState extends State<MainWidget> {
         });
   }
 
-  void onCenterView(Target t) {
-    mapController.move(t.coords, mapController.zoom);
+  void onCenterView(Target t, bool zoom) {
+    mapController.move(
+        t.coords,
+        zoom
+            ? (storage?.mapState?.zoomMax ?? fallbackMaxZoom).toDouble()
+            : mapController.zoom);
   }
 
   void toggleNavigation(Target t) {
