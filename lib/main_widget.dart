@@ -1023,7 +1023,7 @@ class MainWidgetState extends State<MainWidget> {
           null,
           null));
       // TODO with photos?
-      //await download(true);
+      await download(true);
       setState(() {});
       mapController.move(storage!.serverSettings!.defaultCenter,
           storage!.serverSettings!.minZoom.toDouble());
