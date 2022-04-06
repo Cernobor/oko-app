@@ -126,9 +126,8 @@ class MainWidgetState extends State<MainWidget> {
       startPinging();
     }
     if (storage?.mapState?.usingOffline ?? false) {
-      offlineMapProvider = await MbtilesTileProvider.create(
-          storage!.mapState!.zoomMax ?? fallbackMaxZoom.toInt(),
-          storage!.offlineMap.path);
+      offlineMapProvider =
+          await MbtilesTileProvider.create(14, storage!.offlineMap.path);
     }
     mapSubscription = mapController.mapEventStream
         .where((evt) =>
@@ -407,33 +406,7 @@ class MainWidgetState extends State<MainWidget> {
       children: [
         if (storage?.serverSettings != null)
           if (storage?.mapState?.render ?? false)
-            if (offlineMapProvider == null)
-              VectorTileLayerWidget(
-                  options: VectorTileLayerOptions(
-                      tileProviders: TileProviders({
-                        'online': MemoryCacheVectorTileProvider(
-                            delegate: NetworkVectorTileProvider(
-                                urlTemplate:
-                                    '${comm.ensureNoTrailingSlash(storage!.serverSettings!.serverAddress)}${storage!.serverSettings!.tilePathTemplate}',
-                                maximumZoom: 14),
-                            maxSizeBytes: 1024 * 1024 * 5)
-                      }),
-                      theme: ThemeReader().read(mapThemeData('online')),
-                      backgroundTheme: ThemeReader().readAsBackground(
-                          mapThemeData('online'),
-                          layerPredicate: defaultBackgroundLayerPredicate)))
-            else
-              VectorTileLayerWidget(
-                  options: VectorTileLayerOptions(
-                      tileProviders: TileProviders({
-                        'offline': MemoryCacheVectorTileProvider(
-                            delegate: offlineMapProvider!,
-                            maxSizeBytes: 1024 * 1024 * 5)
-                      }),
-                      theme: ThemeReader().read(mapThemeData('offline')),
-                      backgroundTheme: ThemeReader().readAsBackground(
-                          mapThemeData('offline'),
-                          layerPredicate: defaultBackgroundLayerPredicate)))
+            createMapLayer(context)
           else
             SolidColorLayerWidget(
                 options: SolidColorLayerOptions(color: mapBackgroundColor))
@@ -499,6 +472,37 @@ class MainWidgetState extends State<MainWidget> {
         MarkerLayerOptions(markers: createMarkers()),
       ],
     );
+  }
+
+  Widget createMapLayer(BuildContext context) {
+    VectorTileLayerOptions o;
+    if (offlineMapProvider == null) {
+      o = VectorTileLayerOptions(
+          tileProviders: TileProviders({
+            'openmaptiles': MemoryCacheVectorTileProvider(
+                delegate: NetworkVectorTileProvider(
+                    urlTemplate:
+                        '${comm.ensureNoTrailingSlash(storage!.serverSettings!.serverAddress)}${storage!.serverSettings!.tilePathTemplate}',
+                    maximumZoom: 14),
+                maxSizeBytes: 1024 * 1024 * 5)
+          }),
+          theme: ThemeReader().read(mapThemeData('online')),
+          backgroundTheme: ThemeReader().readAsBackground(
+              mapThemeData('online'),
+              layerPredicate: defaultBackgroundLayerPredicate));
+    } else {
+      o = VectorTileLayerOptions(
+          tileProviders: TileProviders({
+            'openmaptiles': MemoryCacheVectorTileProvider(
+                delegate: offlineMapProvider!, maxSizeBytes: 1024 * 1024 * 5)
+          }),
+          theme: ThemeReader().read(mapThemeData('offline')),
+          backgroundTheme: ThemeReader().readAsBackground(
+              mapThemeData('offline'),
+              layerPredicate: defaultBackgroundLayerPredicate));
+    }
+
+    return VectorTileLayerWidget(options: o);
   }
 
   List<Marker> createMarkers() {
@@ -1167,8 +1171,7 @@ class MainWidgetState extends State<MainWidget> {
     }
 
     // set
-    offlineMapProvider = await MbtilesTileProvider.create(
-        storage?.mapState?.zoomMax ?? fallbackMaxZoom.toInt(), offlineMap.path);
+    offlineMapProvider = await MbtilesTileProvider.create(14, offlineMap.path);
     await storage!.setMapState(storage!.mapState!.from(usingOffline: true));
     setState(() {});
   }
