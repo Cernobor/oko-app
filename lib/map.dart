@@ -3,7 +3,7 @@ import 'package:flutter_map/plugin_api.dart';
 
 const Color mapBackgroundColor = Color.fromRGBO(239, 239, 239, 1);
 
-Map<String, dynamic> mapThemeData() {
+Map<String, dynamic> mapThemeData(String key) {
   return {
     'version': 8,
     'name': 'OSM Liberty',
@@ -14,7 +14,7 @@ Map<String, dynamic> mapThemeData() {
       'openmaptiles:version': '3.x'
     },
     'sources': {
-      'openmaptiles': {
+      key: {
         'type': 'vector',
         'url': 'https://api.maptiler.com/tiles/v3/tiles.json?key={key}'
       },
@@ -57,7 +57,7 @@ Map<String, dynamic> mapThemeData() {
       {
         'id': 'park',
         'type': 'fill',
-        'source': 'openmaptiles',
+        'source': key,
         'source-layer': 'park',
         'paint': {
           'fill-color': '#d8e8c8',
@@ -68,7 +68,7 @@ Map<String, dynamic> mapThemeData() {
       {
         'id': 'park_outline',
         'type': 'line',
-        'source': 'openmaptiles',
+        'source': key,
         'source-layer': 'park',
         'paint': {
           'line-dasharray': [1, 1.5],
@@ -78,7 +78,7 @@ Map<String, dynamic> mapThemeData() {
       {
         'id': 'landuse_residential',
         'type': 'fill',
-        'source': 'openmaptiles',
+        'source': key,
         'source-layer': 'landuse',
         'maxzoom': 8,
         'filter': ['==', 'class', 'residential'],
@@ -95,7 +95,7 @@ Map<String, dynamic> mapThemeData() {
       {
         'id': 'landcover_wood',
         'type': 'fill',
-        'source': 'openmaptiles',
+        'source': key,
         'source-layer': 'landcover',
         'filter': [
           'all',
@@ -110,7 +110,7 @@ Map<String, dynamic> mapThemeData() {
       {
         'id': 'landcover_grass',
         'type': 'fill',
-        'source': 'openmaptiles',
+        'source': key,
         'source-layer': 'landcover',
         'filter': [
           'all',
@@ -125,7 +125,7 @@ Map<String, dynamic> mapThemeData() {
       {
         'id': 'landcover_ice',
         'type': 'fill',
-        'source': 'openmaptiles',
+        'source': key,
         'source-layer': 'landcover',
         'filter': [
           'all',
@@ -140,7 +140,7 @@ Map<String, dynamic> mapThemeData() {
       {
         'id': 'landuse_cemetery',
         'type': 'fill',
-        'source': 'openmaptiles',
+        'source': key,
         'source-layer': 'landuse',
         'filter': ['==', 'class', 'cemetery'],
         'paint': {'fill-color': 'hsl(75, 37%, 81%)'}
@@ -148,7 +148,7 @@ Map<String, dynamic> mapThemeData() {
       {
         'id': 'landuse_hospital',
         'type': 'fill',
-        'source': 'openmaptiles',
+        'source': key,
         'source-layer': 'landuse',
         'filter': ['==', 'class', 'hospital'],
         'paint': {'fill-color': '#fde'}
@@ -156,7 +156,7 @@ Map<String, dynamic> mapThemeData() {
       {
         'id': 'landuse_school',
         'type': 'fill',
-        'source': 'openmaptiles',
+        'source': key,
         'source-layer': 'landuse',
         'filter': ['==', 'class', 'school'],
         'paint': {'fill-color': 'rgb(236,238,204)'}
@@ -164,7 +164,7 @@ Map<String, dynamic> mapThemeData() {
       {
         'id': 'waterway_tunnel',
         'type': 'line',
-        'source': 'openmaptiles',
+        'source': key,
         'source-layer': 'waterway',
         'filter': [
           'all',
@@ -192,7 +192,7 @@ Map<String, dynamic> mapThemeData() {
       {
         'id': 'waterway_river',
         'type': 'line',
-        'source': 'openmaptiles',
+        'source': key,
         'source-layer': 'waterway',
         'filter': [
           'all',
@@ -214,7 +214,7 @@ Map<String, dynamic> mapThemeData() {
       {
         'id': 'waterway_other',
         'type': 'line',
-        'source': 'openmaptiles',
+        'source': key,
         'source-layer': 'waterway',
         'filter': [
           'all',
@@ -236,7 +236,7 @@ Map<String, dynamic> mapThemeData() {
       {
         'id': 'water',
         'type': 'fill',
-        'source': 'openmaptiles',
+        'source': key,
         'source-layer': 'water',
         'filter': [
           'all',
@@ -247,7 +247,7 @@ Map<String, dynamic> mapThemeData() {
       {
         'id': 'landcover_sand',
         'type': 'fill',
-        'source': 'openmaptiles',
+        'source': key,
         'source-layer': 'landcover',
         'filter': [
           'all',
@@ -258,7 +258,7 @@ Map<String, dynamic> mapThemeData() {
       {
         'id': 'aeroway_fill',
         'type': 'fill',
-        'source': 'openmaptiles',
+        'source': key,
         'source-layer': 'aeroway',
         'minzoom': 11,
         'filter': ['==', '\$type', 'Polygon'],
@@ -267,7 +267,7 @@ Map<String, dynamic> mapThemeData() {
       {
         'id': 'aeroway_runway',
         'type': 'line',
-        'source': 'openmaptiles',
+        'source': key,
         'source-layer': 'aeroway',
         'minzoom': 11,
         'filter': [
@@ -289,7 +289,7 @@ Map<String, dynamic> mapThemeData() {
       {
         'id': 'aeroway_taxiway',
         'type': 'line',
-        'source': 'openmaptiles',
+        'source': key,
         'source-layer': 'aeroway',
         'minzoom': 11,
         'filter': [
@@ -311,7 +311,7 @@ Map<String, dynamic> mapThemeData() {
       {
         'id': 'tunnel_motorway_link_casing',
         'type': 'line',
-        'source': 'openmaptiles',
+        'source': key,
         'source-layer': 'transportation',
         'filter': [
           'all',
@@ -337,7 +337,7 @@ Map<String, dynamic> mapThemeData() {
       {
         'id': 'tunnel_service_track_casing',
         'type': 'line',
-        'source': 'openmaptiles',
+        'source': key,
         'source-layer': 'transportation',
         'filter': [
           'all',
@@ -361,7 +361,7 @@ Map<String, dynamic> mapThemeData() {
       {
         'id': 'tunnel_link_casing',
         'type': 'line',
-        'source': 'openmaptiles',
+        'source': key,
         'source-layer': 'transportation',
         'filter': [
           'all',
@@ -385,7 +385,7 @@ Map<String, dynamic> mapThemeData() {
       {
         'id': 'tunnel_street_casing',
         'type': 'line',
-        'source': 'openmaptiles',
+        'source': key,
         'source-layer': 'transportation',
         'filter': [
           'all',
@@ -415,7 +415,7 @@ Map<String, dynamic> mapThemeData() {
       {
         'id': 'tunnel_secondary_tertiary_casing',
         'type': 'line',
-        'source': 'openmaptiles',
+        'source': key,
         'source-layer': 'transportation',
         'filter': [
           'all',
@@ -437,7 +437,7 @@ Map<String, dynamic> mapThemeData() {
       {
         'id': 'tunnel_trunk_primary_casing',
         'type': 'line',
-        'source': 'openmaptiles',
+        'source': key,
         'source-layer': 'transportation',
         'filter': [
           'all',
@@ -461,7 +461,7 @@ Map<String, dynamic> mapThemeData() {
       {
         'id': 'tunnel_motorway_casing',
         'type': 'line',
-        'source': 'openmaptiles',
+        'source': key,
         'source-layer': 'transportation',
         'filter': [
           'all',
@@ -487,7 +487,7 @@ Map<String, dynamic> mapThemeData() {
       {
         'id': 'tunnel_path_pedestrian',
         'type': 'line',
-        'source': 'openmaptiles',
+        'source': key,
         'source-layer': 'transportation',
         'filter': [
           'all',
@@ -510,7 +510,7 @@ Map<String, dynamic> mapThemeData() {
       {
         'id': 'tunnel_motorway_link',
         'type': 'line',
-        'source': 'openmaptiles',
+        'source': key,
         'source-layer': 'transportation',
         'filter': [
           'all',
@@ -535,7 +535,7 @@ Map<String, dynamic> mapThemeData() {
       {
         'id': 'tunnel_service_track',
         'type': 'line',
-        'source': 'openmaptiles',
+        'source': key,
         'source-layer': 'transportation',
         'filter': [
           'all',
@@ -558,7 +558,7 @@ Map<String, dynamic> mapThemeData() {
       {
         'id': 'tunnel_link',
         'type': 'line',
-        'source': 'openmaptiles',
+        'source': key,
         'source-layer': 'transportation',
         'filter': [
           'all',
@@ -582,7 +582,7 @@ Map<String, dynamic> mapThemeData() {
       {
         'id': 'tunnel_minor',
         'type': 'line',
-        'source': 'openmaptiles',
+        'source': key,
         'source-layer': 'transportation',
         'filter': [
           'all',
@@ -605,7 +605,7 @@ Map<String, dynamic> mapThemeData() {
       {
         'id': 'tunnel_secondary_tertiary',
         'type': 'line',
-        'source': 'openmaptiles',
+        'source': key,
         'source-layer': 'transportation',
         'filter': [
           'all',
@@ -628,7 +628,7 @@ Map<String, dynamic> mapThemeData() {
       {
         'id': 'tunnel_trunk_primary',
         'type': 'line',
-        'source': 'openmaptiles',
+        'source': key,
         'source-layer': 'transportation',
         'filter': [
           'all',
@@ -651,7 +651,7 @@ Map<String, dynamic> mapThemeData() {
       {
         'id': 'tunnel_motorway',
         'type': 'line',
-        'source': 'openmaptiles',
+        'source': key,
         'source-layer': 'transportation',
         'filter': [
           'all',
@@ -675,7 +675,7 @@ Map<String, dynamic> mapThemeData() {
       {
         'id': 'tunnel_major_rail',
         'type': 'line',
-        'source': 'openmaptiles',
+        'source': key,
         'source-layer': 'transportation',
         'filter': [
           'all',
@@ -697,7 +697,7 @@ Map<String, dynamic> mapThemeData() {
       {
         'id': 'tunnel_major_rail_hatching',
         'type': 'line',
-        'source': 'openmaptiles',
+        'source': key,
         'source-layer': 'transportation',
         'filter': [
           'all',
@@ -720,7 +720,7 @@ Map<String, dynamic> mapThemeData() {
       {
         'id': 'tunnel_transit_rail',
         'type': 'line',
-        'source': 'openmaptiles',
+        'source': key,
         'source-layer': 'transportation',
         'filter': [
           'all',
@@ -742,7 +742,7 @@ Map<String, dynamic> mapThemeData() {
       {
         'id': 'tunnel_transit_rail_hatching',
         'type': 'line',
-        'source': 'openmaptiles',
+        'source': key,
         'source-layer': 'transportation',
         'filter': [
           'all',
@@ -765,7 +765,7 @@ Map<String, dynamic> mapThemeData() {
       {
         'id': 'road_area_pattern',
         'type': 'fill',
-        'source': 'openmaptiles',
+        'source': key,
         'source-layer': 'transportation',
         'filter': [
           'all',
@@ -776,7 +776,7 @@ Map<String, dynamic> mapThemeData() {
       {
         'id': 'road_motorway_link_casing',
         'type': 'line',
-        'source': 'openmaptiles',
+        'source': key,
         'source-layer': 'transportation',
         'minzoom': 12,
         'filter': [
@@ -802,7 +802,7 @@ Map<String, dynamic> mapThemeData() {
       {
         'id': 'road_service_track_casing',
         'type': 'line',
-        'source': 'openmaptiles',
+        'source': key,
         'source-layer': 'transportation',
         'filter': [
           'all',
@@ -825,7 +825,7 @@ Map<String, dynamic> mapThemeData() {
       {
         'id': 'road_link_casing',
         'type': 'line',
-        'source': 'openmaptiles',
+        'source': key,
         'source-layer': 'transportation',
         'minzoom': 13,
         'filter': [
@@ -859,7 +859,7 @@ Map<String, dynamic> mapThemeData() {
       {
         'id': 'road_minor_casing',
         'type': 'line',
-        'source': 'openmaptiles',
+        'source': key,
         'source-layer': 'transportation',
         'filter': [
           'all',
@@ -891,7 +891,7 @@ Map<String, dynamic> mapThemeData() {
       {
         'id': 'road_secondary_tertiary_casing',
         'type': 'line',
-        'source': 'openmaptiles',
+        'source': key,
         'source-layer': 'transportation',
         'filter': [
           'all',
@@ -914,7 +914,7 @@ Map<String, dynamic> mapThemeData() {
       {
         'id': 'road_trunk_primary_casing',
         'type': 'line',
-        'source': 'openmaptiles',
+        'source': key,
         'source-layer': 'transportation',
         'filter': [
           'all',
@@ -938,7 +938,7 @@ Map<String, dynamic> mapThemeData() {
       {
         'id': 'road_motorway_casing',
         'type': 'line',
-        'source': 'openmaptiles',
+        'source': key,
         'source-layer': 'transportation',
         'minzoom': 5,
         'filter': [
@@ -964,7 +964,7 @@ Map<String, dynamic> mapThemeData() {
       {
         'id': 'road_path_pedestrian',
         'type': 'line',
-        'source': 'openmaptiles',
+        'source': key,
         'source-layer': 'transportation',
         'minzoom': 14,
         'filter': [
@@ -989,7 +989,7 @@ Map<String, dynamic> mapThemeData() {
       {
         'id': 'road_motorway_link',
         'type': 'line',
-        'source': 'openmaptiles',
+        'source': key,
         'source-layer': 'transportation',
         'minzoom': 12,
         'filter': [
@@ -1015,7 +1015,7 @@ Map<String, dynamic> mapThemeData() {
       {
         'id': 'road_service_track',
         'type': 'line',
-        'source': 'openmaptiles',
+        'source': key,
         'source-layer': 'transportation',
         'filter': [
           'all',
@@ -1038,7 +1038,7 @@ Map<String, dynamic> mapThemeData() {
       {
         'id': 'road_link',
         'type': 'line',
-        'source': 'openmaptiles',
+        'source': key,
         'source-layer': 'transportation',
         'minzoom': 13,
         'filter': [
@@ -1064,7 +1064,7 @@ Map<String, dynamic> mapThemeData() {
       {
         'id': 'road_minor',
         'type': 'line',
-        'source': 'openmaptiles',
+        'source': key,
         'source-layer': 'transportation',
         'filter': [
           'all',
@@ -1088,7 +1088,7 @@ Map<String, dynamic> mapThemeData() {
       {
         'id': 'road_secondary_tertiary',
         'type': 'line',
-        'source': 'openmaptiles',
+        'source': key,
         'source-layer': 'transportation',
         'filter': [
           'all',
@@ -1111,7 +1111,7 @@ Map<String, dynamic> mapThemeData() {
       {
         'id': 'road_trunk_primary',
         'type': 'line',
-        'source': 'openmaptiles',
+        'source': key,
         'source-layer': 'transportation',
         'filter': [
           'all',
@@ -1134,7 +1134,7 @@ Map<String, dynamic> mapThemeData() {
       {
         'id': 'road_motorway',
         'type': 'line',
-        'source': 'openmaptiles',
+        'source': key,
         'source-layer': 'transportation',
         'minzoom': 5,
         'filter': [
@@ -1165,7 +1165,7 @@ Map<String, dynamic> mapThemeData() {
       {
         'id': 'road_major_rail',
         'type': 'line',
-        'source': 'openmaptiles',
+        'source': key,
         'source-layer': 'transportation',
         'filter': [
           'all',
@@ -1187,7 +1187,7 @@ Map<String, dynamic> mapThemeData() {
       {
         'id': 'road_major_rail_hatching',
         'type': 'line',
-        'source': 'openmaptiles',
+        'source': key,
         'source-layer': 'transportation',
         'filter': [
           'all',
@@ -1210,7 +1210,7 @@ Map<String, dynamic> mapThemeData() {
       {
         'id': 'road_transit_rail',
         'type': 'line',
-        'source': 'openmaptiles',
+        'source': key,
         'source-layer': 'transportation',
         'filter': [
           'all',
@@ -1232,7 +1232,7 @@ Map<String, dynamic> mapThemeData() {
       {
         'id': 'road_transit_rail_hatching',
         'type': 'line',
-        'source': 'openmaptiles',
+        'source': key,
         'source-layer': 'transportation',
         'filter': [
           'all',
@@ -1255,7 +1255,7 @@ Map<String, dynamic> mapThemeData() {
       {
         'id': 'road_one_way_arrow',
         'type': 'symbol',
-        'source': 'openmaptiles',
+        'source': key,
         'source-layer': 'transportation',
         'minzoom': 15,
         'filter': ['==', 'oneway', 1],
@@ -1264,7 +1264,7 @@ Map<String, dynamic> mapThemeData() {
       {
         'id': 'road_one_way_arrow_opposite',
         'type': 'symbol',
-        'source': 'openmaptiles',
+        'source': key,
         'source-layer': 'transportation',
         'minzoom': 15,
         'filter': ['==', 'oneway', -1],
@@ -1277,7 +1277,7 @@ Map<String, dynamic> mapThemeData() {
       {
         'id': 'bridge_motorway_link_casing',
         'type': 'line',
-        'source': 'openmaptiles',
+        'source': key,
         'source-layer': 'transportation',
         'filter': [
           'all',
@@ -1302,7 +1302,7 @@ Map<String, dynamic> mapThemeData() {
       {
         'id': 'bridge_service_track_casing',
         'type': 'line',
-        'source': 'openmaptiles',
+        'source': key,
         'source-layer': 'transportation',
         'filter': [
           'all',
@@ -1325,7 +1325,7 @@ Map<String, dynamic> mapThemeData() {
       {
         'id': 'bridge_link_casing',
         'type': 'line',
-        'source': 'openmaptiles',
+        'source': key,
         'source-layer': 'transportation',
         'filter': [
           'all',
@@ -1349,7 +1349,7 @@ Map<String, dynamic> mapThemeData() {
       {
         'id': 'bridge_street_casing',
         'type': 'line',
-        'source': 'openmaptiles',
+        'source': key,
         'source-layer': 'transportation',
         'filter': [
           'all',
@@ -1379,7 +1379,7 @@ Map<String, dynamic> mapThemeData() {
       {
         'id': 'bridge_path_pedestrian_casing',
         'type': 'line',
-        'source': 'openmaptiles',
+        'source': key,
         'source-layer': 'transportation',
         'filter': [
           'all',
@@ -1402,7 +1402,7 @@ Map<String, dynamic> mapThemeData() {
       {
         'id': 'bridge_secondary_tertiary_casing',
         'type': 'line',
-        'source': 'openmaptiles',
+        'source': key,
         'source-layer': 'transportation',
         'filter': [
           'all',
@@ -1424,7 +1424,7 @@ Map<String, dynamic> mapThemeData() {
       {
         'id': 'bridge_trunk_primary_casing',
         'type': 'line',
-        'source': 'openmaptiles',
+        'source': key,
         'source-layer': 'transportation',
         'filter': [
           'all',
@@ -1448,7 +1448,7 @@ Map<String, dynamic> mapThemeData() {
       {
         'id': 'bridge_motorway_casing',
         'type': 'line',
-        'source': 'openmaptiles',
+        'source': key,
         'source-layer': 'transportation',
         'filter': [
           'all',
@@ -1473,7 +1473,7 @@ Map<String, dynamic> mapThemeData() {
       {
         'id': 'bridge_path_pedestrian',
         'type': 'line',
-        'source': 'openmaptiles',
+        'source': key,
         'source-layer': 'transportation',
         'filter': [
           'all',
@@ -1496,7 +1496,7 @@ Map<String, dynamic> mapThemeData() {
       {
         'id': 'bridge_motorway_link',
         'type': 'line',
-        'source': 'openmaptiles',
+        'source': key,
         'source-layer': 'transportation',
         'filter': [
           'all',
@@ -1521,7 +1521,7 @@ Map<String, dynamic> mapThemeData() {
       {
         'id': 'bridge_service_track',
         'type': 'line',
-        'source': 'openmaptiles',
+        'source': key,
         'source-layer': 'transportation',
         'filter': [
           'all',
@@ -1544,7 +1544,7 @@ Map<String, dynamic> mapThemeData() {
       {
         'id': 'bridge_link',
         'type': 'line',
-        'source': 'openmaptiles',
+        'source': key,
         'source-layer': 'transportation',
         'filter': [
           'all',
@@ -1568,7 +1568,7 @@ Map<String, dynamic> mapThemeData() {
       {
         'id': 'bridge_street',
         'type': 'line',
-        'source': 'openmaptiles',
+        'source': key,
         'source-layer': 'transportation',
         'filter': [
           'all',
@@ -1591,7 +1591,7 @@ Map<String, dynamic> mapThemeData() {
       {
         'id': 'bridge_secondary_tertiary',
         'type': 'line',
-        'source': 'openmaptiles',
+        'source': key,
         'source-layer': 'transportation',
         'filter': [
           'all',
@@ -1614,7 +1614,7 @@ Map<String, dynamic> mapThemeData() {
       {
         'id': 'bridge_trunk_primary',
         'type': 'line',
-        'source': 'openmaptiles',
+        'source': key,
         'source-layer': 'transportation',
         'filter': [
           'all',
@@ -1637,7 +1637,7 @@ Map<String, dynamic> mapThemeData() {
       {
         'id': 'bridge_motorway',
         'type': 'line',
-        'source': 'openmaptiles',
+        'source': key,
         'source-layer': 'transportation',
         'filter': [
           'all',
@@ -1661,7 +1661,7 @@ Map<String, dynamic> mapThemeData() {
       {
         'id': 'bridge_major_rail',
         'type': 'line',
-        'source': 'openmaptiles',
+        'source': key,
         'source-layer': 'transportation',
         'filter': [
           'all',
@@ -1683,7 +1683,7 @@ Map<String, dynamic> mapThemeData() {
       {
         'id': 'bridge_major_rail_hatching',
         'type': 'line',
-        'source': 'openmaptiles',
+        'source': key,
         'source-layer': 'transportation',
         'filter': [
           'all',
@@ -1706,7 +1706,7 @@ Map<String, dynamic> mapThemeData() {
       {
         'id': 'bridge_transit_rail',
         'type': 'line',
-        'source': 'openmaptiles',
+        'source': key,
         'source-layer': 'transportation',
         'filter': [
           'all',
@@ -1728,7 +1728,7 @@ Map<String, dynamic> mapThemeData() {
       {
         'id': 'bridge_transit_rail_hatching',
         'type': 'line',
-        'source': 'openmaptiles',
+        'source': key,
         'source-layer': 'transportation',
         'filter': [
           'all',
@@ -1751,7 +1751,7 @@ Map<String, dynamic> mapThemeData() {
       {
         'id': 'building',
         'type': 'fill',
-        'source': 'openmaptiles',
+        'source': key,
         'source-layer': 'building',
         'minzoom': 13,
         'maxzoom': 20,
@@ -1769,7 +1769,7 @@ Map<String, dynamic> mapThemeData() {
       {
         'id': 'boundary_3',
         'type': 'line',
-        'source': 'openmaptiles',
+        'source': key,
         'source-layer': 'boundary',
         'minzoom': 8,
         'filter': [
@@ -1793,7 +1793,7 @@ Map<String, dynamic> mapThemeData() {
       {
         'id': 'boundary_2_z0-4',
         'type': 'line',
-        'source': 'openmaptiles',
+        'source': key,
         'source-layer': 'boundary',
         'maxzoom': 5,
         'filter': [
@@ -1824,7 +1824,7 @@ Map<String, dynamic> mapThemeData() {
       {
         'id': 'boundary_2_z5-',
         'type': 'line',
-        'source': 'openmaptiles',
+        'source': key,
         'source-layer': 'boundary',
         'minzoom': 5,
         'filter': [
@@ -1854,7 +1854,7 @@ Map<String, dynamic> mapThemeData() {
       {
         'id': 'water_name_line',
         'type': 'symbol',
-        'source': 'openmaptiles',
+        'source': key,
         'source-layer': 'waterway',
         'filter': [
           'all',
@@ -1876,7 +1876,7 @@ Map<String, dynamic> mapThemeData() {
       {
         'id': 'water_name_point',
         'type': 'symbol',
-        'source': 'openmaptiles',
+        'source': key,
         'source-layer': 'water_name',
         'filter': ['==', '\$type', 'Point'],
         'layout': {
@@ -1894,7 +1894,7 @@ Map<String, dynamic> mapThemeData() {
       {
         'id': 'poi_z16',
         'type': 'symbol',
-        'source': 'openmaptiles',
+        'source': key,
         'source-layer': 'poi',
         'minzoom': 16,
         'filter': [
@@ -1921,7 +1921,7 @@ Map<String, dynamic> mapThemeData() {
       {
         'id': 'poi_z15',
         'type': 'symbol',
-        'source': 'openmaptiles',
+        'source': key,
         'source-layer': 'poi',
         'minzoom': 15,
         'filter': [
@@ -1949,7 +1949,7 @@ Map<String, dynamic> mapThemeData() {
       {
         'id': 'poi_z14',
         'type': 'symbol',
-        'source': 'openmaptiles',
+        'source': key,
         'source-layer': 'poi',
         'minzoom': 14,
         'filter': [
@@ -1977,7 +1977,7 @@ Map<String, dynamic> mapThemeData() {
       {
         'id': 'poi_transit',
         'type': 'symbol',
-        'source': 'openmaptiles',
+        'source': key,
         'source-layer': 'poi',
         'filter': [
           'all',
@@ -2002,7 +2002,7 @@ Map<String, dynamic> mapThemeData() {
       {
         'id': 'road_label',
         'type': 'symbol',
-        'source': 'openmaptiles',
+        'source': key,
         'source-layer': 'transportation_name',
         'filter': ['all'],
         'layout': {
@@ -2028,7 +2028,7 @@ Map<String, dynamic> mapThemeData() {
       {
         'id': 'road_shield',
         'type': 'symbol',
-        'source': 'openmaptiles',
+        'source': key,
         'source-layer': 'transportation_name',
         'minzoom': 7,
         'filter': [
@@ -2057,7 +2057,7 @@ Map<String, dynamic> mapThemeData() {
       {
         'id': 'place_other',
         'type': 'symbol',
-        'source': 'openmaptiles',
+        'source': key,
         'source-layer': 'place',
         'filter': [
           'all',
@@ -2095,7 +2095,7 @@ Map<String, dynamic> mapThemeData() {
       {
         'id': 'place_village',
         'type': 'symbol',
-        'source': 'openmaptiles',
+        'source': key,
         'source-layer': 'place',
         'filter': [
           'all',
@@ -2122,7 +2122,7 @@ Map<String, dynamic> mapThemeData() {
       {
         'id': 'place_town',
         'type': 'symbol',
-        'source': 'openmaptiles',
+        'source': key,
         'source-layer': 'place',
         'filter': [
           'all',
@@ -2158,7 +2158,7 @@ Map<String, dynamic> mapThemeData() {
       {
         'id': 'place_city',
         'type': 'symbol',
-        'source': 'openmaptiles',
+        'source': key,
         'source-layer': 'place',
         'minzoom': 5,
         'filter': [
@@ -2197,7 +2197,7 @@ Map<String, dynamic> mapThemeData() {
       {
         'id': 'state',
         'type': 'symbol',
-        'source': 'openmaptiles',
+        'source': key,
         'source-layer': 'place',
         'maxzoom': 6,
         'filter': [
@@ -2224,7 +2224,7 @@ Map<String, dynamic> mapThemeData() {
       {
         'id': 'country_3',
         'type': 'symbol',
-        'source': 'openmaptiles',
+        'source': key,
         'source-layer': 'place',
         'filter': [
           'all',
@@ -2253,7 +2253,7 @@ Map<String, dynamic> mapThemeData() {
       {
         'id': 'country_2',
         'type': 'symbol',
-        'source': 'openmaptiles',
+        'source': key,
         'source-layer': 'place',
         'filter': [
           'all',
@@ -2282,7 +2282,7 @@ Map<String, dynamic> mapThemeData() {
       {
         'id': 'country_1',
         'type': 'symbol',
-        'source': 'openmaptiles',
+        'source': key,
         'source-layer': 'place',
         'filter': [
           'all',
@@ -2311,7 +2311,7 @@ Map<String, dynamic> mapThemeData() {
       {
         'id': 'continent',
         'type': 'symbol',
-        'source': 'openmaptiles',
+        'source': key,
         'source-layer': 'place',
         'maxzoom': 1,
         'filter': [

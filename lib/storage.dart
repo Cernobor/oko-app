@@ -13,8 +13,10 @@ import 'package:sqflite/sqflite.dart';
 class Storage {
   static const String _storageDbFile = 'storage.db';
   static const String _featurePhotosDirname = 'feature-photos';
+  static const String _mapPackFile = 'map.mbtiles';
   static Storage? _instance;
 
+  //region init
   static Future<String> _storageFilePath() async {
     String databasesPath = await getDatabasesPath();
     return join(databasesPath, _storageDbFile);
@@ -123,6 +125,7 @@ class Storage {
   static void _onConfigure(Database db) async {
     await db.execute('PRAGMA foreign_keys = ON');
   }
+  //endregion
 
   final Database _db;
   final Directory _localDir;
@@ -197,15 +200,11 @@ class Storage {
   //region map state
   MapState? _mapState;
   MapState? get mapState => _mapState;
+  File get offlineMap {
+    return File(join(_localDir.path, _mapPackFile));
+  }
 
   Future<void> setMapState(MapState ms) async {
-    if (_mapState != null &&
-        _mapState!.render == ms.render &&
-        _mapState!.center == ms.center &&
-        _mapState!.zoom == ms.zoom) {
-      return;
-    }
-    _mapState = ms;
     await _db.transaction((Transaction tx) async {
       await tx.execute('delete from map_state');
       await tx.insert('map_state', {
@@ -220,44 +219,53 @@ class Storage {
         'lng_sw_bound': ms.swBound?.longitude,
         'zoom_max': ms.zoomMax
       });
+      await _loadMapState(tx);
     });
   }
 
-  Future<void> _loadMapState() async {
-    var rows = await _db.query('map_state',
-        columns: [
-          'render',
-          'using_offline',
-          'lat',
-          'lng',
-          'zoom',
-          'lat_ne_bound',
-          'lng_ne_bound',
-          'lat_sw_bound',
-          'lng_sw_bound',
-          'zoom_min',
-          'zoom_max'
-        ],
-        limit: 1);
-    if (rows.isEmpty) {
-      return;
+  Future<void> _loadMapState([Transaction? tx]) async {
+    Future<void> f(Transaction tx) async {
+      var rows = await tx.query('map_state',
+          columns: [
+            'render',
+            'using_offline',
+            'lat',
+            'lng',
+            'zoom',
+            'lat_ne_bound',
+            'lng_ne_bound',
+            'lat_sw_bound',
+            'lng_sw_bound',
+            'zoom_min',
+            'zoom_max'
+          ],
+          limit: 1);
+      if (rows.isEmpty) {
+        return;
+      }
+      var row = rows[0];
+      _mapState = MapState(
+        row['render'] != 0,
+        row['using_offline'] != 0,
+        LatLng(row['lat']! as double, row['lng']! as double),
+        row['zoom']! as int,
+        row['lat_ne_bound'] != null && row['lng_ne_bound'] != null
+            ? LatLng(
+                row['lat_ne_bound']! as double, row['lng_ne_bound']! as double)
+            : null,
+        row['lat_sw_bound'] != null && row['lng_sw_bound'] != null
+            ? LatLng(
+                row['lat_sw_bound']! as double, row['lng_sw_bound']! as double)
+            : null,
+        row['zoom_max'] == null ? null : row['zoom_max']! as int,
+      );
     }
-    var row = rows[0];
-    _mapState = MapState(
-      row['render'] != 0,
-      row['using_offline'] != 0,
-      LatLng(row['lat']! as double, row['lng']! as double),
-      row['zoom']! as int,
-      row['lat_ne_bound'] != null && row['lng_ne_bound'] != null
-          ? LatLng(
-              row['lat_ne_bound']! as double, row['lng_ne_bound']! as double)
-          : null,
-      row['lat_sw_bound'] != null && row['lng_sw_bound'] != null
-          ? LatLng(
-              row['lat_sw_bound']! as double, row['lng_sw_bound']! as double)
-          : null,
-      row['zoom_max'] == null ? null : row['zoom_max']! as int,
-    );
+
+    if (tx == null) {
+      await _db.transaction(f);
+    } else {
+      await f(tx);
+    }
   }
   //endregion
 

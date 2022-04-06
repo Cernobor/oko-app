@@ -28,6 +28,8 @@ import 'package:rxdart/rxdart.dart';
 import 'package:vector_map_tiles/vector_map_tiles.dart';
 import 'package:vector_tile_renderer/vector_tile_renderer.dart' hide Theme;
 
+import 'mbtiles.dart';
+
 enum PointLogType { currentLocation, crosshair }
 
 class Target {
@@ -82,6 +84,7 @@ class MainWidgetState extends State<MainWidget> {
   late final StreamSubscription<MapEvent> mapSubscription;
   late final StreamController<MapEvent> mapStateStorageController =
       StreamController<MapEvent>(sync: true);
+  MbtilesTileProvider? offlineMapProvider;
 
   // handling flags and values
   bool mapReady = false;
@@ -121,6 +124,11 @@ class MainWidgetState extends State<MainWidget> {
     }
     if (storage?.serverSettings?.serverAddress != null) {
       startPinging();
+    }
+    if (storage?.mapState?.usingOffline ?? false) {
+      offlineMapProvider = await MbtilesTileProvider.create(
+          storage!.mapState!.zoomMax ?? fallbackMaxZoom.toInt(),
+          storage!.offlineMap.path);
     }
     mapSubscription = mapController.mapEventStream
         .where((evt) =>
@@ -399,20 +407,33 @@ class MainWidgetState extends State<MainWidget> {
       children: [
         if (storage?.serverSettings != null)
           if (storage?.mapState?.render ?? false)
-            VectorTileLayerWidget(
-                options: VectorTileLayerOptions(
-                    tileProviders: TileProviders({
-                      'openmaptiles': MemoryCacheVectorTileProvider(
-                          delegate: NetworkVectorTileProvider(
-                              urlTemplate:
-                                  '${comm.ensureNoTrailingSlash(storage!.serverSettings!.serverAddress)}${storage!.serverSettings!.tilePathTemplate}',
-                              maximumZoom: 14),
-                          maxSizeBytes: 1024 * 1024 * 5)
-                    }),
-                    theme: ThemeReader().read(mapThemeData()),
-                    backgroundTheme: ThemeReader().readAsBackground(
-                        mapThemeData(),
-                        layerPredicate: defaultBackgroundLayerPredicate)))
+            if (offlineMapProvider == null)
+              VectorTileLayerWidget(
+                  options: VectorTileLayerOptions(
+                      tileProviders: TileProviders({
+                        'online': MemoryCacheVectorTileProvider(
+                            delegate: NetworkVectorTileProvider(
+                                urlTemplate:
+                                    '${comm.ensureNoTrailingSlash(storage!.serverSettings!.serverAddress)}${storage!.serverSettings!.tilePathTemplate}',
+                                maximumZoom: 14),
+                            maxSizeBytes: 1024 * 1024 * 5)
+                      }),
+                      theme: ThemeReader().read(mapThemeData('online')),
+                      backgroundTheme: ThemeReader().readAsBackground(
+                          mapThemeData('online'),
+                          layerPredicate: defaultBackgroundLayerPredicate)))
+            else
+              VectorTileLayerWidget(
+                  options: VectorTileLayerOptions(
+                      tileProviders: TileProviders({
+                        'offline': MemoryCacheVectorTileProvider(
+                            delegate: offlineMapProvider!,
+                            maxSizeBytes: 1024 * 1024 * 5)
+                      }),
+                      theme: ThemeReader().read(mapThemeData('offline')),
+                      backgroundTheme: ThemeReader().readAsBackground(
+                          mapThemeData('offline'),
+                          layerPredicate: defaultBackgroundLayerPredicate)))
           else
             SolidColorLayerWidget(
                 options: SolidColorLayerOptions(color: mapBackgroundColor))
@@ -1107,72 +1128,49 @@ class MainWidgetState extends State<MainWidget> {
   void onUseOffline(bool use) async {
     developer.log('onUseOffline');
     Navigator.of(context).pop();
-    utils.notifySnackbar(
-        context, 'not implemented (yet)', utils.NotificationLevel.error);
-    /*
-    Navigator.of(context).pop();
-    // download
-    var res = await comm.downloadMap(storage!.serverSettings!.serverAddress,
-        storage!.serverSettings!.tilePackPath);
-    var received = 0;
-    var stream = res.dataStream.map(res.contentLength != null
-        ? (chunk) {
-            received += chunk.length;
-            developer.log('Received $received of ${chunk.length} bytes.');
-            setState(() {
-              progressValue = received / res.contentLength!;
-            });
-            return chunk;
-          }
-        : (chunk) {
-            received += chunk.length;
-            developer.log('Received $received bytes.');
-            return chunk;
-          });
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-      content: Text(I18N.of(context).downloadingMapSnackBar),
-      duration: const Duration(seconds: 3),
-    ));
-    await saveTilePackRaw(stream);
-
-    // unpack
-    setState(() {
-      progressValue = 0;
-    });
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-      content: Text(I18N.of(context).unpackingMapSnackBar),
-      duration: Duration(seconds: 3),
-    ));
-    await unpackTilePack((int n, int total) {
-      var p = n.toDouble() / total.toDouble();
-      setState(() {
-        progressValue = p;
-      });
-    });
-
-    // get and focus on map center
-    var mapLimits = await getMapLimits();
-    if (mapLimits != null) {
-      mapController.fitBounds(mapLimits.latLngBounds);
-      if (mapController.zoom < mapLimits.zoom.min) {
-        mapController.move(mapController.center, mapLimits.zoom.min.toDouble());
-      } else if (mapController.zoom > mapLimits.zoom.max) {
-        mapController.move(mapController.center, mapLimits.zoom.max.toDouble());
-      }
-      setState(() {
-        this.mapLimits = mapLimits;
-      });
+    if (!use) {
+      await offlineMapProvider?.destroy();
+      offlineMapProvider = null;
+      await storage!.setMapState(storage!.mapState!.from(usingOffline: false));
+      setState(() {});
+      return;
     }
 
-    // done
-    setState(() {
-      progressValue = -1;
-    });
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-      content: Text(I18N.of(context).doneMapSnackBar),
-      duration: const Duration(seconds: 3),
-    ));
-    */
+    var offlineMap = storage!.offlineMap;
+    // if there is no map pack, download
+    if (!offlineMap.existsSync()) {
+      utils.notifySnackbar(
+          context, I18N.of(context).downloading, utils.NotificationLevel.info);
+      offlineMap.parent.createSync(recursive: true);
+      bool indeterminateSet = false;
+      await comm.downloadMap(storage!.serverSettings!.serverAddress, offlineMap,
+          (read, total) {
+        if (total == null) {
+          if (!indeterminateSet) {
+            indeterminateSet = true;
+            setState(() {
+              progressValue = -1;
+            });
+          }
+        } else {
+          setState(() {
+            progressValue = read / total;
+            developer.log('download progress: $progressValue');
+          });
+        }
+      });
+      setState(() {
+        progressValue = null;
+      });
+      utils.notifySnackbar(context, I18N.of(context).downloaded,
+          utils.NotificationLevel.success);
+    }
+
+    // set
+    offlineMapProvider = await MbtilesTileProvider.create(
+        storage?.mapState?.zoomMax ?? fallbackMaxZoom.toInt(), offlineMap.path);
+    await storage!.setMapState(storage!.mapState!.from(usingOffline: true));
+    setState(() {});
   }
 
   Future<bool> download(bool withPhotos) async {

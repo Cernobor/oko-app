@@ -108,6 +108,43 @@ Uri _pingUri(String baseAddr) =>
 Uri _dataUri(String baseAddr) =>
     Uri.parse(ensureTrailingSlash(baseAddr)).resolve('data');
 
+Uri _mapPackUri(String baseAddr) =>
+    Uri.parse(ensureTrailingSlash(baseAddr)).resolve('mappack');
+
+Future<void> _downloadFile(Uri uri, File dest,
+    {void Function(http.Request req)? prepareRequest,
+    void Function(int read, int? total)? onProgress}) async {
+  http.Request req = http.Request('GET', uri);
+  if (prepareRequest != null) {
+    prepareRequest(req);
+  }
+  var res = await req.send();
+  if (res.statusCode >= 500) {
+    throw InternalServerError(await res.stream.bytesToString());
+  }
+  if (res.statusCode != HttpStatus.ok) {
+    throw UnexpectedStatusCode(
+        res.statusCode, await res.stream.bytesToString());
+  }
+
+  var ioSink = dest.openWrite();
+  int received = 0;
+  if (onProgress != null) {
+    await res.stream.transform(
+        StreamTransformer<List<int>, List<int>>.fromHandlers(
+            handleData: (data, sink) {
+      received += data.length;
+      developer.log(
+          'Chunk: ${data.length}; Received: $received/${res.contentLength}');
+      onProgress(received, res.contentLength);
+      sink.add(data);
+    })).pipe(ioSink);
+  } else {
+    await res.stream.pipe(ioSink);
+  }
+  return;
+}
+
 Future<ServerSettings> handshake(
     String serverAddress, String name, bool exists) async {
   Uri uri = _handshakeUri(serverAddress);
@@ -162,18 +199,11 @@ class StreamData {
   StreamData(this.contentLength, this.dataStream);
 }
 
-/*
-Future<MapData> downloadMap(String serverAddress, String tilePackPath) async {
-  Uri uri = Uri.http(serverAddress, tilePackPath);
-  http.Request req = http.Request('GET', uri);
-  http.StreamedResponse res;
-  res = await req.send();
-  if (res.statusCode != HttpStatus.ok) {
-    throw RequestRefused(res.statusCode);
-  }
-  return MapData(res.contentLength, res.stream);
+Future<void> downloadMap(String serverAddress, File dest,
+    void Function(int read, int? total) onProgress) async {
+  Uri uri = _mapPackUri(serverAddress);
+  return _downloadFile(uri, dest, onProgress: onProgress);
 }
-*/
 
 Future<ServerData> downloadData(String serverAddress) async {
   Uri uri = _dataUri(serverAddress);
@@ -189,29 +219,9 @@ Future<ServerData> downloadData(String serverAddress) async {
 Future<void> downloadDataWithPhotos(String serverAddress, File dest,
     void Function(int read, int? total) onProgress) async {
   Uri uri = _dataUri(serverAddress);
-  var req = http.Request('GET', uri);
-  req.headers['Accept'] = 'application/zip';
-  var res = await req.send();
-  if (res.statusCode >= 500) {
-    throw InternalServerError(await res.stream.bytesToString());
-  }
-  if (res.statusCode != HttpStatus.ok) {
-    throw UnexpectedStatusCode(
-        res.statusCode, await res.stream.bytesToString());
-  }
-
-  var ioSink = dest.openWrite();
-  int received = 0;
-  await res.stream.transform(
-      StreamTransformer<List<int>, List<int>>.fromHandlers(
-          handleData: (data, sink) {
-    received += data.length;
-    developer
-        .log('Chunk: ${data.length}; Received: $received/${res.contentLength}');
-    onProgress(received, res.contentLength);
-    sink.add(data);
-  })).pipe(ioSink);
-  return;
+  return _downloadFile(uri, dest, prepareRequest: (req) {
+    req.headers['Accept'] = 'application/zip';
+  }, onProgress: onProgress);
 }
 
 Future<void> uploadData(
