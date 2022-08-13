@@ -34,7 +34,7 @@ if (keystorePropertiesFile.exists()) {
 }
 
 android {
-    compileSdkVersion flutter.compileSdkVersion
+    compileSdkVersion Math.max(flutter.compileSdkVersion, 32)
 
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_1_8
@@ -51,9 +51,8 @@ android {
 
     defaultConfig {
         applicationId "cz.cernobor.oko"
-        // minSdkVersion flutter.minSdkVersion
-        minSdkVersion 23
-        targetSdkVersion flutter.targetSdkVersion
+        minSdkVersion Math.max(flutter.minSdkVersion, 23)
+        targetSdkVersion Math.max(flutter.targetSdkVersion, 32)
         versionCode flutterVersionCode.toInteger()
         versionName flutterVersionName
     }
@@ -75,7 +74,7 @@ android {
             signingConfig signingConfigs.release
             minifyEnabled true
             shrinkResources true
-            useProguard false
+            // useProguard false
         }
     }
 }
