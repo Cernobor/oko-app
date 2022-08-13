@@ -21,6 +21,7 @@ import 'package:oko/subpages/edit_point.dart';
 import 'package:oko/subpages/gallery.dart';
 import 'package:oko/subpages/pairing.dart';
 import 'package:oko/subpages/point_list.dart';
+import 'package:oko/subpages/proposal.dart';
 import 'package:oko/utils.dart' as utils;
 import 'package:path/path.dart' show join;
 import 'package:positioned_tap_detector_2/positioned_tap_detector_2.dart';
@@ -320,6 +321,12 @@ class MainWidgetState extends State<MainWidget> {
             subtitle: Text(I18N.of(context).infoOnly),
             leading: const Icon(Icons.people),
             onTap: onUserListTap,
+            enabled: storage?.serverSettings != null,
+          ),
+          ListTile(
+            title: Text(I18N.of(context).proposeImprovement),
+            leading: const Icon(Icons.settings_suggest),
+            onTap: onProposeImprovement,
             enabled: storage?.serverSettings != null,
           ),
           ListTile(
@@ -659,7 +666,7 @@ class MainWidgetState extends State<MainWidget> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: <Widget>[
                             Text(
-                                '${infoTarget.point.name} (${storage?.users[infoTarget.point.ownerId]})',
+                                '${infoTarget.point.name} | ${storage?.users[infoTarget.point.ownerId]}',
                                 style: Theme.of(context).textTheme.headline6),
                             Text(
                                 [
@@ -1363,6 +1370,7 @@ class MainWidgetState extends State<MainWidget> {
     var deleted = storage!.features
         .where((data.Feature f) => f.deleted)
         .toList(growable: false);
+    var proposals = await storage!.getProposals();
     var createdPhotos = <int, List<data.FeaturePhoto>>{};
     for (var f in created) {
       if (f.photoIDs.isEmpty) {
@@ -1387,6 +1395,7 @@ class MainWidgetState extends State<MainWidget> {
         created: created,
         edited: edited,
         deleted: deleted,
+        proposals: proposals,
         createdPhotos: createdPhotos,
         addedPhotos: addedPhotos,
         deletedPhotoIDs: deletedPhotoIDs,
@@ -1402,6 +1411,7 @@ class MainWidgetState extends State<MainWidget> {
           utils.NotificationLevel.error);
       return false;
     }
+    storage!.clearProposals();
     return true;
   }
 
@@ -1430,6 +1440,8 @@ class MainWidgetState extends State<MainWidget> {
     setState(() {
       infoTarget = Target.none();
     });
+
+    if (!mounted) return;
     utils.notifySnackbar(context, I18N.of(context).syncSuccessful,
         utils.NotificationLevel.success);
   }
@@ -1657,6 +1669,23 @@ class MainWidgetState extends State<MainWidget> {
     }
   }
 
+  void onProposeImprovement() async {
+    data.Proposal? proposal = await Navigator.of(context).push(
+        MaterialPageRoute<data.Proposal>(
+            builder: (context) => const CreateProposal()));
+    if (proposal == null) {
+      return;
+    }
+    await storage!.addProposal(Proposal(
+        storage!.serverSettings!.id, proposal.description, proposal.how));
+
+    if (!mounted) return;
+    Navigator.pop(context);
+    setState(() {});
+    utils.notifySnackbar(context, I18N.of(context).suggestionSaved,
+        utils.NotificationLevel.info);
+  }
+
   void onReset() async {
     developer.log('Resetting app.');
     if (storage == null) {
@@ -1667,6 +1696,7 @@ class MainWidgetState extends State<MainWidget> {
     infoTarget = Target.none();
     progressValue = null;
     setState(() {});
+    if (!mounted) return;
     Navigator.of(context).pop();
     utils.notifySnackbar(
         context, I18N.of(context).resetDone, utils.NotificationLevel.info);

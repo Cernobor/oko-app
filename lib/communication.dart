@@ -229,6 +229,7 @@ Future<void> uploadData(
     required List<Feature> created,
     required List<Feature> edited,
     required List<Feature> deleted,
+    required List<Proposal> proposals,
     Map<int, List<FeaturePhoto>> createdPhotos = const {},
     Map<int, List<FeaturePhoto>> addedPhotos = const {},
     List<int> deletedPhotoIDs = const []}) async {
@@ -258,7 +259,9 @@ Future<void> uploadData(
     'add_photos': addedNames,
     'update': edited.map((Feature f) => f.toJson()).toList(growable: false),
     'delete': deleted.map((Feature f) => f.id).toList(growable: false),
-    'delete_photos': deletedPhotoIDs
+    'delete_photos': deletedPhotoIDs,
+    'proposals':
+        proposals.map((Proposal s) => s.toJson()).toList(growable: false)
   };
 
   var req = http.MultipartRequest('POST', uri);

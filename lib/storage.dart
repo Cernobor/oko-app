@@ -14,6 +14,7 @@ class Storage {
   static const String _storageDbFile = 'storage.db';
   static const String _featurePhotosDirname = 'feature-photos';
   static const String _mapPackFile = 'map.mbtiles';
+  static const int _dbVersion = 2;
   static Storage? _instance;
 
   //region init
@@ -38,7 +39,9 @@ class Storage {
     if (_instance == null) {
       await Directory(dirname(path)).create(recursive: true);
       Database db = await openDatabase(path,
-          version: 1, onConfigure: _onConfigure, onCreate: _onCreate);
+          version: _dbVersion,
+          onConfigure: _onConfigure,
+          onUpgrade: _onUpgrade);
       Directory localDir = await getApplicationDocumentsDirectory();
       await localDir.create(recursive: true);
       Storage s = Storage._(db, localDir);
@@ -55,71 +58,79 @@ class Storage {
     return _instance!;
   }
 
-  static void _onCreate(Database db, int version) async {
-    await db.execute('CREATE TABLE server_settings ('
-        'server_address text not null,'
-        'name text not null,'
-        'id integer not null,'
-        'map_pack_path text not null,'
-        'map_pack_size integer not null,'
-        'tile_path_template text not null,'
-        'min_zoom integer not null,'
-        'default_center_lat real not null,'
-        'default_center_lng real not null)');
-    await db.execute('CREATE TABLE map_state ('
-        'render integer not null,'
-        'using_offline integer not null,'
-        'lat real not null,'
-        'lng real not null,'
-        'zoom integer not null,'
-        'lat_ne_bound real,'
-        'lng_ne_bound real,'
-        'lat_sw_bound real,'
-        'lng_sw_bound real,'
-        'zoom_min integer,'
-        'zoom_max integer)');
-    await db.execute('CREATE TABLE point_list_settings ('
-        'sort_key text not null,'
-        'sort_direction integer not null,'
-        'attribute_filter_exact integer not null,'
-        'edit_state_filter text not null)');
-    await db.insert('point_list_settings', {
-      'sort_key': 'name',
-      'sort_direction': 1,
-      'attribute_filter_exact': 0,
-      'edit_state_filter': EditState.anyState.name
-    });
-    await db.execute('CREATE TABLE point_list_checked_categories ('
-        'category text not null)');
-    var batch = db.batch();
-    for (var cat in PointCategory.allCategories) {
-      batch.insert('point_list_checked_categories', {'category': cat.name});
+  static void _onUpgrade(Database db, int oldVersion, int newVersion) async {
+    if (oldVersion <= 0) {
+      await db.execute('CREATE TABLE server_settings ('
+          'server_address text not null,'
+          'name text not null,'
+          'id integer not null,'
+          'map_pack_path text not null,'
+          'map_pack_size integer not null,'
+          'tile_path_template text not null,'
+          'min_zoom integer not null,'
+          'default_center_lat real not null,'
+          'default_center_lng real not null)');
+      await db.execute('CREATE TABLE map_state ('
+          'render integer not null,'
+          'using_offline integer not null,'
+          'lat real not null,'
+          'lng real not null,'
+          'zoom integer not null,'
+          'lat_ne_bound real,'
+          'lng_ne_bound real,'
+          'lat_sw_bound real,'
+          'lng_sw_bound real,'
+          'zoom_min integer,'
+          'zoom_max integer)');
+      await db.execute('CREATE TABLE point_list_settings ('
+          'sort_key text not null,'
+          'sort_direction integer not null,'
+          'attribute_filter_exact integer not null,'
+          'edit_state_filter text not null)');
+      await db.insert('point_list_settings', {
+        'sort_key': 'name',
+        'sort_direction': 1,
+        'attribute_filter_exact': 0,
+        'edit_state_filter': EditState.anyState.name
+      });
+      await db.execute('CREATE TABLE point_list_checked_categories ('
+          'category text not null)');
+      var batch = db.batch();
+      for (var cat in PointCategory.allCategories) {
+        batch.insert('point_list_checked_categories', {'category': cat.name});
+      }
+      await batch.commit(noResult: true);
+      await db.execute('CREATE TABLE point_list_checked_attributes ('
+          'attribute text not null)');
+      await db.execute('CREATE TABLE point_list_checked_users ('
+          'id integer not null)');
+      await db.execute('CREATE TABLE users ('
+          'id integer primary key,'
+          'name text not null)');
+      await db.execute('CREATE TABLE next_local_id ('
+          'id integer not null)');
+      await db.insert('next_local_id', {'id': -1});
+      await db.execute('CREATE TABLE features ('
+          'id integer primary key,'
+          'data text not null)');
+      await db.execute('CREATE TABLE next_local_photo_id ('
+          'id integer not null)');
+      await db.insert('next_local_photo_id', {'id': -1});
+      await db.execute('CREATE TABLE feature_photos ('
+          'id integer primary key,'
+          'feature_id integer,'
+          'thumbnail_content_type text not null,'
+          'content_type text not null,'
+          'thumbnail blob not null,'
+          'photo_file_path blob not null,'
+          'photo_size integer not null)');
     }
-    await batch.commit(noResult: true);
-    await db.execute('CREATE TABLE point_list_checked_attributes ('
-        'attribute text not null)');
-    await db.execute('CREATE TABLE point_list_checked_users ('
-        'id integer not null)');
-    await db.execute('CREATE TABLE users ('
-        'id integer primary key,'
-        'name text not null)');
-    await db.execute('CREATE TABLE next_local_id ('
-        'id integer not null)');
-    await db.insert('next_local_id', {'id': -1});
-    await db.execute('CREATE TABLE features ('
-        'id integer primary key,'
-        'data text not null)');
-    await db.execute('CREATE TABLE next_local_photo_id ('
-        'id integer not null)');
-    await db.insert('next_local_photo_id', {'id': -1});
-    await db.execute('CREATE TABLE feature_photos ('
-        'id integer primary key,'
-        'feature_id integer,'
-        'thumbnail_content_type text not null,'
-        'content_type text not null,'
-        'thumbnail blob not null,'
-        'photo_file_path blob not null,'
-        'photo_size integer not null)');
+    if (oldVersion <= 1) {
+      await db.execute('CREATE TABLE proposals ('
+          'owner_id integer not null,'
+          'description text not null,'
+          'how text not null)');
+    }
   }
 
   static void _onConfigure(Database db) async {
@@ -637,6 +648,35 @@ class Storage {
     File photoFile = await _getPhotoFile(featureID);
     await photoFile.writeAsBytes(bytes, flush: true);
     return photoFile.path;
+  }
+  //endregion
+
+  //region proposals
+  Future<void> addProposal(Proposal proposal) async {
+    await _db.transaction((Transaction tx) async {
+      await tx.insert('proposals', {
+        'owner_id': proposal.ownerId,
+        'description': proposal.description,
+        'how': proposal.how,
+      });
+    });
+  }
+
+  Future<void> clearProposals() async {
+    await _db.transaction((Transaction tx) async {
+      await tx.delete('proposals');
+    });
+  }
+
+  Future<List<Proposal>> getProposals() async {
+    return await _db.transaction((Transaction tx) async {
+      var rows = await tx
+          .query('proposals', columns: ['owner_id', 'description', 'how']);
+      return rows
+          .map((e) => Proposal(e['owner_id'] as int, e['description'] as String,
+              e['how'] as String))
+          .toList(growable: false);
+    });
   }
   //endregion
 }

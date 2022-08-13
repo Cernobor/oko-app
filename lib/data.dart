@@ -988,6 +988,18 @@ class ThumbnailMemoryPhotoFileFeaturePhoto extends FeaturePhoto {
   Stream<List<int>> get photoDataStream => _photoFile.openRead();
 }
 
+class Proposal {
+  final int ownerId;
+  final String description;
+  final String how;
+
+  Proposal(this.ownerId, this.description, this.how);
+
+  @mustCallSuper
+  Map<String, dynamic> toJson() =>
+      {'owner_id': ownerId, 'description': description, 'how': how};
+}
+
 typedef Users = Map<int, String>;
 typedef UsersView = UnmodifiableMapView<int, String>;
 typedef FeaturesView = UnmodifiableListView<Feature>;

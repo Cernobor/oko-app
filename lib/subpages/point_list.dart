@@ -282,7 +282,8 @@ class _PointListState extends State<PointList> {
                                             ))
                                     ],
                                   )),
-                              title: Text(point.name),
+                              title: Text(
+                                  '${point.name} | ${storage.users[point.ownerId]}'),
                               subtitle: Text(
                                   [
                                     if (point.description?.isNotEmpty ?? false)

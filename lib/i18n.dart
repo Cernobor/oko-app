@@ -346,6 +346,36 @@ class I18N {
         'cs': DateFormat('d.M. HH:mm', 'cs'),
         'en': DateFormat('M/d HH:mm', 'en'),
       }[locale.languageCode]!;
+  String get proposeImprovement => {
+        'cs': 'Navrhnout vylepšení aplikace',
+        'en': 'Propose app improvement'
+      }[locale.languageCode]!;
+  String get proposalDescriptionLabel => {
+        'cs': 'Popis vylepšení',
+        'en': 'Improvement description'
+      }[locale.languageCode]!;
+  String get errorProposalDescriptionRequired => {
+        'cs': 'Popis vylepšení musí být uveden',
+        'en': 'Improvement description must be stated'
+      }[locale.languageCode]!;
+  String get proposalHowLabel => {
+        'cs': 'Jak (mi) toto vylepšení pomůže? Jednou větou.',
+        'en': 'How is this improvement going to help me? With one sentence.'
+      }[locale.languageCode]!;
+  String get errorProposalHowRequired => {
+        'cs': 'Důvod vylepšení musí být uveden',
+        'en': 'The reason for improvement must be stated'
+      }[locale.languageCode]!;
+  String get suggestionInfo => {
+        'cs':
+            'Napište návrh, jak vylepšit aplikaci. Návrh bude odeslán při příští synchronizaci se serverem.',
+        'en':
+            'Propose an improvement of the app. The proposal will be sent with the next synchronisation with the server.'
+      }[locale.languageCode]!;
+  String get suggestionSaved => {
+        'cs': 'Návrh uložen k odeslání.',
+        'en': 'Proposal saved for sending.'
+      }[locale.languageCode]!;
 }
 
 class I18NDelegate extends LocalizationsDelegate<I18N> {
