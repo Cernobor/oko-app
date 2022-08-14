@@ -19,8 +19,14 @@ class I18N {
         'cs': 'Spárováno se serverem',
         'en': 'Paired to server'
       }[locale.languageCode]!;
+  String get drawerServerChecking =>
+      {'cs': 'Zjišťuji dostupnost serveru', 'en': 'Checking server availability'}[locale.languageCode]!;
   String get drawerServerAvailable =>
       {'cs': 'Server dostupný', 'en': 'Server available'}[locale.languageCode]!;
+  String get drawerServerUnavailable => {
+        'cs': 'Server nedostupný',
+        'en': 'Server unavailable'
+      }[locale.languageCode]!;
   String get zoomIn =>
       {'cs': 'Přiblížit', 'en': 'Zoom in'}[locale.languageCode]!;
   String get zoomOut =>

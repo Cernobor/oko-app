@@ -219,14 +219,18 @@ class MainWidgetState extends State<MainWidget> {
           ),
           // pinging
           ListTile(
-            title: Text(I18N.of(context).drawerServerAvailable),
+            title: pingInProgress
+                ? Text(I18N.of(context).drawerServerChecking)
+                : (serverAvailable
+                    ? Text(I18N.of(context).drawerServerAvailable)
+                    : Text(I18N.of(context).drawerServerUnavailable)),
             enabled: storage?.serverSettings != null,
             trailing: storage?.serverSettings != null && pingInProgress
                 ? const SizedBox(
-                    child: CircularProgressIndicator(
-                        value: null, strokeWidth: 2.5),
                     height: 16,
                     width: 16,
+                    child: CircularProgressIndicator(
+                        value: null, strokeWidth: 2.5),
                   )
                 : (storage?.serverSettings != null && serverAvailable
                     ? const Icon(
@@ -1291,7 +1295,9 @@ class MainWidgetState extends State<MainWidget> {
       Map<int, int> photo2feature = Map.fromEntries(serverData.features
           .expand((f) => f.photoIDs.map((pid) => MapEntry(pid, f.id))));
 
-      var photos = serverData.photoMetadata.entries.map((e) {
+      var photos = serverData.photoMetadata.entries
+          .where((e) => photo2feature.containsKey(e.value.id))
+          .map((e) {
         String photoFilename = e.key;
         data.PhotoMetadata photoMetadata = e.value;
         return FileFeaturePhoto(

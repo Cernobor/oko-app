@@ -1,3 +1,4 @@
+import 'dart:developer' as developer;
 import 'dart:io';
 import 'dart:typed_data';
 
@@ -770,8 +771,13 @@ class LineString extends Feature {
     assert(geom['type'] == 'LineString');
     assert(origGeom['type'] == 'LineString');
 
-    List<List<double>> coords = geom['coordinates'];
-    List<List<double>> origCoords = origGeom['coordinates'];
+    developer.log("coords: ${geom['coordinates']}");
+    List<List<double>> coords = (geom['coordinates'] as List<dynamic>)
+        .map((e) => (e as List<dynamic>).cast<double>())
+        .toList(growable: false);
+    List<List<double>> origCoords = (origGeom['coordinates'] as List<dynamic>)
+        .map((e) => (e as List<dynamic>).cast<double>())
+        .toList(growable: false);
     return LineString._(
         id,
         ownerId,
