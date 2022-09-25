@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_map/plugin_api.dart';
 
 const Color mapBackgroundColor = Color.fromRGBO(239, 239, 239, 1);
 
@@ -2336,33 +2335,13 @@ Map<String, dynamic> mapThemeData(String id) {
   };
 }
 
-class SolidColorLayerOptions extends TileLayerOptions {
+class SolidColorLayer extends StatelessWidget {
   final Color color;
 
-  SolidColorLayerOptions({required this.color});
-}
-
-class SolidColorLayerWidget extends StatelessWidget {
-  final SolidColorLayerOptions options;
-
-  const SolidColorLayerWidget({Key? key, required this.options})
-      : super(key: key);
+  const SolidColorLayer({Key? key, required this.color}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
-    return SolidColorLayer(
-      options: options,
-    );
-  }
-}
-
-class SolidColorLayer extends StatelessWidget {
-  final SolidColorLayerOptions options;
-
-  SolidColorLayer({required this.options}) : super(key: options.key);
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(color: options.color);
+    return Container(color: color);
   }
 }

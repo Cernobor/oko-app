@@ -82,11 +82,8 @@ class Home extends StatelessWidget {
           canvasColor: null,
           selectedRowColor: null, //
           splashColor: null, //
-          cursorColor: null,
           accentColor: null,
           buttonColor: null,
-          textSelectionColor: null,
-          textSelectionHandleColor: null,
           // themes
           drawerTheme: DrawerThemeData(
             backgroundColor: colorScheme.background,

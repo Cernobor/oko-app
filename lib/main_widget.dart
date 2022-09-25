@@ -39,6 +39,7 @@ class Target {
   static final Target _none = Target._(null);
 
   Target._(this._point);
+
   Target(data.Point p) : _point = p;
 
   static Target none() {
@@ -46,7 +47,9 @@ class Target {
   }
 
   data.Point get point => _point!;
+
   bool get isSet => _point != null;
+
   LatLng get coords => _point!.coords;
 
   bool isSamePoint(data.Point p) {
@@ -153,6 +156,7 @@ class MainWidgetState extends State<MainWidget> {
             return createUi(context);
           }
           return Container(
+            decoration: const BoxDecoration(color: cbGreen),
             child: const Center(
               child: Image(
                 image: AssetImage('assets/splash.png'),
@@ -160,7 +164,6 @@ class MainWidgetState extends State<MainWidget> {
                 height: 147.0,
               ),
             ),
-            decoration: const BoxDecoration(color: cbGreen),
           );
         });
   }
@@ -354,15 +357,15 @@ class MainWidgetState extends State<MainWidget> {
         createMap(context),
         if (navigationTarget.isSet && currentLocation != null)
           Container(
-            child: createInfoContentDistance(context),
             alignment: Alignment.bottomCenter,
             constraints: const BoxConstraints.expand(),
+            child: createInfoContentDistance(context),
           ),
         if (infoTarget.isSet)
           Container(
-            child: createInfoContentFull(context),
             alignment: Alignment.bottomCenter,
             constraints: const BoxConstraints.expand(),
+            child: createInfoContentFull(context),
           ),
         Container(
             alignment: Alignment.center,
@@ -380,15 +383,84 @@ class MainWidgetState extends State<MainWidget> {
               ),
             )),
         Container(
-          child: createMapControls(context),
           alignment: Alignment.topRight,
           padding: const EdgeInsets.all(8.0),
+          child: createMapControls(context),
         )
       ],
     );
   }
 
   Widget createMap(BuildContext context) {
+    List<Widget> children = [];
+    if (storage?.serverSettings != null) {
+      if (storage?.mapState?.render ?? false) {
+        children.add(createMapLayer(context));
+      } else {
+        children.add(const SolidColorLayer(color: mapBackgroundColor));
+      }
+    }
+    // limits
+    children.add(PolylineLayer(
+        polylines: storage?.mapState?.hasPanLimits ?? false
+            ? <Polyline>[
+                Polyline(points: <LatLng>[
+                  LatLng(storage!.mapState!.swBound!.latitude,
+                      storage!.mapState!.swBound!.longitude),
+                  LatLng(storage!.mapState!.swBound!.latitude,
+                      storage!.mapState!.neBound!.longitude),
+                  LatLng(storage!.mapState!.neBound!.latitude,
+                      storage!.mapState!.neBound!.longitude),
+                  LatLng(storage!.mapState!.neBound!.latitude,
+                      storage!.mapState!.swBound!.longitude),
+                ], strokeWidth: 5, color: Colors.red),
+              ]
+            : []));
+    // line to target
+    if (currentLocation != null && navigationTarget.isSet) {
+      children.add(PolylineLayer(polylines: <Polyline>[
+        Polyline(points: <LatLng>[
+          currentLocation!,
+          navigationTarget.coords,
+        ], strokeWidth: 5, color: Colors.blue),
+      ]));
+    }
+    // current location
+    if (currentLocation != null) {
+      children.add(MarkerLayer(markers: [
+        Marker(
+            height: 40,
+            width: 40,
+            anchorPos: AnchorPos.align(AnchorAlign.center),
+            point: currentLocation!,
+            builder: (context) {
+              if (currentHeading != null && locationSubscription != null) {
+                return Transform.rotate(
+                  angle: currentHeading!,
+                  child: const Icon(
+                    Icons.navigation,
+                    color: Color(0xffff0000),
+                    size: 40,
+                  ),
+                );
+              }
+              return Transform.rotate(
+                  angle: -mapController.rotation * math.pi / 180.0,
+                  child: Icon(
+                    Icons.my_location,
+                    color: locationSubscription == null
+                        ? const Color(0xff000000)
+                        : const Color(0xffff0000),
+                    size: 40,
+                  ));
+            })
+      ]));
+    }
+    // extra geometry
+    children.addAll(createGeometry());
+    // Points
+    children.add(MarkerLayer(markers: createMarkers()));
+
     return FlutterMap(
       options: MapOptions(
           center: storage?.mapState?.center ??
@@ -405,8 +477,7 @@ class MainWidgetState extends State<MainWidget> {
           enableMultiFingerGestureRace: true,
           pinchZoomThreshold: 0.2,
           rotationThreshold: 2,
-          plugins: [VectorMapTilesPlugin()],
-          onMapCreated: (MapController mapController) {
+          onMapReady: () {
             Future.microtask(() {
               setState(() {
                 mapReady = true;
@@ -414,81 +485,14 @@ class MainWidgetState extends State<MainWidget> {
             });
           }),
       mapController: mapController,
-      children: [
-        if (storage?.serverSettings != null)
-          if (storage?.mapState?.render ?? false)
-            createMapLayer(context)
-          else
-            SolidColorLayerWidget(
-                options: SolidColorLayerOptions(color: mapBackgroundColor))
-      ],
-      layers: [
-        // limits
-        PolylineLayerOptions(
-            polylines: storage?.mapState?.hasPanLimits ?? false
-                ? <Polyline>[
-                    Polyline(points: <LatLng>[
-                      LatLng(storage!.mapState!.swBound!.latitude,
-                          storage!.mapState!.swBound!.longitude),
-                      LatLng(storage!.mapState!.swBound!.latitude,
-                          storage!.mapState!.neBound!.longitude),
-                      LatLng(storage!.mapState!.neBound!.latitude,
-                          storage!.mapState!.neBound!.longitude),
-                      LatLng(storage!.mapState!.neBound!.latitude,
-                          storage!.mapState!.swBound!.longitude),
-                    ], strokeWidth: 5, color: Colors.red),
-                  ]
-                : []),
-        // line to target
-        if (currentLocation != null && navigationTarget.isSet)
-          PolylineLayerOptions(polylines: <Polyline>[
-            Polyline(points: <LatLng>[
-              currentLocation!,
-              navigationTarget.coords,
-            ], strokeWidth: 5, color: Colors.blue),
-          ]),
-        // current location
-        if (currentLocation != null)
-          MarkerLayerOptions(markers: [
-            Marker(
-                height: 40,
-                width: 40,
-                anchorPos: AnchorPos.align(AnchorAlign.center),
-                point: currentLocation!,
-                builder: (context) {
-                  if (currentHeading != null && locationSubscription != null) {
-                    return Transform.rotate(
-                      angle: currentHeading!,
-                      child: const Icon(
-                        Icons.navigation,
-                        color: Color(0xffff0000),
-                        size: 40,
-                      ),
-                    );
-                  }
-                  return Transform.rotate(
-                      angle: -mapController.rotation * math.pi / 180.0,
-                      child: Icon(
-                        Icons.my_location,
-                        color: locationSubscription == null
-                            ? const Color(0xff000000)
-                            : const Color(0xffff0000),
-                        size: 40,
-                      ));
-                })
-          ]),
-        // extra geometry
-        GroupLayerOptions(group: createGeometry()),
-        // Points
-        MarkerLayerOptions(markers: createMarkers()),
-      ],
+      children: children,
     );
   }
 
   Widget createMapLayer(BuildContext context) {
-    VectorTileLayerOptions o;
+    VectorTileLayer vtl;
     if (offlineMapProvider == null) {
-      o = VectorTileLayerOptions(
+      vtl = VectorTileLayer(
           tileProviders: TileProviders({
             'openmaptiles': MemoryCacheVectorTileProvider(
                 delegate: NetworkVectorTileProvider(
@@ -502,7 +506,7 @@ class MainWidgetState extends State<MainWidget> {
               mapThemeData('online'),
               layerPredicate: defaultBackgroundLayerPredicate));
     } else {
-      o = VectorTileLayerOptions(
+      vtl = VectorTileLayer(
           tileProviders: TileProviders({
             'openmaptiles': MemoryCacheVectorTileProvider(
                 delegate: offlineMapProvider!, maxSizeBytes: 1024 * 1024 * 5)
@@ -513,7 +517,7 @@ class MainWidgetState extends State<MainWidget> {
               layerPredicate: defaultBackgroundLayerPredicate));
     }
 
-    return VectorTileLayerWidget(options: o);
+    return vtl;
   }
 
   List<Marker> createMarkers() {
@@ -594,12 +598,12 @@ class MainWidgetState extends State<MainWidget> {
     }).toList();
   }
 
-  List<LayerOptions> createGeometry() {
+  List<Widget> createGeometry() {
     if (storage == null) {
       return [];
     }
     return [
-      PolylineLayerOptions(
+      PolylineLayer(
           polylines: storage!.features
               .whereType<data.LineString>()
               .map((data.LineString ls) =>
@@ -621,6 +625,7 @@ class MainWidgetState extends State<MainWidget> {
         currentLocation!, navigationTarget.coords, currentHeading);
     return Card(
         child: InkWell(
+      onTap: onInfoDistanceTap,
       child: Container(
           padding: const EdgeInsets.all(8.0),
           child: Text(
@@ -629,7 +634,6 @@ class MainWidgetState extends State<MainWidget> {
             'rb: ${nav.relativeBearingDeg == null ? '-' : nav.relativeBearingDeg!.toStringAsFixed(2)}°',
             textAlign: TextAlign.center,
           )),
-      onTap: onInfoDistanceTap,
     ));
   }
 
@@ -762,10 +766,6 @@ class MainWidgetState extends State<MainWidget> {
           heroTag: 'fab-zoom-in',
           tooltip: I18N.of(context).zoomIn,
           elevation: 0,
-          child: const Icon(
-            Icons.zoom_in,
-            size: 30,
-          ),
           backgroundColor: !mapReady ||
                   mapController.zoom >=
                       (storage?.mapState?.zoomMax ?? fallbackMaxZoom)
@@ -776,6 +776,10 @@ class MainWidgetState extends State<MainWidget> {
                       (storage?.mapState?.zoomMax ?? fallbackMaxZoom)
               ? null
               : () => onZoom(1),
+          child: const Icon(
+            Icons.zoom_in,
+            size: 30,
+          ),
         ),
         Container(
           padding: const EdgeInsets.only(top: 6),
@@ -783,10 +787,6 @@ class MainWidgetState extends State<MainWidget> {
             heroTag: 'fab-zoom-out',
             tooltip: I18N.of(context).zoomOut,
             elevation: 0,
-            child: const Icon(
-              Icons.zoom_out,
-              size: 30,
-            ),
             backgroundColor: !mapReady ||
                     mapController.zoom <=
                         (storage?.serverSettings?.minZoom ?? fallbackMinZoom)
@@ -797,6 +797,10 @@ class MainWidgetState extends State<MainWidget> {
                         (storage?.serverSettings?.minZoom ?? fallbackMinZoom)
                 ? null
                 : () => onZoom(-1),
+            child: const Icon(
+              Icons.zoom_out,
+              size: 30,
+            ),
           ),
         ),
         Container(
@@ -805,13 +809,6 @@ class MainWidgetState extends State<MainWidget> {
             heroTag: 'fab-reset-rotation',
             tooltip: I18N.of(context).resetRotation,
             elevation: 0,
-            child: Transform.rotate(
-              angle: mapReady ? mapController.rotation * math.pi / 180 : 0,
-              child: const Icon(
-                Icons.north,
-                size: 30,
-              ),
-            ),
             backgroundColor: !mapReady || mapController.rotation == 0.0
                 ? Theme.of(context).colorScheme.secondary.withOpacity(.35)
                 : null,
@@ -822,6 +819,13 @@ class MainWidgetState extends State<MainWidget> {
                 });
               }
             },
+            child: Transform.rotate(
+              angle: mapReady ? mapController.rotation * math.pi / 180 : 0,
+              child: const Icon(
+                Icons.north,
+                size: 30,
+              ),
+            ),
           ),
         ),
       ],

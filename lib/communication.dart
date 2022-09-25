@@ -97,7 +97,7 @@ String ensureNoTrailingSlash(String baseAddr) => baseAddr.endsWith('/')
     : baseAddr;
 
 String ensureTrailingSlash(String baseAddr) =>
-    baseAddr.endsWith('/') ? baseAddr : (baseAddr + '/');
+    baseAddr.endsWith('/') ? baseAddr : ('$baseAddr/');
 
 Uri _handshakeUri(String baseAddr) =>
     Uri.parse(ensureTrailingSlash(baseAddr)).resolve('handshake');
