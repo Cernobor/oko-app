@@ -16,8 +16,9 @@ class MultiCheckerSwitcher {
   final String offLabel;
   final String onLabel;
   final bool value;
-  
-  MultiCheckerSwitcher({required this.offLabel, required this.onLabel, required this.value});
+
+  MultiCheckerSwitcher(
+      {required this.offLabel, required this.onLabel, required this.value});
 }
 
 class MultiChecker<T> extends StatefulWidget {
@@ -68,41 +69,51 @@ class _MultiCheckerState<T> extends State<MultiChecker<T>> {
 
   @override
   Widget build(BuildContext context) {
-    return SimpleDialog(
-      children: <Widget>[
-        Row(
-          mainAxisSize: MainAxisSize.max,
-          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-          crossAxisAlignment: CrossAxisAlignment.end,
-          children: <Widget>[
-            TextButton(
-              child: Text(I18N.of(context).allNothing),
-              onPressed: () {
-                bool val = checked.contains(false);
-                setState(() {
-                  checked.setAll(0, List<bool>.filled(checked.length, val));
-                });
-              },
+    return AlertDialog(
+      scrollable: true,
+      actionsPadding: const EdgeInsets.fromLTRB(0, 0, 0, 8),
+      actions: [
+        Column(
+          children: [
+            const Padding(
+                padding: EdgeInsets.only(bottom: 4),
+                child: Divider(
+                  thickness: 0,
+                  height: 0,
+                )),
+            Row(
+              mainAxisSize: MainAxisSize.max,
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: <Widget>[
+                TextButton(
+                  child: Text(I18N.of(context).allNothing),
+                  onPressed: () {
+                    bool val = checked.contains(false);
+                    setState(() {
+                      checked.setAll(0, List<bool>.filled(checked.length, val));
+                    });
+                  },
+                ),
+                TextButton(
+                  child: Text(I18N.of(context).invert),
+                  onPressed: () {
+                    setState(() {
+                      checked.setAll(0, checked.map((e) => !e));
+                    });
+                  },
+                )
+              ],
             ),
-            TextButton(
-              child: Text(I18N.of(context).invert),
-              onPressed: () {
-                setState(() {
-                  checked.setAll(0, checked.map((e) => !e));
-                });
-              },
-            )
-          ],
-        ),
-        if (widget.switcher != null)
-          Row(
-            mainAxisSize: MainAxisSize.min,
-            mainAxisAlignment: MainAxisAlignment.center,
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              Text(widget.switcher!.offLabel),
-              Switch.adaptive(
-                  /*
+            if (widget.switcher != null)
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  Text(widget.switcher!.offLabel),
+                  Switch.adaptive(
+                      /*
                   thumbColor: MaterialStateProperty.all(Theme.of(context)
                       .switchTheme
                       .thumbColor
@@ -112,59 +123,53 @@ class _MultiCheckerState<T> extends State<MultiChecker<T>> {
                       .trackColor
                       ?.resolve({})),
                   */
-                  value: switcher,
-                  onChanged: (value) => setState(() {
-                        switcher = value;
-                      })),
-              Text(widget.switcher!.onLabel),
-            ],
-          ),
-        const Padding(
-            padding: EdgeInsets.only(top: 8),
-            child: Divider(
-              thickness: 0,
-              height: 0,
-            )),
-        ListView(
-          scrollDirection: Axis.vertical,
-          shrinkWrap: true,
-          children: widget.items
-              .asMap()
-              .map((int idx, T item) => MapEntry(
-                  idx,
-                  CheckboxListTile(
-                      value: checked[idx],
-                      title: widget.titleBuilder.call(item, checked[idx]),
-                      subtitle: widget.subtitleBuilder(item, checked[idx]),
-                      secondary: widget.secondaryBuilder(item, checked[idx]),
-                      isThreeLine:
-                          widget.isThreeLinePredicate(item, checked[idx]),
-                      onChanged: (bool? val) => onChanged(idx, val))))
-              .values
-              .toList(growable: false),
-        ),
-        const Padding(
-            padding: EdgeInsets.only(bottom: 8),
-            child: Divider(
-              thickness: 0,
-              height: 0,
-            )),
-        Row(
-          mainAxisSize: MainAxisSize.max,
-          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-          crossAxisAlignment: CrossAxisAlignment.end,
-          children: <Widget>[
-            TextButton(
-              child: Text(I18N.of(context).dialogCancel),
-              onPressed: onCancel,
-            ),
-            TextButton(
-              child: Text(I18N.of(context).ok),
-              onPressed: onOk,
+                      value: switcher,
+                      onChanged: (value) => setState(() {
+                            switcher = value;
+                          })),
+                  Text(widget.switcher!.onLabel),
+                ],
+              ),
+            const Padding(
+                padding: EdgeInsets.symmetric(vertical: 4),
+                child: Divider(
+                  thickness: 0,
+                  height: 0,
+                )),
+            Row(
+              mainAxisSize: MainAxisSize.max,
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                TextButton(
+                  onPressed: onCancel,
+                  child: Text(I18N.of(context).dialogCancel),
+                ),
+                TextButton(
+                  onPressed: onOk,
+                  child: Text(I18N.of(context).ok),
+                )
+              ],
             )
           ],
         ),
       ],
+      content: Column(
+        children: widget.items
+            .asMap()
+            .map((int idx, T item) => MapEntry(
+                idx,
+                CheckboxListTile(
+                    value: checked[idx],
+                    title: widget.titleBuilder.call(item, checked[idx]),
+                    subtitle: widget.subtitleBuilder(item, checked[idx]),
+                    secondary: widget.secondaryBuilder(item, checked[idx]),
+                    isThreeLine:
+                        widget.isThreeLinePredicate(item, checked[idx]),
+                    onChanged: (bool? val) => onChanged(idx, val))))
+            .values
+            .toList(growable: false),
+      ),
     );
   }
 

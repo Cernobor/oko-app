@@ -47,52 +47,56 @@ class _SingleChooserState<T> extends State<SingleChooser<T>> {
 
   @override
   Widget build(BuildContext context) {
-    return SimpleDialog(
-      children: <Widget>[
-        ListView(
-          scrollDirection: Axis.vertical,
-          shrinkWrap: true,
-          children: widget.items
-              .map((T item) => RadioListTile(
-                  controlAffinity: ListTileControlAffinity.trailing,
-                  value: item,
-                  groupValue: selected,
-                  title: widget.titleBuilder.call(item, selected == item),
-                  subtitle: widget.subtitleBuilder(item, selected == item),
-                  secondary: widget.secondaryBuilder(item, selected == item),
-                  isThreeLine:
-                      widget.isThreeLinePredicate(item, selected == item),
-                  onChanged: (T? value) {
-                    if (value != null) {
-                      setState(() {
-                        selected = value;
-                      });
-                    }
-                  }))
-              .toList(growable: false),
-        ),
-        const Padding(
-            padding: EdgeInsets.only(bottom: 8),
-            child: Divider(
-              thickness: 0,
-              height: 0,
-            )),
-        Row(
-          mainAxisSize: MainAxisSize.max,
-          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-          crossAxisAlignment: CrossAxisAlignment.end,
-          children: <Widget>[
-            TextButton(
-              child: Text(I18N.of(context).dialogCancel),
-              onPressed: onCancel,
+    return AlertDialog(
+      scrollable: true,
+      actionsPadding: const EdgeInsets.fromLTRB(0, 0, 0, 8),
+      actions: [
+        Column(
+          children: [
+            const Padding(
+                padding: EdgeInsets.only(bottom: 8),
+                child: Divider(
+                  thickness: 0,
+                  height: 0,
+                )),
+            Row(
+              mainAxisSize: MainAxisSize.max,
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: <Widget>[
+                TextButton(
+                  onPressed: onCancel,
+                  child: Text(I18N.of(context).dialogCancel),
+                ),
+                TextButton(
+                  onPressed: onOk,
+                  child: Text(I18N.of(context).ok),
+                )
+              ],
             ),
-            TextButton(
-              child: Text(I18N.of(context).ok),
-              onPressed: onOk,
-            )
           ],
-        ),
+        )
       ],
+      content: Column(
+        children: widget.items
+            .map((T item) => RadioListTile(
+                controlAffinity: ListTileControlAffinity.trailing,
+                value: item,
+                groupValue: selected,
+                title: widget.titleBuilder.call(item, selected == item),
+                subtitle: widget.subtitleBuilder(item, selected == item),
+                secondary: widget.secondaryBuilder(item, selected == item),
+                isThreeLine:
+                    widget.isThreeLinePredicate(item, selected == item),
+                onChanged: (T? value) {
+                  if (value != null) {
+                    setState(() {
+                      selected = value;
+                    });
+                  }
+                }))
+            .toList(growable: false),
+      ),
     );
   }
 
