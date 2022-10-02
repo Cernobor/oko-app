@@ -19,14 +19,40 @@ class I18N {
         'cs': 'Spárováno se serverem',
         'en': 'Paired to server'
       }[locale.languageCode]!;
-  String get drawerServerChecking =>
-      {'cs': 'Zjišťuji dostupnost serveru', 'en': 'Checking server availability'}[locale.languageCode]!;
+  String get drawerServerChecking => {
+        'cs': 'Zjišťuji dostupnost serveru',
+        'en': 'Checking server availability'
+      }[locale.languageCode]!;
   String get drawerServerAvailable =>
       {'cs': 'Server dostupný', 'en': 'Server available'}[locale.languageCode]!;
   String get drawerServerUnavailable => {
         'cs': 'Server nedostupný',
         'en': 'Server unavailable'
       }[locale.languageCode]!;
+  String get drawerNewVersion => {
+        'cs': 'Novější verze k dispozici',
+        'en': 'Newer version available'
+      }[locale.languageCode]!;
+  String get newVersionNotificationTitle => {
+        'cs': 'Nová verze aplikace k dispozici',
+        'en': 'New app version available'
+      }[locale.languageCode]!;
+  String newVersionNotificationText(String vCurrent, String vNew) => sprintf(
+      {
+        'cs':
+            'K dispozici je novější verze %s. Nyní máte verzi %s. Chcete stáhnout novou verzi?',
+        'en':
+            'Newer version %s is available. Currently you have version %s. Do you want to download new version?'
+      }[locale.languageCode]!,
+      [vCurrent, vNew]);
+  String get newVersionDismissalInfo => {
+        'cs':
+            'Pokud budete chtít novou verzi stáhnout později, můžete klepnout na indikátor dostupnosti serveru v levém menu hlavní obrazovky.',
+        'en':
+            'If you want to download the new version later, you can tap on the server availability indicator in the left menu of the main screen.'
+      }[locale.languageCode]!;
+  String get newVersionNotificationDownloadButton =>
+      {'cs': 'Stáhnout', 'en': 'Download'}[locale.languageCode]!;
   String get zoomIn =>
       {'cs': 'Přiblížit', 'en': 'Zoom in'}[locale.languageCode]!;
   String get zoomOut =>

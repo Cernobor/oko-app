@@ -8,6 +8,8 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_compass/flutter_compass.dart';
 import 'package:flutter_map/plugin_api.dart';
+import 'package:get_it/get_it.dart';
+import 'package:http/http.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:location/location.dart';
 import 'package:oko/communication.dart' as comm;
@@ -23,13 +25,17 @@ import 'package:oko/subpages/pairing.dart';
 import 'package:oko/subpages/point_list.dart';
 import 'package:oko/subpages/proposal.dart';
 import 'package:oko/utils.dart' as utils;
+import 'package:package_info_plus/package_info_plus.dart';
 import 'package:path/path.dart' show join;
 import 'package:positioned_tap_detector_2/positioned_tap_detector_2.dart';
 import 'package:rxdart/rxdart.dart';
+import 'package:url_launcher/url_launcher_string.dart';
 import 'package:vector_map_tiles/vector_map_tiles.dart';
 import 'package:vector_tile_renderer/vector_tile_renderer.dart' hide Theme;
 
 import 'mbtiles.dart';
+
+GetIt getIt = GetIt.instance;
 
 enum PointLogType { currentLocation, crosshair }
 
@@ -95,7 +101,7 @@ class MainWidgetState extends State<MainWidget> {
   double? progressValue;
   bool pinging = false;
   bool pingInProgress = false;
-  bool serverAvailable = false;
+  comm.PingResponse? pingResponse;
   StreamSubscription<LocationData>? locationSubscription;
   StreamSubscription<CompassEvent>? compassSubscription;
   bool viewLockedToLocation = false;
@@ -117,6 +123,12 @@ class MainWidgetState extends State<MainWidget> {
   }
 
   Future<bool> init() async {
+    getIt.registerSingletonAsync<PackageInfo>(PackageInfo.fromPlatform);
+    getIt.registerSingletonWithDependencies<Client>(
+        () => comm.UserAgentClient(
+            '${getIt.get<PackageInfo>().appName}/${getIt.get<PackageInfo>().version}'),
+        dependsOn: [PackageInfo]);
+
     try {
       storage = await Storage.getInstance();
     } catch (e) {
@@ -143,6 +155,7 @@ class MainWidgetState extends State<MainWidget> {
     mapStateStorageController.stream
         .debounceTime(const Duration(milliseconds: 200))
         .listen(onMapEventStorage);
+    await getIt.allReady();
     return true;
   }
 
@@ -224,9 +237,12 @@ class MainWidgetState extends State<MainWidget> {
           ListTile(
             title: pingInProgress
                 ? Text(I18N.of(context).drawerServerChecking)
-                : (serverAvailable
-                    ? Text(I18N.of(context).drawerServerAvailable)
-                    : Text(I18N.of(context).drawerServerUnavailable)),
+                : (pingResponse == null
+                    ? Text(I18N.of(context).drawerServerUnavailable)
+                    : Text(I18N.of(context).drawerServerAvailable)),
+            subtitle: pingResponse == null || pingResponse!.appVersion == null
+                ? null
+                : Text(I18N.of(context).drawerNewVersion),
             enabled: storage?.serverSettings != null,
             trailing: storage?.serverSettings != null && pingInProgress
                 ? const SizedBox(
@@ -235,7 +251,7 @@ class MainWidgetState extends State<MainWidget> {
                     child: CircularProgressIndicator(
                         value: null, strokeWidth: 2.5),
                   )
-                : (storage?.serverSettings != null && serverAvailable
+                : (storage?.serverSettings != null && pingResponse != null
                     ? const Icon(
                         Icons.done,
                         color: Colors.green,
@@ -244,7 +260,10 @@ class MainWidgetState extends State<MainWidget> {
                         Icons.clear,
                         color: Colors.red,
                       )),
-            onTap: onPing,
+            onTap: () {
+              pingResponse = null;
+              onPing();
+            },
           ),
           // map switch
           SwitchListTile(
@@ -1111,11 +1130,54 @@ class MainWidgetState extends State<MainWidget> {
     setState(() {
       pingInProgress = true;
     });
-    var pong = await comm.ping(storage!.serverSettings!.serverAddress);
+    bool knowsNewVersion =
+        pingResponse != null && pingResponse!.appVersion != null;
+    var res = await comm.ping(storage!.serverSettings!.serverAddress);
     setState(() {
       pingInProgress = false;
-      serverAvailable = pong;
+      pingResponse = res;
     });
+    if (res != null && res.appVersion != null && !knowsNewVersion) {
+      setState(() {
+        pinging = false;
+      });
+
+      await showDialog(
+          context: context,
+          builder: (context) => AlertDialog(
+                  title: Text(I18N.of(context).newVersionNotificationTitle),
+                  content: SingleChildScrollView(
+                    child: Column(
+                      children: [
+                        Text(I18N.of(context).newVersionNotificationText(
+                            getIt.get<PackageInfo>().version,
+                            res.appVersion!.version)),
+                        const SizedBox(height: 10),
+                        Text(I18N.of(context).newVersionDismissalInfo)
+                      ],
+                    ),
+                  ),
+                  actionsAlignment: MainAxisAlignment.spaceBetween,
+                  actions: [
+                    TextButton(
+                        child: Column(children: [
+                          Text(I18N
+                              .of(context)
+                              .newVersionNotificationDownloadButton),
+                        ]),
+                        onPressed: () async {
+                          if (!await launchUrlString(res.appVersion!.address)) {
+                            utils.notifyDialog(context, 'TODO', 'TODO',
+                                utils.NotificationLevel.error);
+                          }
+                          Navigator.of(context).pop();
+                        }),
+                    TextButton(
+                        child: Text(I18N.of(context).dismiss),
+                        onPressed: () => Navigator.of(context).pop())
+                  ]));
+      startPinging();
+    }
   }
 
   void startPinging() {

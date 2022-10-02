@@ -4,11 +4,14 @@ import 'dart:developer' as developer;
 import 'dart:io';
 
 import 'package:flutter/cupertino.dart';
+import 'package:get_it/get_it.dart';
 import 'package:http/http.dart' as http;
 import 'package:http_parser/http_parser.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:oko/data.dart';
 import 'package:oko/i18n.dart';
+
+GetIt getIt = GetIt.instance;
 
 abstract class CommException implements Exception {
   String getMessage(BuildContext context);
@@ -111,6 +114,60 @@ Uri _dataUri(String baseAddr) =>
 Uri _mapPackUri(String baseAddr) =>
     Uri.parse(ensureTrailingSlash(baseAddr)).resolve('mappack');
 
+class UserAgentClient extends http.BaseClient {
+  final Map<String, String> _defaultHeaders;
+  final http.Client _httpClient = http.Client();
+
+  UserAgentClient(String userAgent)
+      : _defaultHeaders = {'user-agent': userAgent};
+
+  @override
+  Future<http.StreamedResponse> send(http.BaseRequest request) {
+    return _httpClient.send(request);
+  }
+
+  @override
+  Future<http.Response> get(url, {Map<String, String>? headers}) {
+    return _httpClient.get(url, headers: _mergedHeaders(headers));
+  }
+
+  @override
+  Future<http.Response> post(url,
+      {Map<String, String>? headers, dynamic body, Encoding? encoding}) {
+    return _httpClient.post(url,
+        headers: _mergedHeaders(headers), body: body, encoding: encoding);
+  }
+
+  @override
+  Future<http.Response> patch(url,
+      {Map<String, String>? headers, dynamic body, Encoding? encoding}) {
+    return _httpClient.patch(url,
+        headers: _mergedHeaders(headers), body: body, encoding: encoding);
+  }
+
+  @override
+  Future<http.Response> put(url,
+      {Map<String, String>? headers, dynamic body, Encoding? encoding}) {
+    return _httpClient.put(url,
+        headers: _mergedHeaders(headers), body: body, encoding: encoding);
+  }
+
+  @override
+  Future<http.Response> head(url, {Map<String, String>? headers}) {
+    return _httpClient.head(url, headers: _mergedHeaders(headers));
+  }
+
+  @override
+  Future<http.Response> delete(url,
+      {Map<String, String>? headers, Object? body, Encoding? encoding}) {
+    return _httpClient.delete(url,
+        headers: _mergedHeaders(headers), body: body, encoding: encoding);
+  }
+
+  Map<String, String> _mergedHeaders(Map<String, String>? headers) =>
+      {..._defaultHeaders, ...?headers};
+}
+
 Future<void> _downloadFile(Uri uri, File dest,
     {void Function(http.Request req)? prepareRequest,
     void Function(int read, int? total)? onProgress}) async {
@@ -118,7 +175,7 @@ Future<void> _downloadFile(Uri uri, File dest,
   if (prepareRequest != null) {
     prepareRequest(req);
   }
-  var res = await req.send();
+  var res = await getIt.get<http.Client>().send(req);
   if (res.statusCode >= 500) {
     throw InternalServerError(await res.stream.bytesToString());
   }
@@ -149,7 +206,7 @@ Future<ServerSettings> handshake(
     String serverAddress, String name, bool exists) async {
   Uri uri = _handshakeUri(serverAddress);
   developer.log('Handshaking: $uri');
-  var res = await http.post(uri,
+  var res = await getIt.get<http.Client>().post(uri,
       headers: {'Content-Type': 'application/json'},
       body: jsonEncode({'name': name, 'exists': exists}));
   var body = res.body;
@@ -182,13 +239,34 @@ Future<ServerSettings> handshake(
   );
 }
 
-Future<bool> ping(String serverAddress) async {
+class AppVersion {
+  final String version;
+  final String address;
+
+  AppVersion(this.version, this.address);
+}
+
+class PingResponse {
+  final AppVersion? appVersion;
+
+  PingResponse(this.appVersion);
+}
+
+Future<PingResponse?> ping(String serverAddress) async {
   var uri = _pingUri(serverAddress);
   try {
-    var res = await http.get(uri);
-    return res.statusCode == HttpStatus.noContent;
-  } catch (_) {
-    return false;
+    var client = getIt.get<http.Client>();
+    var res = await client.get(uri);
+    if (res.statusCode == HttpStatus.noContent) {
+      return PingResponse(null);
+    } else if (res.statusCode == HttpStatus.ok) {
+      var data = jsonDecode(res.body);
+      return PingResponse(AppVersion(data['version'], data['address']));
+    }
+    return null;
+  } catch (e) {
+    developer.log('$e');
+    return null;
   }
 }
 
@@ -207,7 +285,9 @@ Future<void> downloadMap(String serverAddress, File dest,
 
 Future<ServerData> downloadData(String serverAddress) async {
   Uri uri = _dataUri(serverAddress);
-  var res = await http.get(uri, headers: {'Accept': 'application/json'});
+  var res = await getIt
+      .get<http.Client>()
+      .get(uri, headers: {'Accept': 'application/json'});
   var body = res.body;
   if (res.statusCode != HttpStatus.ok) {
     throw UnexpectedStatusCode(res.statusCode, body);
@@ -278,7 +358,7 @@ Future<void> uploadData(
         filename: entry.key,
         contentType: MediaType.parse(entry.value.contentType)));
   }
-  var res = await req.send();
+  var res = await getIt.get<http.Client>().send(req);
 
   switch (res.statusCode) {
     case HttpStatus.badRequest:

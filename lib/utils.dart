@@ -48,6 +48,7 @@ String formatCoords(LatLng coords, bool onLines) {
 }
 
 enum NotificationType { snackbar, dialog }
+
 enum NotificationLevel { error, info, success }
 
 void notifySnackbar(BuildContext context, String msg, NotificationLevel level,

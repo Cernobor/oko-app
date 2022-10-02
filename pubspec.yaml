@@ -57,6 +57,13 @@ dependencies:
   image_picker: ^0.8.4+11
   image: ^3.2.0
   flutter_archive: ^5.0.0
+  package_info_plus: ^1.4.3+1
+  get_it: ^7.2.0
+  http: ^0.13.5
+  http_parser: ^4.0.1
+  positioned_tap_detector_2: ^1.0.4
+  vector_tile_renderer: ^3.0.3
+  url_launcher: ^6.1.5
 
 dev_dependencies:
   flutter_test:
