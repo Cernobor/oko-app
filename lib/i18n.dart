@@ -15,6 +15,7 @@ class I18N {
   }
 
   String get appTitle => {'cs': 'OKO', 'en': 'OKO'}[locale.languageCode]!;
+  String appTitleWithVersion(String version) => '$appTitle v$version';
   String get drawerPaired => {
         'cs': 'Spárováno se serverem',
         'en': 'Paired to server'

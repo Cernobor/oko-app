@@ -196,7 +196,9 @@ class MainWidgetState extends State<MainWidget> {
 
   AppBar createAppBar(BuildContext context) {
     return AppBar(
-      title: Text(I18N.of(context).appTitle),
+      title: Text(I18N
+          .of(context)
+          .appTitleWithVersion(getIt.get<PackageInfo>().version)),
       centerTitle: true,
       primary: true,
       bottom: PreferredSize(
