@@ -27,7 +27,6 @@ import 'package:oko/subpages/proposal.dart';
 import 'package:oko/utils.dart' as utils;
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:path/path.dart' show join;
-import 'package:positioned_tap_detector_2/positioned_tap_detector_2.dart';
 import 'package:rxdart/rxdart.dart';
 import 'package:url_launcher/url_launcher_string.dart';
 import 'package:vector_map_tiles/vector_map_tiles.dart';
