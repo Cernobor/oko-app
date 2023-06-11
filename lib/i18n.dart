@@ -418,6 +418,10 @@ class I18N {
         cs: 'Návrh uložen k odeslání.',
         en: 'Proposal saved for sending.'
       }[locale.languageCode]!;
+  String get clearButtonTooltip => {
+    cs: 'Vymazat',
+    en: 'Clear'
+  }[locale.languageCode]!;
 }
 
 class I18NDelegate extends LocalizationsDelegate<I18N> {

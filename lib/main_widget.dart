@@ -1309,7 +1309,7 @@ class MainWidgetState extends State<MainWidget> {
     features.addAll(serverData.features);
     await storage!.setFeatures(features);
     if (usersChanged) {
-      await storage!.setPointListCheckedUsers(storage!.users.keys);
+      await storage!.setFeatureFilterUsers(FeatureFilter.featureList, storage!.users.keys);
     }
     return true;
   }
@@ -1380,7 +1380,7 @@ class MainWidgetState extends State<MainWidget> {
           serverData.users.keys.toSet(), storage!.users.keys.toSet());
       await storage!.setUsers(serverData.users);
       if (usersChanged) {
-        await storage!.setPointListCheckedUsers(storage!.users.keys);
+        await storage!.setFeatureFilterUsers(FeatureFilter.featureList, storage!.users.keys);
       }
 
       List<Feature> localFeatures =

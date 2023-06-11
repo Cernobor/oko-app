@@ -10,11 +10,13 @@ import 'package:path/path.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:sqflite/sqflite.dart';
 
+enum FeatureFilter { featureList, map }
+
 class Storage {
   static const String _storageDbFile = 'storage.db';
   static const String _featurePhotosDirname = 'feature-photos';
   static const String _mapPackFile = 'map.mbtiles';
-  static const int _dbVersion = 2;
+  static const int _dbVersion = 3;
   static Storage? _instance;
 
   //region init
@@ -50,7 +52,10 @@ class Storage {
       await s._loadServerSettings();
       await s._loadUsers();
       await s._loadMapState();
-      await s._loadPointListSettings();
+      await s._loadFeatureListSorting();
+      for (FeatureFilter f in FeatureFilter.values) {
+        await s._loadFeatureFilter(f);
+      }
       await s._loadFeatures();
 
       _instance = s;
@@ -70,6 +75,7 @@ class Storage {
           'min_zoom integer not null,'
           'default_center_lat real not null,'
           'default_center_lng real not null)');
+
       await db.execute('CREATE TABLE map_state ('
           'render integer not null,'
           'using_offline integer not null,'
@@ -82,6 +88,7 @@ class Storage {
           'lng_sw_bound real,'
           'zoom_min integer,'
           'zoom_max integer)');
+
       await db.execute('CREATE TABLE point_list_settings ('
           'sort_key text not null,'
           'sort_direction integer not null,'
@@ -104,18 +111,25 @@ class Storage {
           'attribute text not null)');
       await db.execute('CREATE TABLE point_list_checked_users ('
           'id integer not null)');
+
       await db.execute('CREATE TABLE users ('
           'id integer primary key,'
           'name text not null)');
+
       await db.execute('CREATE TABLE next_local_id ('
           'id integer not null)');
+
       await db.insert('next_local_id', {'id': -1});
+
       await db.execute('CREATE TABLE features ('
           'id integer primary key,'
           'data text not null)');
+
       await db.execute('CREATE TABLE next_local_photo_id ('
           'id integer not null)');
+
       await db.insert('next_local_photo_id', {'id': -1});
+
       await db.execute('CREATE TABLE feature_photos ('
           'id integer primary key,'
           'feature_id integer,'
@@ -130,6 +144,71 @@ class Storage {
           'owner_id integer not null,'
           'description text not null,'
           'how text not null)');
+    }
+    if (oldVersion <= 2) {
+      await db.execute('CREATE TABLE feature_list_sorting ('
+          'sort_key text not null,'
+          'sort_direction integer not null)');
+      await db.insert(
+          'feature_list_sorting', {'sort_key': 'name', 'sort_direction': 1});
+      await db.execute('CREATE TABLE feature_filters ('
+          'filter_name text not null PRIMARY KEY,'
+          'users text not null,'
+          'categories text not null,'
+          'attributes text not null,'
+          'attributes_exact integer not null,'
+          'edit_state text not null,'
+          'search_term text not null)');
+      await db.insert('feature_filters', {
+        'filter_name': FeatureFilter.featureList.name,
+        'users': jsonEncode(
+            (await db.query('point_list_checked_users', columns: ['id']))
+                .map((e) => e['id'])
+                .toList(growable: false)),
+        'categories': jsonEncode((await db
+                .query('point_list_checked_categories', columns: ['category']))
+            .map((e) => e['category'])
+            .toList(growable: false)),
+        'attributes': jsonEncode((await db
+                .query('point_list_checked_attributes', columns: ['attribute']))
+            .map((e) => e['attribute'])
+            .toList(growable: false)),
+        'attributes_exact': 0,
+        'edit_state': EditState.anyState.name,
+        'search_term': ''
+      });
+      var rows = await db.query('point_list_settings',
+          columns: [
+            'sort_key',
+            'sort_direction',
+            'attribute_filter_exact',
+            'edit_state_filter'
+          ],
+          limit: 1);
+      if (rows.isNotEmpty) {
+        await db.update('feature_list_sorting', {
+          'sort_key': rows[0]['sort_key'],
+          'sort_direction': rows[0]['sort_direction']
+        });
+        await db.update('feature_filters', {
+          'attributes_exact': rows[0]['attribute_filter_exact'],
+          'edit_state': rows[0]['edit_state_filter']
+        });
+      }
+      await db.execute('DROP TABLE point_list_settings');
+      await db.execute('DROP TABLE point_list_checked_categories');
+      await db.execute('DROP TABLE point_list_checked_attributes');
+      await db.execute('DROP TABLE point_list_checked_users');
+
+      await db.insert('feature_filters', {
+        'filter_name': FeatureFilter.map.name,
+        'users': '[]',
+        'categories': '[]',
+        'attributes': '[]',
+        'attributes_exact': 0,
+        'edit_state': EditState.anyState.name,
+        'search_term': ''
+      });
     }
   }
 
@@ -280,123 +359,148 @@ class Storage {
   }
   //endregion
 
-  //region point list sorts and filters
-  late Sort _pointListSortKey;
-  late int _pointListSortDir;
-  late bool _pointListAttributeFilterExact;
-  late EditState _pointListEditStateFilter;
-  final Set<int> _pointListCheckedUsers = {};
-  final Set<PointCategory> _pointListCheckedCategories = {};
-  final Set<PointAttribute> _pointListCheckedAttributes = {};
-  Sort get pointListSortKey => _pointListSortKey;
-  int get pointListSortDir => _pointListSortDir;
-  bool get pointListAttributeFilterExact => _pointListAttributeFilterExact;
-  EditState get pointListEditStateFilter => _pointListEditStateFilter;
-  UnmodifiableSetView<int> get pointListCheckedUsers =>
-      UnmodifiableSetView(_pointListCheckedUsers);
-  UnmodifiableSetView<PointCategory> get pointListCheckedCategories =>
-      UnmodifiableSetView(_pointListCheckedCategories);
-  UnmodifiableSetView<PointAttribute> get pointListCheckedAttributes =>
-      UnmodifiableSetView(_pointListCheckedAttributes);
+  //region feature list sorts
+  late Sort _featureListSortKey;
+  late int _featureListSortDir;
+  Sort get featureListSortKey => _featureListSortKey;
+  int get featureListSortDir => _featureListSortDir;
 
-  Future<void> setPointListSortKey(Sort sort) async {
-    _pointListSortKey = sort;
-    await _db.update('point_list_settings', {'sort_key': sort.name()});
+  Future<void> setFeatureListSortKey(Sort sort) async {
+    _featureListSortKey = sort;
+    await _db.update('feature_list_sorting', {'sort_key': sort.name()});
   }
 
-  Future<void> setPointListSortDir(int dir) async {
-    _pointListSortDir = dir;
-    await _db.update('point_list_settings', {'sort_direction': dir});
+  Future<void> setFeatureListSortDir(int dir) async {
+    _featureListSortDir = dir;
+    await _db.update('feature_list_sorting', {'sort_direction': dir});
   }
 
-  Future<void> setPointListAttributeFilterExact(bool exact) async {
-    _pointListAttributeFilterExact = exact;
-    await _db.update(
-        'point_list_settings', {'attribute_filter_exact': exact ? 1 : 0});
-  }
-
-  Future<void> setPointListEditStateFilter(EditState editState) async {
-    _pointListEditStateFilter = editState;
-    await _db
-        .update('point_list_settings', {'edit_state_filter': editState.name});
-  }
-
-  Future<void> setPointListCheckedUsers(Iterable<int> userIds) async {
-    await _db.transaction((Transaction tx) async {
-      await tx.execute('delete from point_list_checked_users');
-      var batch = tx.batch();
-      for (var id in userIds) {
-        batch.insert('point_list_checked_users', {'id': id});
-      }
-      await batch.commit(noResult: true);
-      await _loadPointListSettings(tx);
-    });
-  }
-
-  Future<void> setPointListCheckedCategories(
-      Iterable<PointCategory> categories) async {
-    await _db.transaction((Transaction tx) async {
-      await tx.execute('delete from point_list_checked_categories');
-      var batch = tx.batch();
-      for (var cat in categories) {
-        batch.insert('point_list_checked_categories', {'category': cat.name});
-      }
-      await batch.commit(noResult: true);
-      await _loadPointListSettings(tx);
-    });
-  }
-
-  Future<void> setPointListCheckedAttributes(
-      Iterable<PointAttribute> attributes) async {
-    await _db.transaction((Transaction tx) async {
-      await tx.execute('delete from point_list_checked_attributes');
-      var batch = tx.batch();
-      for (var attr in attributes) {
-        batch.insert('point_list_checked_attributes', {'attribute': attr.name});
-      }
-      await batch.commit(noResult: true);
-      await _loadPointListSettings(tx);
-    });
-  }
-
-  Future<void> _loadPointListSettings([Transaction? txn]) async {
+  Future<void> _loadFeatureListSorting([Transaction? txn]) async {
     Future<void> f(Transaction tx) async {
-      var rows = await tx.query('point_list_settings',
+      var rows = await tx.query('feature_list_sorting',
+          columns: ['sort_key', 'sort_direction'], limit: 1);
+      for (var row in rows) {
+        _featureListSortKey = SortExt.parse(row['sort_key'] as String);
+        _featureListSortDir = row['sort_direction'] as int;
+      }
+    }
+
+    if (txn == null) {
+      await _db.transaction(f);
+    } else {
+      await f(txn);
+    }
+  }
+  //endregion
+
+  //region feature filters
+  final Map<FeatureFilter, Set<int>> _filterUsers = {};
+  final Map<FeatureFilter, Set<PointCategory>> _filterCategories = {};
+  final Map<FeatureFilter, Set<PointAttribute>> _filterAttributes = {};
+  final Map<FeatureFilter, bool> _filterAttributesExact = {};
+  final Map<FeatureFilter, EditState> _filterEditState = {};
+  final Map<FeatureFilter, String> _filterSearchTerm = {};
+  UnmodifiableSetView<int> getFeatureFilterUsers(FeatureFilter filter) =>
+      UnmodifiableSetView(_filterUsers[filter]!);
+  UnmodifiableSetView<PointCategory> getFeatureFilterCategories(
+          FeatureFilter filter) =>
+      UnmodifiableSetView(_filterCategories[filter]!);
+  UnmodifiableSetView<PointAttribute> getFeatureFilterAttributes(
+          FeatureFilter filter) =>
+      UnmodifiableSetView(_filterAttributes[filter]!);
+  bool getFeatureFilterAttributesExact(FeatureFilter filter) =>
+      _filterAttributesExact[filter]!;
+  EditState getFeatureFilterEditState(FeatureFilter filter) =>
+      _filterEditState[filter]!;
+  String getFeatureFilterSearchTerm(FeatureFilter filter) =>
+      _filterSearchTerm[filter]!;
+
+  Future<void> setFeatureFilterUsers(
+      FeatureFilter filter, Iterable<int> userIds) async {
+    _filterUsers[filter] = Set<int>.from(userIds);
+    await _db.update('feature_filters',
+        {'users': jsonEncode(userIds.toList(growable: false))},
+        where: 'filter_name = ?', whereArgs: [filter.name]);
+  }
+
+  Future<void> setFeatureFilterCategories(
+      FeatureFilter filter, Iterable<PointCategory> categories) async {
+    _filterCategories[filter] = Set.of(categories);
+    await _db.update(
+        'feature_filters',
+        {
+          'categories':
+              jsonEncode(categories.map((e) => e.name).toList(growable: false))
+        },
+        where: 'filter_name = ?',
+        whereArgs: [filter.name]);
+  }
+
+  Future<void> setFeatureFilterAttributes(
+      FeatureFilter filter, Iterable<PointAttribute> attributes) async {
+    _filterAttributes[filter] = Set.of(attributes);
+    await _db.update(
+        'feature_filters',
+        {
+          'attributes':
+              jsonEncode(attributes.map((e) => e.name).toList(growable: false))
+        },
+        where: 'filter_name = ?',
+        whereArgs: [filter.name]);
+  }
+
+  Future<void> setFeatureFilterAttributesExact(
+      FeatureFilter filter, bool exact) async {
+    _filterAttributesExact[filter] = exact;
+    await _db.update('feature_filters', {'attributes_exact': exact ? 1 : 0},
+        where: 'filter_name = ?', whereArgs: [filter.name]);
+  }
+
+  Future<void> setFeatureFilterEditState(
+      FeatureFilter filter, EditState editState) async {
+    _filterEditState[filter] = editState;
+    await _db.update('feature_filters', {'edit_state': editState.name},
+        where: 'filter_name = ?', whereArgs: [filter.name]);
+  }
+
+  Future<void> setFeatureFilterSearchTerm(
+      FeatureFilter filter, String searchTerm) async {
+    _filterSearchTerm[filter] = searchTerm;
+    await _db.update('feature_filters', {'search_term': searchTerm},
+        where: 'filter_name = ?', whereArgs: [filter.name]);
+  }
+
+  Future<void> _loadFeatureFilter(FeatureFilter filter,
+      [Transaction? txn]) async {
+    Future<void> f(Transaction tx) async {
+      var rows = await tx.query('feature_filters',
           columns: [
-            'sort_key',
-            'sort_direction',
-            'attribute_filter_exact',
-            'edit_state_filter'
+            'users',
+            'categories',
+            'attributes',
+            'attributes_exact',
+            'edit_state',
+            'search_term'
           ],
+          where: 'filter_name = ?',
+          whereArgs: [filter.name],
           limit: 1);
       for (var row in rows) {
-        _pointListSortKey = SortExt.parse(row['sort_key'] as String);
-        _pointListSortDir = row['sort_direction'] as int;
-        _pointListAttributeFilterExact = row['attribute_filter_exact'] != 0;
-        _pointListEditStateFilter =
-            parseEditState(row['edit_state_filter'] as String);
-      }
-
-      rows = await tx
-          .query('point_list_checked_categories', columns: ['category']);
-      _pointListCheckedCategories.clear();
-      for (var row in rows) {
-        _pointListCheckedCategories
-            .add(PointCategory.fromNameString(row['category'] as String));
-      }
-
-      rows = await tx
-          .query('point_list_checked_attributes', columns: ['attribute']);
-      _pointListCheckedAttributes.clear();
-      for (var row in rows) {
-        _pointListCheckedAttributes
-            .add(PointAttribute.fromNameString(row['attribute'] as String));
-      }
-
-      rows = await tx.query('point_list_checked_users', columns: ['id']);
-      _pointListCheckedUsers.clear();
-      for (var row in rows) {
-        _pointListCheckedUsers.add(row['id'] as int);
+        _filterUsers[filter] =
+            (jsonDecode(row['users'] as String) as List<dynamic>)
+                .map((e) => e as int)
+                .toSet();
+        _filterCategories[filter] =
+            (jsonDecode(row['categories'] as String) as List<dynamic>)
+                .map((e) => PointCategory.fromNameString(e))
+                .toSet();
+        _filterAttributes[filter] =
+            (jsonDecode(row['attributes'] as String) as List<dynamic>)
+                .map((e) => PointAttribute.fromNameString(e))
+                .toSet();
+        _filterAttributesExact[filter] = row['attributes_exact'] != 0;
+        _filterEditState[filter] = parseEditState(row['edit_state'] as String);
+        _filterSearchTerm[filter] = row['search_term'] as String;
       }
     }
 

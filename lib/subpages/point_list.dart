@@ -53,20 +53,30 @@ class _PointListState extends State<PointList> {
     super.initState();
     points = List.of(widget.points, growable: false);
     searchController.addListener(() {
-      setState(() {});
+      setState(() {
+        storage.setFeatureFilterSearchTerm(
+            FeatureFilter.featureList, searchController.text);
+      });
     });
 
     getStorage().whenComplete(() => setState(() {
-          asc = storage.pointListSortDir;
-          sort = storage.pointListSortKey;
-          exact = storage.pointListAttributeFilterExact;
-          editState = storage.pointListEditStateFilter;
+          asc = storage.featureListSortDir;
+          sort = storage.featureListSortKey;
+          exact = storage
+              .getFeatureFilterAttributesExact(FeatureFilter.featureList);
+          editState =
+              storage.getFeatureFilterEditState(FeatureFilter.featureList);
           checkedCategories.clear();
-          checkedCategories.addAll(storage.pointListCheckedCategories);
+          checkedCategories.addAll(
+              storage.getFeatureFilterCategories(FeatureFilter.featureList));
           checkedUsers.clear();
-          checkedUsers.addAll(storage.pointListCheckedUsers);
+          checkedUsers
+              .addAll(storage.getFeatureFilterUsers(FeatureFilter.featureList));
           checkedAttributes.clear();
-          checkedAttributes.addAll(storage.pointListCheckedAttributes);
+          checkedAttributes.addAll(
+              storage.getFeatureFilterAttributes(FeatureFilter.featureList));
+          searchController.text =
+              storage.getFeatureFilterSearchTerm(FeatureFilter.featureList);
           doSort();
         }));
   }
@@ -88,6 +98,23 @@ class _PointListState extends State<PointList> {
           leading: BackButton(
             onPressed: () => Navigator.of(context).pop(),
           ),
+          actions: [
+            IconButton(
+                onPressed: () => {},
+                icon: const SizedBox(
+                    width: 36,
+                    height: 36,
+                    child: Stack(
+                      children: [
+                        Align(
+                            alignment: Alignment.topLeft,
+                            child: Icon(Icons.filter_alt)),
+                        Align(
+                            alignment: Alignment.bottomRight,
+                            child: Icon(Icons.map)),
+                      ],
+                    )))
+          ],
         ),
         body: Column(
           mainAxisAlignment: MainAxisAlignment.start,
@@ -187,7 +214,13 @@ class _PointListState extends State<PointList> {
             Padding(
                 padding: const EdgeInsets.all(8),
                 child: TextField(
-                  decoration: const InputDecoration(icon: Icon(Icons.search)),
+                  decoration: InputDecoration(
+                      icon: const Icon(Icons.search),
+                      suffixIcon: searchController.text.isEmpty ? null : IconButton(
+                        onPressed: searchController.clear,
+                        icon: const Icon(Icons.clear),
+                        tooltip: I18N.of(context).clearButtonTooltip,
+                      )),
                   controller: searchController,
                 )),
             const Padding(
@@ -318,10 +351,12 @@ class _PointListState extends State<PointList> {
     if (result == null) {
       return;
     }
-    await storage.setPointListCheckedUsers(result.checked);
+    await storage.setFeatureFilterUsers(
+        FeatureFilter.featureList, result.checked);
     setState(() {
       checkedUsers.clear();
-      checkedUsers.addAll(storage.pointListCheckedUsers);
+      checkedUsers
+          .addAll(storage.getFeatureFilterUsers(FeatureFilter.featureList));
     });
   }
 
@@ -340,10 +375,12 @@ class _PointListState extends State<PointList> {
     if (result == null) {
       return;
     }
-    await storage.setPointListCheckedCategories(result.checked);
+    await storage.setFeatureFilterCategories(
+        FeatureFilter.featureList, result.checked);
     setState(() {
       checkedCategories.clear();
-      checkedCategories.addAll(storage.pointListCheckedCategories);
+      checkedCategories.addAll(
+          storage.getFeatureFilterCategories(FeatureFilter.featureList));
     });
   }
 
@@ -366,12 +403,15 @@ class _PointListState extends State<PointList> {
     if (result == null) {
       return;
     }
-    await storage.setPointListAttributeFilterExact(result.switcher);
-    await storage.setPointListCheckedAttributes(result.checked);
+    await storage.setFeatureFilterAttributesExact(
+        FeatureFilter.featureList, result.switcher);
+    await storage.setFeatureFilterAttributes(
+        FeatureFilter.featureList, result.checked);
     setState(() {
       exact = result.switcher;
       checkedAttributes.clear();
-      checkedAttributes.addAll(storage.pointListCheckedAttributes);
+      checkedAttributes.addAll(
+          storage.getFeatureFilterAttributes(FeatureFilter.featureList));
     });
   }
 
@@ -388,11 +428,11 @@ class _PointListState extends State<PointList> {
       EditState.newState: const Icon(Icons.star),
       EditState.editedState: const Icon(Icons.edit),
       EditState.deletedState: const Icon(Icons.delete),
-      EditState.editedDeletedState: SizedBox(
+      EditState.editedDeletedState: const SizedBox(
           width: 35,
           height: 35,
           child: Stack(
-            children: const [
+            children: [
               Align(alignment: Alignment.topLeft, child: Icon(Icons.delete)),
               Align(alignment: Alignment.bottomRight, child: Icon(Icons.edit)),
             ],
@@ -412,7 +452,7 @@ class _PointListState extends State<PointList> {
     if (result == null) {
       return;
     }
-    await storage.setPointListEditStateFilter(result);
+    await storage.setFeatureFilterEditState(FeatureFilter.featureList, result);
     setState(() {
       editState = result;
     });
@@ -456,14 +496,14 @@ class _PointListState extends State<PointList> {
       return;
     }
     sort = s;
-    await storage.setPointListSortKey(sort);
+    await storage.setFeatureListSortKey(sort);
     doSort();
     setState(() {});
   }
 
   void onSortDir() async {
     asc = asc * -1;
-    await storage.setPointListSortDir(asc);
+    await storage.setFeatureListSortDir(asc);
     doSort();
     setState(() {});
   }
