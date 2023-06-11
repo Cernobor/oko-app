@@ -1,6 +1,5 @@
 import 'dart:developer' as developer;
 import 'dart:io';
-import 'dart:typed_data';
 
 import 'package:collection/collection.dart';
 import 'package:flutter/foundation.dart';
@@ -195,12 +194,16 @@ class PointCategory implements Comparable {
 class PointAttribute implements Comparable {
   static const PointAttribute important = PointAttribute._(
       0, 'important', Icons.warning, -1, -1, Color(0xffff0000));
+  static const PointAttribute cleaned = PointAttribute._(
+      1, 'cleaned', Icons.cleaning_services, -1, 0, Color(0xff00ff0f));
 
-  static final List<PointAttribute> attributes = [important];
+  static final List<PointAttribute> attributes = [important, cleaned];
 
   static PointAttribute fromNameString(String? s) {
     if (s == important.name) {
       return important;
+    } else if (s == cleaned.name) {
+      return cleaned;
     } else {
       throw IllegalStateException('unsupported attribute name');
     }
