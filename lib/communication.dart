@@ -114,15 +114,16 @@ Uri _dataUri(String baseAddr) =>
 Uri _mapPackUri(String baseAddr) =>
     Uri.parse(ensureTrailingSlash(baseAddr)).resolve('mappack');
 
-class UserAgentClient extends http.BaseClient {
+class AppClient extends http.BaseClient {
   final Map<String, String> _defaultHeaders;
   final http.Client _httpClient = http.Client();
 
-  UserAgentClient(String userAgent)
+  AppClient(String userAgent)
       : _defaultHeaders = {'user-agent': userAgent};
 
   @override
   Future<http.StreamedResponse> send(http.BaseRequest request) {
+    _mergeHeaders(request.headers);
     return _httpClient.send(request);
   }
 
@@ -166,6 +167,18 @@ class UserAgentClient extends http.BaseClient {
 
   Map<String, String> _mergedHeaders(Map<String, String>? headers) =>
       {..._defaultHeaders, ...?headers};
+
+  void _mergeHeaders(Map<String, String>? headers) {
+    headers?.addAll(_defaultHeaders);
+  }
+
+  void setUserID(int id) {
+    _defaultHeaders['X-User-ID'] = id.toString();
+  }
+
+  void unsetUserID() {
+    _defaultHeaders.remove('X-User-ID');
+  }
 }
 
 Future<void> _downloadFile(Uri uri, File dest,
@@ -175,7 +188,7 @@ Future<void> _downloadFile(Uri uri, File dest,
   if (prepareRequest != null) {
     prepareRequest(req);
   }
-  var res = await getIt.get<http.Client>().send(req);
+  var res = await getIt.get<AppClient>().send(req);
   if (res.statusCode >= 500) {
     throw InternalServerError(await res.stream.bytesToString());
   }
@@ -206,7 +219,7 @@ Future<ServerSettings> handshake(
     String serverAddress, String name, bool exists) async {
   Uri uri = _handshakeUri(serverAddress);
   developer.log('Handshaking: $uri');
-  var res = await getIt.get<http.Client>().post(uri,
+  var res = await getIt.get<AppClient>().post(uri,
       headers: {'Content-Type': 'application/json'},
       body: jsonEncode({'name': name, 'exists': exists}));
   var body = res.body;
@@ -255,7 +268,7 @@ class PingResponse {
 Future<PingResponse?> ping(String serverAddress) async {
   var uri = _pingUri(serverAddress);
   try {
-    var client = getIt.get<http.Client>();
+    var client = getIt.get<AppClient>();
     var res = await client.get(uri);
     if (res.statusCode == HttpStatus.noContent) {
       return PingResponse(null);
@@ -286,7 +299,7 @@ Future<void> downloadMap(String serverAddress, File dest,
 Future<ServerData> downloadData(String serverAddress) async {
   Uri uri = _dataUri(serverAddress);
   var res = await getIt
-      .get<http.Client>()
+      .get<AppClient>()
       .get(uri, headers: {'Accept': 'application/json'});
   var body = res.body;
   if (res.statusCode != HttpStatus.ok) {
@@ -358,7 +371,7 @@ Future<void> uploadData(
         filename: entry.key,
         contentType: MediaType.parse(entry.value.contentType)));
   }
-  var res = await getIt.get<http.Client>().send(req);
+  var res = await getIt.get<AppClient>().send(req);
 
   switch (res.statusCode) {
     case HttpStatus.badRequest:

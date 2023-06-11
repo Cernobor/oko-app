@@ -233,7 +233,9 @@ class _PairingState extends State<Pairing> {
           e.toString(), utils.NotificationLevel.error);
       return;
     }
-    Navigator.of(context).pop(ss);
+    if (context.mounted) {
+      Navigator.of(context).pop(ss);
+    }
   }
 
   @override

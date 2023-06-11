@@ -9,7 +9,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_compass/flutter_compass.dart';
 import 'package:flutter_map/plugin_api.dart';
 import 'package:get_it/get_it.dart';
-import 'package:http/http.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:location/location.dart';
 import 'package:oko/communication.dart' as comm;
@@ -123,8 +122,8 @@ class MainWidgetState extends State<MainWidget> {
 
   Future<bool> init() async {
     getIt.registerSingletonAsync<PackageInfo>(PackageInfo.fromPlatform);
-    getIt.registerSingletonWithDependencies<Client>(
-        () => comm.UserAgentClient(
+    getIt.registerSingletonWithDependencies<comm.AppClient>(
+        () => comm.AppClient(
             '${getIt.get<PackageInfo>().appName}/${getIt.get<PackageInfo>().version}'),
         dependsOn: [PackageInfo]);
 
@@ -1097,7 +1096,9 @@ class MainWidgetState extends State<MainWidget> {
     data.ServerSettings? settings = await Navigator.of(context).push(
         MaterialPageRoute<data.ServerSettings>(
             builder: (context) => Pairing(scaffoldKey: scaffoldKey)));
-    Navigator.of(context).pop();
+    if (context.mounted) {
+      Navigator.of(context).pop();
+    }
     if (settings == null) {
       developer.log('no settings');
     } else {
@@ -1111,11 +1112,16 @@ class MainWidgetState extends State<MainWidget> {
           null,
           null,
           null));
+      getIt.get<comm.AppClient>().setUserID(settings.id);
       // TODO with photos?
       bool success = await download(true);
       if (success) {
-        utils.notifySnackbar(context, I18N.of(context).syncSuccessful,
-            utils.NotificationLevel.success);
+        if (context.mounted) {
+          utils.notifySnackbar(context, I18N
+              .of(context)
+              .syncSuccessful,
+              utils.NotificationLevel.success);
+        }
       }
       setState(() {});
       mapController.move(storage!.serverSettings!.defaultCenter,
@@ -1143,40 +1149,56 @@ class MainWidgetState extends State<MainWidget> {
         pinging = false;
       });
 
-      await showDialog(
-          context: context,
-          builder: (context) => AlertDialog(
-                  title: Text(I18N.of(context).newVersionNotificationTitle),
-                  content: SingleChildScrollView(
-                    child: Column(
-                      children: [
-                        Text(I18N.of(context).newVersionNotificationText(
-                            getIt.get<PackageInfo>().version,
-                            res.appVersion!.version)),
-                        const SizedBox(height: 10),
-                        Text(I18N.of(context).newVersionDismissalInfo)
-                      ],
-                    ),
-                  ),
-                  actionsAlignment: MainAxisAlignment.spaceBetween,
-                  actions: [
-                    TextButton(
-                        child: Column(children: [
+      if (context.mounted) {
+        await showDialog(
+            context: context,
+            builder: (context) =>
+                AlertDialog(
+                    title: Text(I18N
+                        .of(context)
+                        .newVersionNotificationTitle),
+                    content: SingleChildScrollView(
+                      child: Column(
+                        children: [
+                          Text(I18N.of(context).newVersionNotificationText(
+                              getIt
+                                  .get<PackageInfo>()
+                                  .version,
+                              res.appVersion!.version)),
+                          const SizedBox(height: 10),
                           Text(I18N
                               .of(context)
-                              .newVersionNotificationDownloadButton),
-                        ]),
-                        onPressed: () async {
-                          if (!await launchUrlString(res.appVersion!.address)) {
-                            utils.notifyDialog(context, 'TODO', 'TODO',
-                                utils.NotificationLevel.error);
-                          }
-                          Navigator.of(context).pop();
-                        }),
-                    TextButton(
-                        child: Text(I18N.of(context).dismiss),
-                        onPressed: () => Navigator.of(context).pop())
-                  ]));
+                              .newVersionDismissalInfo)
+                        ],
+                      ),
+                    ),
+                    actionsAlignment: MainAxisAlignment.spaceBetween,
+                    actions: [
+                      TextButton(
+                          child: Column(children: [
+                            Text(I18N
+                                .of(context)
+                                .newVersionNotificationDownloadButton),
+                          ]),
+                          onPressed: () async {
+                            if (!await launchUrlString(
+                                res.appVersion!.address)) {
+                              if (context.mounted) {
+                                utils.notifyDialog(context, 'TODO', 'TODO',
+                                    utils.NotificationLevel.error);
+                              }
+                            }
+                            if (context.mounted) {
+                              Navigator.of(context).pop();
+                            }
+                          }),
+                      TextButton(
+                          child: Text(I18N
+                              .of(context)
+                              .dismiss),
+                          onPressed: () => Navigator.of(context).pop())
+                    ]));
+      }
       startPinging();
     }
   }
@@ -1244,8 +1266,12 @@ class MainWidgetState extends State<MainWidget> {
       setState(() {
         progressValue = null;
       });
-      utils.notifySnackbar(context, I18N.of(context).downloaded,
-          utils.NotificationLevel.success);
+      if (context.mounted) {
+        utils.notifySnackbar(context, I18N
+            .of(context)
+            .downloaded,
+            utils.NotificationLevel.success);
+      }
     }
 
     // set
@@ -1328,9 +1354,13 @@ class MainWidgetState extends State<MainWidget> {
       }
 
       var unpackDir = tempDir.createTempSync();
-      utils.notifySnackbar(
-          context, I18N.of(context).unpacking, utils.NotificationLevel.info,
-          vibrate: false);
+      if (context.mounted) {
+        utils.notifySnackbar(
+            context, I18N
+            .of(context)
+            .unpacking, utils.NotificationLevel.info,
+            vibrate: false);
+      }
       await utils.unzip(downloadFile, unpackDir, (progress) {
         if (progress.isNaN || progress.isInfinite) {
           developer.log('unpack NaN/infinite progress');
@@ -1422,10 +1452,14 @@ class MainWidgetState extends State<MainWidget> {
     }
     // TODO with photos?
     bool success = await download(true);
-    Navigator.of(context).pop();
-    if (success) {
-      utils.notifySnackbar(context, I18N.of(context).downloaded,
-          utils.NotificationLevel.success);
+    if (context.mounted) {
+      Navigator.of(context).pop();
+      if (success) {
+        utils.notifySnackbar(context, I18N
+            .of(context)
+            .downloaded,
+            utils.NotificationLevel.success);
+      }
     }
     setState(() {
       infoTarget = Target.none();
@@ -1475,13 +1509,19 @@ class MainWidgetState extends State<MainWidget> {
       );
     } on comm.DetailedCommException catch (e, stack) {
       developer.log('exception: ${e.toString()}\n$stack');
-      await utils.notifyDialog(context, e.getMessage(context), e.detail,
-          utils.NotificationLevel.error);
+      if (context.mounted) {
+        await utils.notifyDialog(context, e.getMessage(context), e.detail,
+            utils.NotificationLevel.error);
+      }
       return false;
     } catch (e, stack) {
       developer.log('exception: ${e.toString()}\n$stack');
-      utils.notifySnackbar(context, I18N.of(context).serverUnavailable,
-          utils.NotificationLevel.error);
+      if (context.mounted) {
+        utils.notifySnackbar(context, I18N
+            .of(context)
+            .serverUnavailable,
+            utils.NotificationLevel.error);
+      }
       return false;
     }
     storage!.clearProposals();
@@ -1491,10 +1531,14 @@ class MainWidgetState extends State<MainWidget> {
   FutureOr<void> onUpload() async {
     developer.log('onUpload');
     bool success = await upload();
-    Navigator.of(context).pop();
-    if (success) {
-      utils.notifySnackbar(context, I18N.of(context).syncSuccessful,
-          utils.NotificationLevel.success);
+    if (context.mounted) {
+      Navigator.of(context).pop();
+      if (success) {
+        utils.notifySnackbar(context, I18N
+            .of(context)
+            .syncSuccessful,
+            utils.NotificationLevel.success);
+      }
     }
     setState(() {});
   }
@@ -1534,7 +1578,9 @@ class MainWidgetState extends State<MainWidget> {
     if (point == null) {
       return;
     }
-    Navigator.pop(context);
+    if (context.mounted) {
+      Navigator.pop(context);
+    }
     point.id = await storage!.nextLocalId();
     await storage!.upsertFeature(point);
     setState(() {});
@@ -1589,7 +1635,9 @@ class MainWidgetState extends State<MainWidget> {
     setState(() {
       infoTarget = Target(selected);
     });
-    Navigator.of(context).pop();
+    if (context.mounted) {
+      Navigator.of(context).pop();
+    }
   }
 
   void onUserListTap() {
@@ -1598,22 +1646,33 @@ class MainWidgetState extends State<MainWidget> {
           context, 'No storage!', utils.NotificationLevel.error);
       Navigator.of(context).pop();
     }
-    Map<int, String>? users = Map.of(storage!.users);
+    List<MapEntry<int, String>> users = Map.of(storage!.users).entries.toList();
+    users.sort((a, b) {
+      if (a.key == 0 && b.key != 0) {
+        return 1;
+      }
+      if (a.key != 0 && b.key == 0) {
+        return -1;
+      }
+      return a.key - b.key;
+    });
     showDialog(
         context: context,
         builder: (context) => AlertDialog(
               actionsAlignment: MainAxisAlignment.center,
               title: Text(I18N.of(context).userListTitle),
-              content: ListView(
-                scrollDirection: Axis.vertical,
-                shrinkWrap: true,
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
-                children: users.entries
-                    .map((e) => Text(
-                        '\u2022 ${e.value}${e.key == storage!.serverSettings?.id ? ' (${I18N.of(context).me})' : ''}'))
-                    .toList(growable: false)
-                  ..sort((Text a, Text b) => -a.data!.compareTo(b.data!)),
+              content: SizedBox(
+                width: double.maxFinite,
+                child: ListView(
+                  scrollDirection: Axis.vertical,
+                  shrinkWrap: true,
+                  padding:
+                  const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+                  children: users
+                      .map((e) => Text(
+                      '\u2022 ${e.value} <ID: ${e.key}> ${e.key == storage!.serverSettings?.id ? ' (${I18N.of(context).me})' : ''}'))
+                      .toList(growable: false),
+                ),
               ),
               actions: [
                 TextButton(
@@ -1760,6 +1819,34 @@ class MainWidgetState extends State<MainWidget> {
   }
 
   void onReset() async {
+    bool? confirm = await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: Text(I18N.of(context).resetConfirm),
+          actionsAlignment: MainAxisAlignment.center,
+          actions: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: [
+                TextButton(
+                  child: Text(I18N.of(context).dialogConfirm),
+                  onPressed: () {
+                    Navigator.of(context).pop(true);
+                  },
+                ),
+                TextButton(
+                  child: Text(I18N.of(context).dialogCancel),
+                  onPressed: () {
+                    Navigator.of(context).pop(false);
+                  },
+                )
+              ],
+            )
+          ],
+        ));
+    if (confirm != true) {
+      return;
+    }
     developer.log('Resetting app.');
     if (storage == null) {
       developer.log('No storage - nothing to reset.');
@@ -1768,6 +1855,7 @@ class MainWidgetState extends State<MainWidget> {
     storage = await Storage.getInstance(reset: true);
     infoTarget = Target.none();
     progressValue = null;
+    getIt.get<comm.AppClient>().unsetUserID();
     setState(() {});
     if (!mounted) return;
     Navigator.of(context).pop();

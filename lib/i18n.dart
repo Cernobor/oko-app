@@ -312,6 +312,8 @@ class I18N {
         'en':
             'Breaks pairing and deletes all data. IRREVERSIBLE OPERATION. Activate by long press.'
       }[locale.languageCode]!;
+  String get resetConfirm =>
+      {'cs': 'Opravdu resetovat aplikaci?', 'en': 'Really reset the app?'}[locale.languageCode]!;
   String get resetDone =>
       {'cs': 'Vyresetováno.', 'en': 'Reset done.'}[locale.languageCode]!;
   String get attributes =>
