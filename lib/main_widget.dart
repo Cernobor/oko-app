@@ -544,7 +544,9 @@ class MainWidgetState extends State<MainWidget> {
     if (storage == null) {
       return [];
     }
-    return storage!.features.whereType<data.Point>().map((data.Point point) {
+    utils.FeatureFilter filter = storage!.getFeatureFilter(FeatureFilterInst.map);
+    Iterable<data.Point> points = storage!.features.whereType<data.Point>();
+    return filter.filter(points).map((data.Point point) {
       var baseSize = 35.0;
       var badgeSize = 12.0;
       var width = baseSize * (infoTarget.isSamePoint(point) ? 1.5 : 1);

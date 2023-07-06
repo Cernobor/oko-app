@@ -1,5 +1,4 @@
 import 'package:diacritic/diacritic.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:oko/data.dart';
 import 'package:oko/dialogs/multi_checker.dart';
@@ -78,20 +77,22 @@ class _PointListState extends State<PointList> {
           ),
           actions: [
             IconButton(
-                onPressed: () => {},
-                icon: const SizedBox(
-                    width: 36,
-                    height: 36,
-                    child: Stack(
-                      children: [
-                        Align(
-                            alignment: Alignment.topLeft,
-                            child: Icon(Icons.filter_alt)),
-                        Align(
-                            alignment: Alignment.bottomRight,
-                            child: Icon(Icons.map)),
-                      ],
-                    )))
+              tooltip: I18N.of(context).applyFilterToMap,
+              icon: const SizedBox(
+                  width: 36,
+                  height: 36,
+                  child: Stack(
+                    children: [
+                      Align(
+                          alignment: Alignment.topLeft,
+                          child: Icon(Icons.filter_alt)),
+                      Align(
+                          alignment: Alignment.bottomRight,
+                          child: Icon(Icons.map)),
+                    ],
+                  )),
+              onPressed: onStoreMapFilter,
+            )
           ],
         ),
         body: Column(
@@ -142,9 +143,10 @@ class _PointListState extends State<PointList> {
                             tooltip: I18N.of(context).filterByAttributes,
                             icon: Icon(
                               Icons.edit_attributes,
-                              color: (filter.exact || filter.attributes.isNotEmpty)
-                                  ? Theme.of(context).colorScheme.primary
-                                  : null,
+                              color:
+                                  (filter.exact || filter.attributes.isNotEmpty)
+                                      ? Theme.of(context).colorScheme.primary
+                                      : null,
                             ),
                             onPressed: onAttributesButtonPressed,
                           )),
@@ -194,11 +196,13 @@ class _PointListState extends State<PointList> {
                 child: TextField(
                   decoration: InputDecoration(
                       icon: const Icon(Icons.search),
-                      suffixIcon: searchController.text.isEmpty ? null : IconButton(
-                        onPressed: searchController.clear,
-                        icon: const Icon(Icons.clear),
-                        tooltip: I18N.of(context).clearButtonTooltip,
-                      )),
+                      suffixIcon: searchController.text.isEmpty
+                          ? null
+                          : IconButton(
+                              onPressed: searchController.clear,
+                              icon: const Icon(Icons.clear),
+                              tooltip: I18N.of(context).clearButtonTooltip,
+                            )),
                   controller: searchController,
                 )),
             const Padding(
@@ -209,7 +213,10 @@ class _PointListState extends State<PointList> {
               ),
             ),
             Expanded(
-                child: ListView(children: filter.filter(points).map((Point point) => ListTile(
+                child: ListView(
+                    children: filter
+                        .filter(points)
+                        .map((Point point) => ListTile(
                               leading: SizedBox(
                                   width: 40,
                                   child: Stack(
@@ -283,11 +290,18 @@ class _PointListState extends State<PointList> {
                               onTap: () {
                                 Navigator.of(context).pop(point);
                               },
-                            )).toList(growable: false)))
+                            ))
+                        .toList(growable: false)))
           ],
         ),
       ),
     );
+  }
+
+  void onStoreMapFilter() {
+    Navigator.of(context).setState(() {
+      storage.setFeatureFilter(FeatureFilterInst.map, filter);
+    });
   }
 
   Future<void> onUsersButtonPressed() async {
