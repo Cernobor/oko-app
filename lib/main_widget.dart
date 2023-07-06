@@ -14,6 +14,7 @@ import 'package:location/location.dart';
 import 'package:oko/communication.dart' as comm;
 import 'package:oko/data.dart' as data;
 import 'package:oko/data.dart';
+import 'package:oko/feature_filters.dart';
 import 'package:oko/i18n.dart';
 import 'package:oko/main.dart';
 import 'package:oko/map.dart';
@@ -107,7 +108,8 @@ class MainWidgetState extends State<MainWidget> {
   double? currentHeading;
   Target infoTarget = Target.none();
   Target navigationTarget = Target.none();
-  bool poiListExpanded = false;
+  bool filterExpanded = false;
+  TextEditingController? searchController;
 
   // settings
   Storage? storage;
@@ -372,21 +374,29 @@ class MainWidgetState extends State<MainWidget> {
       color: Color(0xffdd0000),
       thickness: 2,
     );
+    Widget? bottomCard;
+    if (searchController != null) {
+      bottomCard = Container(
+          alignment: Alignment.bottomCenter,
+          constraints: const BoxConstraints.expand(),
+          child: createFilterSearch(context));
+    } else if (infoTarget.isSet) {
+      bottomCard = Container(
+        alignment: Alignment.bottomCenter,
+        constraints: const BoxConstraints.expand(),
+        child: createInfoContentFull(context),
+      );
+    } else if (navigationTarget.isSet && currentLocation != null) {
+      bottomCard = Container(
+        alignment: Alignment.bottomCenter,
+        constraints: const BoxConstraints.expand(),
+        child: createInfoContentDistance(context),
+      );
+    }
     return Stack(
       children: <Widget>[
         createMap(context),
-        if (navigationTarget.isSet && currentLocation != null)
-          Container(
-            alignment: Alignment.bottomCenter,
-            constraints: const BoxConstraints.expand(),
-            child: createInfoContentDistance(context),
-          ),
-        if (infoTarget.isSet)
-          Container(
-            alignment: Alignment.bottomCenter,
-            constraints: const BoxConstraints.expand(),
-            child: createInfoContentFull(context),
-          ),
+        if (bottomCard != null) bottomCard,
         Container(
             alignment: Alignment.center,
             child: SizedBox(
@@ -406,6 +416,11 @@ class MainWidgetState extends State<MainWidget> {
           alignment: Alignment.topRight,
           padding: const EdgeInsets.all(8.0),
           child: createMapControls(context),
+        ),
+        Container(
+          alignment: Alignment.topLeft,
+          padding: const EdgeInsets.all(8.0),
+          child: createMapFilterControl(context),
         )
       ],
     );
@@ -544,7 +559,7 @@ class MainWidgetState extends State<MainWidget> {
     if (storage == null) {
       return [];
     }
-    utils.FeatureFilter filter = storage!.getFeatureFilter(FeatureFilterInst.map);
+    FeatureFilter filter = storage!.getFeatureFilter(FeatureFilterInst.map);
     Iterable<data.Point> points = storage!.features.whereType<data.Point>();
     return filter.filter(points).map((data.Point point) {
       var baseSize = 35.0;
@@ -696,7 +711,9 @@ class MainWidgetState extends State<MainWidget> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: <Widget>[
                             Text(
-                                '${infoTarget.point.name} | ${storage?.users[infoTarget.point.ownerId]}',
+                                ('${infoTarget.point.name} | '
+                                    '${storage?.users[infoTarget.point.ownerId]}'
+                                    '${storage?.getFeatureFilter(FeatureFilterInst.map).passes(infoTarget.point) == true ? '' : ' (${I18N.of(context).filteredOut})'}'),
                                 style: Theme.of(context).textTheme.titleLarge),
                             Text(
                                 [
@@ -779,10 +796,12 @@ class MainWidgetState extends State<MainWidget> {
   }
 
   Widget createMapControls(BuildContext context) {
-    return Column(
-      mainAxisAlignment: MainAxisAlignment.start,
-      crossAxisAlignment: CrossAxisAlignment.end,
-      mainAxisSize: MainAxisSize.min,
+    return Wrap(
+      alignment: WrapAlignment.start,
+      direction: Axis.vertical,
+      crossAxisAlignment: WrapCrossAlignment.center,
+      runAlignment: WrapAlignment.end,
+      spacing: 10,
       children: <Widget>[
         FloatingActionButton(
           heroTag: 'fab-zoom-in',
@@ -803,55 +822,260 @@ class MainWidgetState extends State<MainWidget> {
             size: 30,
           ),
         ),
-        Container(
-          padding: const EdgeInsets.only(top: 6),
-          child: FloatingActionButton(
-            heroTag: 'fab-zoom-out',
-            tooltip: I18N.of(context).zoomOut,
-            elevation: 0,
-            backgroundColor: !mapReady ||
-                    mapController.zoom <=
-                        (storage?.serverSettings?.minZoom ?? fallbackMinZoom)
-                ? Theme.of(context).colorScheme.secondary.withOpacity(.35)
-                : null,
-            onPressed: !mapReady ||
-                    mapController.zoom <=
-                        (storage?.serverSettings?.minZoom ?? fallbackMinZoom)
-                ? null
-                : () => onZoom(-1),
-            child: const Icon(
-              Icons.zoom_out,
-              size: 30,
-            ),
+        FloatingActionButton(
+          heroTag: 'fab-zoom-out',
+          tooltip: I18N.of(context).zoomOut,
+          elevation: 0,
+          backgroundColor: !mapReady ||
+                  mapController.zoom <=
+                      (storage?.serverSettings?.minZoom ?? fallbackMinZoom)
+              ? Theme.of(context).colorScheme.secondary.withOpacity(.35)
+              : null,
+          onPressed: !mapReady ||
+                  mapController.zoom <=
+                      (storage?.serverSettings?.minZoom ?? fallbackMinZoom)
+              ? null
+              : () => onZoom(-1),
+          child: const Icon(
+            Icons.zoom_out,
+            size: 30,
           ),
         ),
-        Container(
-          padding: const EdgeInsets.only(top: 6),
-          child: FloatingActionButton(
-            heroTag: 'fab-reset-rotation',
-            tooltip: I18N.of(context).resetRotation,
-            elevation: 0,
-            backgroundColor: !mapReady || mapController.rotation == 0.0
-                ? Theme.of(context).colorScheme.secondary.withOpacity(.35)
-                : null,
-            onPressed: () {
-              if (mapReady) {
-                setState(() {
-                  mapController.rotate(0);
-                });
-              }
-            },
-            child: Transform.rotate(
-              angle: mapReady ? mapController.rotation * math.pi / 180 : 0,
-              child: const Icon(
-                Icons.north,
-                size: 30,
-              ),
+        FloatingActionButton(
+          heroTag: 'fab-reset-rotation',
+          tooltip: I18N.of(context).resetRotation,
+          elevation: 0,
+          backgroundColor: !mapReady || mapController.rotation == 0.0
+              ? Theme.of(context).colorScheme.secondary.withOpacity(.35)
+              : null,
+          onPressed: () {
+            if (mapReady) {
+              setState(() {
+                mapController.rotate(0);
+              });
+            }
+          },
+          child: Transform.rotate(
+            angle: mapReady ? mapController.rotation * math.pi / 180 : 0,
+            child: const Icon(
+              Icons.north,
+              size: 30,
             ),
           ),
         ),
       ],
     );
+  }
+
+  Widget createMapFilterControl(BuildContext context) {
+    return Wrap(
+      alignment: WrapAlignment.end,
+      direction: Axis.vertical,
+      crossAxisAlignment: WrapCrossAlignment.center,
+      runAlignment: WrapAlignment.end,
+      spacing: 2,
+      children: <Widget>[
+            FloatingActionButton(
+              heroTag: 'fab-filter',
+              tooltip: I18N.of(context).toFilter,
+              elevation: 0,
+              onPressed: () {
+                setState(() {
+                  filterExpanded = !filterExpanded;
+                  if (!filterExpanded && searchController != null) {
+                    onToggleFilterSearch();
+                  }
+                });
+              },
+              child: Icon(
+                Icons.filter_alt,
+                size: 30,
+                color: storage != null &&
+                        storage!
+                            .getFeatureFilter(FeatureFilterInst.map)
+                            .doesFilter(storage!.users.keys)
+                    ? Theme.of(context).colorScheme.primary
+                    : null,
+              ),
+            ),
+          ] +
+          (!filterExpanded
+              ? <Widget>[]
+              : <Widget>[
+                  FloatingActionButton(
+                    heroTag: 'fab-filter-people',
+                    tooltip: I18N.of(context).filterByOwner,
+                    elevation: 0,
+                    mini: true,
+                    onPressed: () async {
+                      FeatureFilter f =
+                          storage!.getFeatureFilter(FeatureFilterInst.map);
+                      bool changed = await f.setUsers(
+                          context: context,
+                          users: storage!.users,
+                          myId: storage!.serverSettings!.id);
+                      if (changed) {
+                        await storage!
+                            .setFeatureFilter(FeatureFilterInst.map, f);
+                        setState(() {});
+                      }
+                    },
+                    child: Icon(
+                      Icons.people,
+                      size: 16,
+                      color: storage != null &&
+                              storage!
+                                  .getFeatureFilter(FeatureFilterInst.map)
+                                  .doesFilterUsers(storage!.users.keys)
+                          ? Theme.of(context).colorScheme.primary
+                          : null,
+                    ),
+                  ),
+                  FloatingActionButton(
+                    heroTag: 'fab-filter-category',
+                    tooltip: I18N.of(context).filterByCategory,
+                    elevation: 0,
+                    mini: true,
+                    onPressed: () async {
+                      FeatureFilter f =
+                          storage!.getFeatureFilter(FeatureFilterInst.map);
+                      bool changed = await f.setCategories(context: context);
+                      if (changed) {
+                        await storage!
+                            .setFeatureFilter(FeatureFilterInst.map, f);
+                        setState(() {});
+                      }
+                    },
+                    child: Icon(
+                      Icons.category,
+                      size: 16,
+                      color: storage != null &&
+                              storage!
+                                  .getFeatureFilter(FeatureFilterInst.map)
+                                  .doesFilterCategories()
+                          ? Theme.of(context).colorScheme.primary
+                          : null,
+                    ),
+                  ),
+                  FloatingActionButton(
+                    heroTag: 'fab-filter-attributes',
+                    tooltip: I18N.of(context).filterByAttributes,
+                    elevation: 0,
+                    mini: true,
+                    onPressed: () async {
+                      FeatureFilter f =
+                          storage!.getFeatureFilter(FeatureFilterInst.map);
+                      bool changed = await f.setAttributes(context: context);
+                      if (changed) {
+                        await storage!
+                            .setFeatureFilter(FeatureFilterInst.map, f);
+                        setState(() {});
+                      }
+                    },
+                    child: Icon(
+                      Icons.edit_attributes,
+                      size: 16,
+                      color: storage != null &&
+                              storage!
+                                  .getFeatureFilter(FeatureFilterInst.map)
+                                  .doesFilterAttributes()
+                          ? Theme.of(context).colorScheme.primary
+                          : null,
+                    ),
+                  ),
+                  FloatingActionButton(
+                    heroTag: 'fab-filter-editState',
+                    tooltip: I18N.of(context).filterByEditState,
+                    elevation: 0,
+                    mini: true,
+                    onPressed: () async {
+                      FeatureFilter f =
+                          storage!.getFeatureFilter(FeatureFilterInst.map);
+                      bool changed = await f.setEditState(context: context);
+                      if (changed) {
+                        await storage!
+                            .setFeatureFilter(FeatureFilterInst.map, f);
+                        setState(() {});
+                      }
+                    },
+                    child: Icon(
+                      Icons.edit,
+                      size: 16,
+                      color: storage != null &&
+                              storage!
+                                  .getFeatureFilter(FeatureFilterInst.map)
+                                  .doesFilterEditState()
+                          ? Theme.of(context).colorScheme.primary
+                          : null,
+                    ),
+                  ),
+                  FloatingActionButton(
+                    heroTag: 'fab-filter-search',
+                    tooltip: I18N.of(context).filterByText,
+                    elevation: 0,
+                    mini: true,
+                    onPressed: () {
+                      setState(() {
+                        onToggleFilterSearch();
+                      });
+                    },
+                    child: Icon(
+                      Icons.search,
+                      size: 16,
+                      color: storage != null &&
+                              storage!
+                                  .getFeatureFilter(FeatureFilterInst.map)
+                                  .doesFilterSearch()
+                          ? Theme.of(context).colorScheme.primary
+                          : null,
+                    ),
+                  ),
+                  FloatingActionButton(
+                    heroTag: 'fab-filter-clear',
+                    tooltip: I18N.of(context).clearFilter,
+                    elevation: 0,
+                    mini: true,
+                    onPressed: () async {
+                      FeatureFilter f = FeatureFilter.empty();
+                      f.users = Set.of(storage!.users.keys);
+                      f.categories = Set.of(PointCategory.allCategories);
+                      await storage!.setFeatureFilter(FeatureFilterInst.map, f);
+                      setState(() {});
+                    },
+                    child: const Icon(
+                      Icons.clear,
+                      size: 16,
+                    ),
+                  )
+                ]),
+    );
+  }
+
+  Widget createFilterSearch(BuildContext context) {
+    return Dismissible(
+        key: const Key('filterSearchDismissible'),
+        onDismissed: (DismissDirection dd) {
+          setState(() {
+            onToggleFilterSearch();
+          });
+        },
+        resizeDuration: null,
+        child: Card(
+            child: Container(
+          padding: const EdgeInsets.all(8.0),
+          child: TextField(
+            decoration: InputDecoration(
+                icon: const Icon(Icons.search),
+                suffixIcon: searchController!.text.isEmpty
+                    ? null
+                    : IconButton(
+                        onPressed: searchController!.clear,
+                        icon: const Icon(Icons.clear),
+                        tooltip: I18N.of(context).clearButtonTooltip,
+                      )),
+            controller: searchController!,
+          ),
+        )));
   }
 
   Widget createBottomBar(BuildContext context) {
@@ -894,7 +1118,8 @@ class MainWidgetState extends State<MainWidget> {
                         ),
                       ),
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 3, vertical: 1),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 3, vertical: 1),
                         alignment: Alignment.centerLeft,
                         child: Text(
                           currentLocation == null
@@ -905,7 +1130,8 @@ class MainWidgetState extends State<MainWidget> {
                         ),
                       ),
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 3, vertical: 1),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 3, vertical: 1),
                         alignment: Alignment.centerLeft,
                         child: Text(
                           !mapReady
@@ -926,7 +1152,8 @@ class MainWidgetState extends State<MainWidget> {
                         ),
                       ),
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 3, vertical: 1),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 3, vertical: 1),
                         alignment: Alignment.centerLeft,
                         child: Text(
                           currentLocation == null
@@ -937,7 +1164,8 @@ class MainWidgetState extends State<MainWidget> {
                         ),
                       ),
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 3, vertical: 1),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 3, vertical: 1),
                         alignment: Alignment.centerLeft,
                         child: Text(
                           !mapReady
@@ -1052,6 +1280,27 @@ class MainWidgetState extends State<MainWidget> {
     }
   }
 
+  void onToggleFilterSearch() {
+    if (searchController == null) {
+      TextEditingController controller = TextEditingController();
+      FeatureFilter filter = storage!.getFeatureFilter(FeatureFilterInst.map);
+      controller.text = filter.searchTerm;
+      controller.addListener(() {
+        setState(() {
+          FeatureFilter filter =
+              storage!.getFeatureFilter(FeatureFilterInst.map);
+          filter.searchTerm = controller.text;
+          storage!.setFeatureFilter(FeatureFilterInst.featureList, filter);
+        });
+      });
+      searchController = controller;
+    } else {
+      TextEditingController controller = searchController!;
+      searchController = null;
+      controller.dispose();
+    }
+  }
+
   void onToggleLocationContinuous() {
     if (locationSubscription == null) {
       locationSubscription =
@@ -1110,9 +1359,7 @@ class MainWidgetState extends State<MainWidget> {
       bool success = await download(true);
       if (success) {
         if (context.mounted) {
-          utils.notifySnackbar(context, I18N
-              .of(context)
-              .syncSuccessful,
+          utils.notifySnackbar(context, I18N.of(context).syncSuccessful,
               utils.NotificationLevel.success);
         }
       }
@@ -1145,23 +1392,16 @@ class MainWidgetState extends State<MainWidget> {
       if (context.mounted) {
         await showDialog(
             context: context,
-            builder: (context) =>
-                AlertDialog(
-                    title: Text(I18N
-                        .of(context)
-                        .newVersionNotificationTitle),
+            builder: (context) => AlertDialog(
+                    title: Text(I18N.of(context).newVersionNotificationTitle),
                     content: SingleChildScrollView(
                       child: Column(
                         children: [
                           Text(I18N.of(context).newVersionNotificationText(
-                              getIt
-                                  .get<PackageInfo>()
-                                  .version,
+                              getIt.get<PackageInfo>().version,
                               res.appVersion!.version)),
                           const SizedBox(height: 10),
-                          Text(I18N
-                              .of(context)
-                              .newVersionDismissalInfo)
+                          Text(I18N.of(context).newVersionDismissalInfo)
                         ],
                       ),
                     ),
@@ -1186,9 +1426,7 @@ class MainWidgetState extends State<MainWidget> {
                             }
                           }),
                       TextButton(
-                          child: Text(I18N
-                              .of(context)
-                              .dismiss),
+                          child: Text(I18N.of(context).dismiss),
                           onPressed: () => Navigator.of(context).pop())
                     ]));
       }
@@ -1260,9 +1498,7 @@ class MainWidgetState extends State<MainWidget> {
         progressValue = null;
       });
       if (context.mounted) {
-        utils.notifySnackbar(context, I18N
-            .of(context)
-            .downloaded,
+        utils.notifySnackbar(context, I18N.of(context).downloaded,
             utils.NotificationLevel.success);
       }
     }
@@ -1352,9 +1588,7 @@ class MainWidgetState extends State<MainWidget> {
       var unpackDir = tempDir.createTempSync();
       if (context.mounted) {
         utils.notifySnackbar(
-            context, I18N
-            .of(context)
-            .unpacking, utils.NotificationLevel.info,
+            context, I18N.of(context).unpacking, utils.NotificationLevel.info,
             vibrate: false);
       }
       await utils.unzip(downloadFile, unpackDir, (progress) {
@@ -1454,9 +1688,7 @@ class MainWidgetState extends State<MainWidget> {
     if (context.mounted) {
       Navigator.of(context).pop();
       if (success) {
-        utils.notifySnackbar(context, I18N
-            .of(context)
-            .downloaded,
+        utils.notifySnackbar(context, I18N.of(context).downloaded,
             utils.NotificationLevel.success);
       }
     }
@@ -1516,9 +1748,7 @@ class MainWidgetState extends State<MainWidget> {
     } catch (e, stack) {
       developer.log('exception: ${e.toString()}\n$stack');
       if (context.mounted) {
-        utils.notifySnackbar(context, I18N
-            .of(context)
-            .serverUnavailable,
+        utils.notifySnackbar(context, I18N.of(context).serverUnavailable,
             utils.NotificationLevel.error);
       }
       return false;
@@ -1533,9 +1763,7 @@ class MainWidgetState extends State<MainWidget> {
     if (context.mounted) {
       Navigator.of(context).pop();
       if (success) {
-        utils.notifySnackbar(context, I18N
-            .of(context)
-            .syncSuccessful,
+        utils.notifySnackbar(context, I18N.of(context).syncSuccessful,
             utils.NotificationLevel.success);
       }
     }
@@ -1583,6 +1811,15 @@ class MainWidgetState extends State<MainWidget> {
     point.id = await storage!.nextLocalId();
     await storage!.upsertFeature(point);
     setState(() {});
+    if (context.mounted) {
+      if (storage!.getFeatureFilter(FeatureFilterInst.map).passes(point)) {
+        utils.notifySnackbar(context, I18N.of(context).pointCreated,
+            utils.NotificationLevel.success);
+      } else {
+        utils.notifySnackbar(context, I18N.of(context).pointCreatedFiltered,
+            utils.NotificationLevel.success);
+      }
+    }
   }
 
   void onEditPoint(data.Point point) async {
@@ -1609,7 +1846,11 @@ class MainWidgetState extends State<MainWidget> {
   void onMapTap(TapPosition tapPosition, LatLng coords) {
     developer.log('onMapTap: $coords');
     setState(() {
-      infoTarget = Target.none();
+      if (searchController != null) {
+        onToggleFilterSearch();
+      } else {
+        infoTarget = Target.none();
+      }
     });
   }
 
@@ -1629,6 +1870,7 @@ class MainWidgetState extends State<MainWidget> {
                 storage!.serverSettings!.id,
                 users)));
     if (selected == null) {
+      setState(() {});
       return;
     }
     setState(() {
@@ -1666,10 +1908,10 @@ class MainWidgetState extends State<MainWidget> {
                   scrollDirection: Axis.vertical,
                   shrinkWrap: true,
                   padding:
-                  const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+                      const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
                   children: users
                       .map((e) => Text(
-                      '\u2022 ${e.value} <ID: ${e.key}> ${e.key == storage!.serverSettings?.id ? ' (${I18N.of(context).me})' : ''}'))
+                          '\u2022 ${e.value} <ID: ${e.key}> ${e.key == storage!.serverSettings?.id ? ' (${I18N.of(context).me})' : ''}'))
                       .toList(growable: false),
                 ),
               ),
@@ -1821,28 +2063,28 @@ class MainWidgetState extends State<MainWidget> {
     bool? confirm = await showDialog<bool>(
         context: context,
         builder: (context) => AlertDialog(
-          title: Text(I18N.of(context).resetConfirm),
-          actionsAlignment: MainAxisAlignment.center,
-          actions: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-              children: [
-                TextButton(
-                  child: Text(I18N.of(context).dialogConfirm),
-                  onPressed: () {
-                    Navigator.of(context).pop(true);
-                  },
-                ),
-                TextButton(
-                  child: Text(I18N.of(context).dialogCancel),
-                  onPressed: () {
-                    Navigator.of(context).pop(false);
-                  },
+              title: Text(I18N.of(context).resetConfirm),
+              actionsAlignment: MainAxisAlignment.center,
+              actions: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  children: [
+                    TextButton(
+                      child: Text(I18N.of(context).dialogConfirm),
+                      onPressed: () {
+                        Navigator.of(context).pop(true);
+                      },
+                    ),
+                    TextButton(
+                      child: Text(I18N.of(context).dialogCancel),
+                      onPressed: () {
+                        Navigator.of(context).pop(false);
+                      },
+                    )
+                  ],
                 )
               ],
-            )
-          ],
-        ));
+            ));
     if (confirm != true) {
       return;
     }

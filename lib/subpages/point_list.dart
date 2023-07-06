@@ -1,8 +1,7 @@
 import 'package:diacritic/diacritic.dart';
 import 'package:flutter/material.dart';
 import 'package:oko/data.dart';
-import 'package:oko/dialogs/multi_checker.dart';
-import 'package:oko/dialogs/single_chooser.dart';
+import 'package:oko/feature_filters.dart';
 import 'package:oko/i18n.dart';
 import 'package:oko/storage.dart';
 import 'package:oko/utils.dart';
@@ -116,7 +115,7 @@ class _PointListState extends State<PointList> {
                             tooltip: I18N.of(context).filterByOwner,
                             icon: Icon(
                               Icons.people,
-                              color: filter.users.length < widget.users.length
+                              color: filter.doesFilterUsers(widget.users.keys)
                                   ? Theme.of(context).colorScheme.primary
                                   : null,
                             ),
@@ -129,8 +128,7 @@ class _PointListState extends State<PointList> {
                             tooltip: I18N.of(context).filterByCategory,
                             icon: Icon(
                               Icons.category,
-                              color: filter.categories.length <
-                                      PointCategory.allCategories.length
+                              color: filter.doesFilterCategories()
                                   ? Theme.of(context).colorScheme.primary
                                   : null,
                             ),
@@ -144,7 +142,7 @@ class _PointListState extends State<PointList> {
                             icon: Icon(
                               Icons.edit_attributes,
                               color:
-                                  (filter.exact || filter.attributes.isNotEmpty)
+                                  filter.doesFilterAttributes()
                                       ? Theme.of(context).colorScheme.primary
                                       : null,
                             ),
@@ -157,7 +155,7 @@ class _PointListState extends State<PointList> {
                             tooltip: I18N.of(context).filterByEditState,
                             icon: Icon(
                               Icons.edit,
-                              color: filter.editState != EditState.anyState
+                              color: filter.doesFilterEditState()
                                   ? Theme.of(context).colorScheme.primary
                                   : null,
                             ),
@@ -299,118 +297,39 @@ class _PointListState extends State<PointList> {
   }
 
   void onStoreMapFilter() {
-    Navigator.of(context).setState(() {
-      storage.setFeatureFilter(FeatureFilterInst.map, filter);
-    });
+    storage.setFeatureFilter(FeatureFilterInst.map, filter);
   }
 
   Future<void> onUsersButtonPressed() async {
-    MultiCheckerResult<int>? result = await showDialog<MultiCheckerResult<int>>(
-      context: context,
-      builder: (context) => MultiChecker<int>(
-        items: widget.users.keys.toList(growable: false),
-        checkedItems: filter.users,
-        titleBuilder: (int uid, bool _) => Text(
-            '${widget.users[uid] ?? '<unknown ID: $uid>'}${uid == widget.myId ? ' (${I18N.of(context).me})' : ''}'),
-      ),
-    );
-    if (result == null) {
-      return;
+    bool changed = await filter.setUsers(context: context, users: widget.users, myId: widget.myId);
+    if (changed) {
+      setState(() {});
+      await storage.setFeatureFilter(FeatureFilterInst.featureList, filter);
     }
-    setState(() {
-      filter.users = result.checked;
-    });
-    await storage.setFeatureFilter(FeatureFilterInst.featureList, filter);
   }
 
   Future<void> onCategoryButtonPressed() async {
-    MultiCheckerResult<PointCategory>? result =
-        await showDialog<MultiCheckerResult<PointCategory>>(
-      context: context,
-      builder: (context) => MultiChecker<PointCategory>(
-        items: PointCategory.allCategories,
-        checkedItems: filter.categories,
-        titleBuilder: (PointCategory cat, bool _) =>
-            Text(I18N.of(context).category(cat)),
-        secondaryBuilder: (PointCategory cat, bool _) => Icon(cat.iconData),
-      ),
-    );
-    if (result == null) {
-      return;
+    bool changed = await filter.setCategories(context: context);
+    if (changed) {
+      setState(() {});
+      await storage.setFeatureFilter(FeatureFilterInst.featureList, filter);
     }
-    setState(() {
-      filter.categories = result.checked;
-    });
-    await storage.setFeatureFilter(FeatureFilterInst.featureList, filter);
   }
 
   Future<void> onAttributesButtonPressed() async {
-    MultiCheckerResult<PointAttribute>? result =
-        await showDialog<MultiCheckerResult<PointAttribute>>(
-      context: context,
-      builder: (context) => MultiChecker<PointAttribute>(
-        switcher: MultiCheckerSwitcher(
-            value: filter.exact,
-            offLabel: I18N.of(context).intersection,
-            onLabel: I18N.of(context).exact),
-        items: PointAttribute.attributes,
-        checkedItems: filter.attributes,
-        titleBuilder: (PointAttribute attr, bool _) =>
-            Text(I18N.of(context).attribute(attr)),
-        secondaryBuilder: (PointAttribute attr, bool _) => Icon(attr.iconData),
-      ),
-    );
-    if (result == null) {
-      return;
+    bool changed = await filter.setAttributes(context: context);
+    if (changed) {
+      setState(() {});
+      await storage.setFeatureFilter(FeatureFilterInst.featureList, filter);
     }
-    setState(() {
-      filter.exact = result.switcher;
-      filter.attributes = result.checked;
-    });
-    await storage.setFeatureFilter(FeatureFilterInst.featureList, filter);
   }
 
   Future<void> onEditStateButtonPressed() async {
-    var titles = {
-      EditState.newState: I18N.of(context).newState,
-      EditState.editedState: I18N.of(context).editedState,
-      EditState.deletedState: I18N.of(context).deletedState,
-      EditState.editedDeletedState: I18N.of(context).editedDeletedState,
-      EditState.pristineState: I18N.of(context).pristineState,
-      EditState.anyState: I18N.of(context).anyState,
-    };
-    var secondaries = {
-      EditState.newState: const Icon(Icons.star),
-      EditState.editedState: const Icon(Icons.edit),
-      EditState.deletedState: const Icon(Icons.delete),
-      EditState.editedDeletedState: const SizedBox(
-          width: 35,
-          height: 35,
-          child: Stack(
-            children: [
-              Align(alignment: Alignment.topLeft, child: Icon(Icons.delete)),
-              Align(alignment: Alignment.bottomRight, child: Icon(Icons.edit)),
-            ],
-          )),
-      EditState.pristineState: const SizedBox(),
-      EditState.anyState: const SizedBox()
-    };
-    EditState? result = await showDialog<EditState>(
-      context: context,
-      builder: (context) => SingleChooser<EditState>(
-        value: filter.editState,
-        items: EditState.values,
-        titleBuilder: (item, _) => Text(titles[item]!),
-        secondaryBuilder: (item, _) => secondaries[item],
-      ),
-    );
-    if (result == null) {
-      return;
+    bool changed = await filter.setEditState(context: context);
+    if (changed) {
+      setState(() {});
+      await storage.setFeatureFilter(FeatureFilterInst.featureList, filter);
     }
-    setState(() {
-      filter.editState = result;
-    });
-    await storage.setFeatureFilter(FeatureFilterInst.featureList, filter);
   }
 
   void doSort() {

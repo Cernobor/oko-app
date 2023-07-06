@@ -1,14 +1,11 @@
 import 'dart:async';
 import 'dart:io';
 
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_archive/flutter_archive.dart';
 import 'package:flutter_vibrate/flutter_vibrate.dart';
 import 'package:latlong2/latlong.dart';
-import 'package:oko/data.dart';
 import 'package:oko/i18n.dart';
-import 'package:diacritic/diacritic.dart';
 
 const Distance _distance = Distance();
 
@@ -142,50 +139,6 @@ FutureOr<void> _notify(
                       child: Text(I18N.of(context).dismiss),
                       onPressed: () => Navigator.of(context).pop())
                 ]));
-  }
-}
-
-class FeatureFilter {
-  Set<int> users;
-  Set<PointCategory> categories;
-  Set<PointAttribute> attributes;
-  bool exact;
-  EditState editState;
-  String searchTerm;
-
-  FeatureFilter(this.users, this.categories, this.attributes, this.exact,
-      this.editState, this.searchTerm);
-
-  FeatureFilter.empty() : this({}, {}, {}, false, EditState.anyState, '');
-
-  FeatureFilter.copy(FeatureFilter other) : this(other.users, Set<PointCategory>.of(other.categories), Set<PointAttribute>.of(other.attributes), other.exact, other.editState, other.searchTerm);
-
-  Iterable<Point> filter(Iterable<Point> points) {
-    return points.where((point) =>
-        users.contains(point.ownerId) &&
-        categories.contains(point.category) &&
-        ((editState == EditState.newState && point.isLocal) ||
-            (editState == EditState.editedState && point.isEdited) ||
-            (editState == EditState.pristineState &&
-                !point.isEdited &&
-                !point.isLocal &&
-                !point.deleted) ||
-            (editState == EditState.anyState) ||
-            (editState == EditState.deletedState && point.deleted) ||
-            (editState == EditState.editedDeletedState &&
-                point.deleted &&
-                point.isEdited)) &&
-        (exact
-            ? setEquals(point.attributes, attributes)
-            : (point.attributes.any((attr) => attributes.contains(attr))) ||
-                attributes.isEmpty) &&
-        _fulltext(point, searchTerm));
-  }
-
-  bool _fulltext(Point point, String needle) {
-    String n = removeDiacritics(needle).toLowerCase();
-    return removeDiacritics(point.name).toLowerCase().contains(n) ||
-        removeDiacritics(point.description ?? '').toLowerCase().contains(n);
   }
 }
 

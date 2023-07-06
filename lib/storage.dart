@@ -5,6 +5,7 @@ import 'dart:typed_data';
 
 import 'package:latlong2/latlong.dart';
 import 'package:oko/data.dart';
+import 'package:oko/feature_filters.dart';
 import 'package:oko/utils.dart';
 import 'package:path/path.dart';
 import 'package:path_provider/path_provider.dart';

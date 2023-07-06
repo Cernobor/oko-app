@@ -179,10 +179,15 @@ class I18N {
         en: 'Synchronization successful'
       }[locale.languageCode]!;
 
-  String get clearLocalPois => {
-        cs: 'Odstranit lokální body',
-        en: 'Clear local points'
+  String get pointCreated => {
+        cs: 'Bod vytvořen',
+        en: 'Point created'
       }[locale.languageCode]!;
+
+  String get pointCreatedFiltered => {
+    cs: 'Bod vytvořen - skrytý kvůli aktivnímu filtru',
+    en: 'Point created - hidden due to active filter'
+  }[locale.languageCode]!;
 
   String get stopNavigationButton =>
       {cs: 'Zastavit navigaci', en: 'Stop navigation'}[locale.languageCode]!;
@@ -304,6 +309,21 @@ class I18N {
         cs: 'Filtrovat podle stavu úprav',
         en: 'Filter by edit state'
       }[locale.languageCode]!;
+
+  String get filterByText => {
+    cs: 'Filtrovat podle textu',
+    en: 'Filter by text'
+  }[locale.languageCode]!;
+
+  String get clearFilter => {
+    cs: 'Zrušit filtr',
+    en: 'Clear filter'
+  }[locale.languageCode]!;
+
+  String get filteredOut => {
+    cs: 'skryto filtrem',
+    en: 'hidden by filter'
+  }[locale.languageCode]!;
 
   String get downloadConfirm =>
       {cs: 'Opravdu stáhnout?', en: 'Really download?'}[locale.languageCode]!;
