@@ -10,7 +10,7 @@ import 'package:path/path.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:sqflite/sqflite.dart';
 
-enum FeatureFilter { featureList, map }
+enum FeatureFilterInst { featureList, map }
 
 class Storage {
   static const String _storageDbFile = 'storage.db';
@@ -53,7 +53,7 @@ class Storage {
       await s._loadUsers();
       await s._loadMapState();
       await s._loadFeatureListSorting();
-      for (FeatureFilter f in FeatureFilter.values) {
+      for (FeatureFilterInst f in FeatureFilterInst.values) {
         await s._loadFeatureFilter(f);
       }
       await s._loadFeatures();
@@ -160,7 +160,7 @@ class Storage {
           'edit_state text not null,'
           'search_term text not null)');
       await db.insert('feature_filters', {
-        'filter_name': FeatureFilter.featureList.name,
+        'filter_name': FeatureFilterInst.featureList.name,
         'users': jsonEncode(
             (await db.query('point_list_checked_users', columns: ['id']))
                 .map((e) => e['id'])
@@ -201,7 +201,7 @@ class Storage {
       await db.execute('DROP TABLE point_list_checked_users');
 
       await db.insert('feature_filters', {
-        'filter_name': FeatureFilter.map.name,
+        'filter_name': FeatureFilterInst.map.name,
         'users': '[]',
         'categories': '[]',
         'attributes': '[]',
@@ -215,6 +215,7 @@ class Storage {
   static void _onConfigure(Database db) async {
     await db.execute('PRAGMA foreign_keys = ON');
   }
+
   //endregion
 
   final Database _db;
@@ -228,6 +229,7 @@ class Storage {
 
   //region server settings
   ServerSettings? _serverSettings;
+
   ServerSettings? get serverSettings => _serverSettings;
 
   Future<void> setServerSettings(ServerSettings ss) async {
@@ -285,11 +287,14 @@ class Storage {
       await f(tx);
     }
   }
+
   //endregion
 
   //region map state
   MapState? _mapState;
+
   MapState? get mapState => _mapState;
+
   File get offlineMap {
     return File(join(_localDir.path, _mapPackFile));
   }
@@ -357,12 +362,15 @@ class Storage {
       await f(tx);
     }
   }
+
   //endregion
 
   //region feature list sorts
   late Sort _featureListSortKey;
   late int _featureListSortDir;
+
   Sort get featureListSortKey => _featureListSortKey;
+
   int get featureListSortDir => _featureListSortDir;
 
   Future<void> setFeatureListSortKey(Sort sort) async {
@@ -391,86 +399,35 @@ class Storage {
       await f(txn);
     }
   }
+
   //endregion
 
   //region feature filters
-  final Map<FeatureFilter, Set<int>> _filterUsers = {};
-  final Map<FeatureFilter, Set<PointCategory>> _filterCategories = {};
-  final Map<FeatureFilter, Set<PointAttribute>> _filterAttributes = {};
-  final Map<FeatureFilter, bool> _filterAttributesExact = {};
-  final Map<FeatureFilter, EditState> _filterEditState = {};
-  final Map<FeatureFilter, String> _filterSearchTerm = {};
-  UnmodifiableSetView<int> getFeatureFilterUsers(FeatureFilter filter) =>
-      UnmodifiableSetView(_filterUsers[filter]!);
-  UnmodifiableSetView<PointCategory> getFeatureFilterCategories(
-          FeatureFilter filter) =>
-      UnmodifiableSetView(_filterCategories[filter]!);
-  UnmodifiableSetView<PointAttribute> getFeatureFilterAttributes(
-          FeatureFilter filter) =>
-      UnmodifiableSetView(_filterAttributes[filter]!);
-  bool getFeatureFilterAttributesExact(FeatureFilter filter) =>
-      _filterAttributesExact[filter]!;
-  EditState getFeatureFilterEditState(FeatureFilter filter) =>
-      _filterEditState[filter]!;
-  String getFeatureFilterSearchTerm(FeatureFilter filter) =>
-      _filterSearchTerm[filter]!;
+  final Map<FeatureFilterInst, FeatureFilter> _featureFilters = {};
 
-  Future<void> setFeatureFilterUsers(
-      FeatureFilter filter, Iterable<int> userIds) async {
-    _filterUsers[filter] = Set<int>.from(userIds);
-    await _db.update('feature_filters',
-        {'users': jsonEncode(userIds.toList(growable: false))},
-        where: 'filter_name = ?', whereArgs: [filter.name]);
-  }
+  FeatureFilter getFeatureFilter(FeatureFilterInst filter) =>
+      _featureFilters[filter]!;
 
-  Future<void> setFeatureFilterCategories(
-      FeatureFilter filter, Iterable<PointCategory> categories) async {
-    _filterCategories[filter] = Set.of(categories);
+  Future<void> setFeatureFilter(
+      FeatureFilterInst filterInst, FeatureFilter filter) async {
+    _featureFilters[filterInst] = FeatureFilter.copy(filter);
     await _db.update(
         'feature_filters',
         {
-          'categories':
-              jsonEncode(categories.map((e) => e.name).toList(growable: false))
+          'users': jsonEncode(filter.users.toList(growable: false)),
+          'categories': jsonEncode(
+              filter.categories.map((e) => e.name).toList(growable: false)),
+          'attributes': jsonEncode(
+              filter.attributes.map((e) => e.name).toList(growable: false)),
+          'attributes_exact': filter.exact ? 1 : 0,
+          'edit_state': filter.editState.name,
+          'search_term': filter.searchTerm
         },
         where: 'filter_name = ?',
-        whereArgs: [filter.name]);
+        whereArgs: [filterInst.name]);
   }
 
-  Future<void> setFeatureFilterAttributes(
-      FeatureFilter filter, Iterable<PointAttribute> attributes) async {
-    _filterAttributes[filter] = Set.of(attributes);
-    await _db.update(
-        'feature_filters',
-        {
-          'attributes':
-              jsonEncode(attributes.map((e) => e.name).toList(growable: false))
-        },
-        where: 'filter_name = ?',
-        whereArgs: [filter.name]);
-  }
-
-  Future<void> setFeatureFilterAttributesExact(
-      FeatureFilter filter, bool exact) async {
-    _filterAttributesExact[filter] = exact;
-    await _db.update('feature_filters', {'attributes_exact': exact ? 1 : 0},
-        where: 'filter_name = ?', whereArgs: [filter.name]);
-  }
-
-  Future<void> setFeatureFilterEditState(
-      FeatureFilter filter, EditState editState) async {
-    _filterEditState[filter] = editState;
-    await _db.update('feature_filters', {'edit_state': editState.name},
-        where: 'filter_name = ?', whereArgs: [filter.name]);
-  }
-
-  Future<void> setFeatureFilterSearchTerm(
-      FeatureFilter filter, String searchTerm) async {
-    _filterSearchTerm[filter] = searchTerm;
-    await _db.update('feature_filters', {'search_term': searchTerm},
-        where: 'filter_name = ?', whereArgs: [filter.name]);
-  }
-
-  Future<void> _loadFeatureFilter(FeatureFilter filter,
+  Future<void> _loadFeatureFilter(FeatureFilterInst filter,
       [Transaction? txn]) async {
     Future<void> f(Transaction tx) async {
       var rows = await tx.query('feature_filters',
@@ -486,21 +443,19 @@ class Storage {
           whereArgs: [filter.name],
           limit: 1);
       for (var row in rows) {
-        _filterUsers[filter] =
+        _featureFilters[filter] = FeatureFilter(
             (jsonDecode(row['users'] as String) as List<dynamic>)
                 .map((e) => e as int)
-                .toSet();
-        _filterCategories[filter] =
+                .toSet(),
             (jsonDecode(row['categories'] as String) as List<dynamic>)
                 .map((e) => PointCategory.fromNameString(e))
-                .toSet();
-        _filterAttributes[filter] =
+                .toSet(),
             (jsonDecode(row['attributes'] as String) as List<dynamic>)
                 .map((e) => PointAttribute.fromNameString(e))
-                .toSet();
-        _filterAttributesExact[filter] = row['attributes_exact'] != 0;
-        _filterEditState[filter] = parseEditState(row['edit_state'] as String);
-        _filterSearchTerm[filter] = row['search_term'] as String;
+                .toSet(),
+            row['attributes_exact'] != 0,
+            parseEditState(row['edit_state'] as String),
+            row['search_term'] as String);
       }
     }
 
@@ -510,10 +465,12 @@ class Storage {
       await f(txn);
     }
   }
+
   //endregion
 
   //region users
   final Users _users = HashMap();
+
   UsersView get users => UnmodifiableMapView(_users);
 
   Future<void> setUsers(Users users) async {
@@ -535,6 +492,7 @@ class Storage {
       _users[row['id']! as int] = row['name']! as String;
     }
   }
+
   //endregion
 
   //region next local id
@@ -545,12 +503,15 @@ class Storage {
       return row[0]['id'] as int;
     });
   }
+
   //endregion
 
   //region features
   final List<Feature> _features = List.empty(growable: true);
   final Map<int, Feature> _featuresMap = HashMap();
+
   FeaturesView get features => UnmodifiableListView(_features);
+
   FeaturesMapView get featuresMap => UnmodifiableMapView(_featuresMap);
 
   Future<void> setFeatures(List<Feature> features) async {
@@ -599,6 +560,7 @@ class Storage {
       _featuresMap[f.id] = f;
     }
   }
+
   //endregion
 
   //region feature photos
@@ -753,6 +715,7 @@ class Storage {
     await photoFile.writeAsBytes(bytes, flush: true);
     return photoFile.path;
   }
+
   //endregion
 
   //region proposals
@@ -782,5 +745,5 @@ class Storage {
           .toList(growable: false);
     });
   }
-  //endregion
+//endregion
 }

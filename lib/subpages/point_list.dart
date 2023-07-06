@@ -17,12 +17,6 @@ String _sortToString(Sort sort, BuildContext context) {
   }
 }
 
-bool _fulltext(Point point, String needle) {
-  String n = removeDiacritics(needle).toLowerCase();
-  return removeDiacritics(point.name).toLowerCase().contains(n) ||
-      removeDiacritics(point.description ?? '').toLowerCase().contains(n);
-}
-
 class PointList extends StatefulWidget {
   final List<Point> points;
   final int? myId;
@@ -38,11 +32,7 @@ class PointList extends StatefulWidget {
 class _PointListState extends State<PointList> {
   late Storage storage;
   late final List<Point> points;
-  Set<int> checkedUsers = <int>{};
-  Set<PointCategory> checkedCategories = <PointCategory>{};
-  Set<PointAttribute> checkedAttributes = <PointAttribute>{};
-  bool exact = false;
-  EditState editState = EditState.anyState;
+  FeatureFilter filter = FeatureFilter.empty();
   Sort sort = Sort.name;
   int asc = 1;
 
@@ -54,29 +44,17 @@ class _PointListState extends State<PointList> {
     points = List.of(widget.points, growable: false);
     searchController.addListener(() {
       setState(() {
-        storage.setFeatureFilterSearchTerm(
-            FeatureFilter.featureList, searchController.text);
+        filter.searchTerm = searchController.text;
+        storage.setFeatureFilter(FeatureFilterInst.featureList, filter);
       });
     });
 
     getStorage().whenComplete(() => setState(() {
           asc = storage.featureListSortDir;
           sort = storage.featureListSortKey;
-          exact = storage
-              .getFeatureFilterAttributesExact(FeatureFilter.featureList);
-          editState =
-              storage.getFeatureFilterEditState(FeatureFilter.featureList);
-          checkedCategories.clear();
-          checkedCategories.addAll(
-              storage.getFeatureFilterCategories(FeatureFilter.featureList));
-          checkedUsers.clear();
-          checkedUsers
-              .addAll(storage.getFeatureFilterUsers(FeatureFilter.featureList));
-          checkedAttributes.clear();
-          checkedAttributes.addAll(
-              storage.getFeatureFilterAttributes(FeatureFilter.featureList));
-          searchController.text =
-              storage.getFeatureFilterSearchTerm(FeatureFilter.featureList);
+
+          filter = storage.getFeatureFilter(FeatureFilterInst.featureList);
+          searchController.text = filter.searchTerm;
           doSort();
         }));
   }
@@ -137,7 +115,7 @@ class _PointListState extends State<PointList> {
                             tooltip: I18N.of(context).filterByOwner,
                             icon: Icon(
                               Icons.people,
-                              color: checkedUsers.length < widget.users.length
+                              color: filter.users.length < widget.users.length
                                   ? Theme.of(context).colorScheme.primary
                                   : null,
                             ),
@@ -150,7 +128,7 @@ class _PointListState extends State<PointList> {
                             tooltip: I18N.of(context).filterByCategory,
                             icon: Icon(
                               Icons.category,
-                              color: checkedCategories.length <
+                              color: filter.categories.length <
                                       PointCategory.allCategories.length
                                   ? Theme.of(context).colorScheme.primary
                                   : null,
@@ -164,7 +142,7 @@ class _PointListState extends State<PointList> {
                             tooltip: I18N.of(context).filterByAttributes,
                             icon: Icon(
                               Icons.edit_attributes,
-                              color: (exact || checkedAttributes.isNotEmpty)
+                              color: (filter.exact || filter.attributes.isNotEmpty)
                                   ? Theme.of(context).colorScheme.primary
                                   : null,
                             ),
@@ -177,7 +155,7 @@ class _PointListState extends State<PointList> {
                             tooltip: I18N.of(context).filterByEditState,
                             icon: Icon(
                               Icons.edit,
-                              color: editState != EditState.anyState
+                              color: filter.editState != EditState.anyState
                                   ? Theme.of(context).colorScheme.primary
                                   : null,
                             ),
@@ -231,32 +209,7 @@ class _PointListState extends State<PointList> {
               ),
             ),
             Expanded(
-                child: ListView(
-                    children: points
-                        .where((point) =>
-                            checkedUsers.contains(point.ownerId) &&
-                            checkedCategories.contains(point.category) &&
-                            ((editState == EditState.newState &&
-                                    point.isLocal) ||
-                                (editState == EditState.editedState &&
-                                    point.isEdited) ||
-                                (editState == EditState.pristineState &&
-                                    !point.isEdited &&
-                                    !point.isLocal &&
-                                    !point.deleted) ||
-                                (editState == EditState.anyState) ||
-                                (editState == EditState.deletedState &&
-                                    point.deleted) ||
-                                (editState == EditState.editedDeletedState &&
-                                    point.deleted &&
-                                    point.isEdited)) &&
-                            (exact
-                                ? setEquals(point.attributes, checkedAttributes)
-                                : (point.attributes.any((attr) =>
-                                        checkedAttributes.contains(attr))) ||
-                                    checkedAttributes.isEmpty) &&
-                            _fulltext(point, searchController.text))
-                        .map((Point point) => ListTile(
+                child: ListView(children: filter.filter(points).map((Point point) => ListTile(
                               leading: SizedBox(
                                   width: 40,
                                   child: Stack(
@@ -330,8 +283,7 @@ class _PointListState extends State<PointList> {
                               onTap: () {
                                 Navigator.of(context).pop(point);
                               },
-                            ))
-                        .toList(growable: false)))
+                            )).toList(growable: false)))
           ],
         ),
       ),
@@ -343,7 +295,7 @@ class _PointListState extends State<PointList> {
       context: context,
       builder: (context) => MultiChecker<int>(
         items: widget.users.keys.toList(growable: false),
-        checkedItems: checkedUsers,
+        checkedItems: filter.users,
         titleBuilder: (int uid, bool _) => Text(
             '${widget.users[uid] ?? '<unknown ID: $uid>'}${uid == widget.myId ? ' (${I18N.of(context).me})' : ''}'),
       ),
@@ -351,13 +303,10 @@ class _PointListState extends State<PointList> {
     if (result == null) {
       return;
     }
-    await storage.setFeatureFilterUsers(
-        FeatureFilter.featureList, result.checked);
     setState(() {
-      checkedUsers.clear();
-      checkedUsers
-          .addAll(storage.getFeatureFilterUsers(FeatureFilter.featureList));
+      filter.users = result.checked;
     });
+    await storage.setFeatureFilter(FeatureFilterInst.featureList, filter);
   }
 
   Future<void> onCategoryButtonPressed() async {
@@ -366,7 +315,7 @@ class _PointListState extends State<PointList> {
       context: context,
       builder: (context) => MultiChecker<PointCategory>(
         items: PointCategory.allCategories,
-        checkedItems: checkedCategories,
+        checkedItems: filter.categories,
         titleBuilder: (PointCategory cat, bool _) =>
             Text(I18N.of(context).category(cat)),
         secondaryBuilder: (PointCategory cat, bool _) => Icon(cat.iconData),
@@ -375,13 +324,10 @@ class _PointListState extends State<PointList> {
     if (result == null) {
       return;
     }
-    await storage.setFeatureFilterCategories(
-        FeatureFilter.featureList, result.checked);
     setState(() {
-      checkedCategories.clear();
-      checkedCategories.addAll(
-          storage.getFeatureFilterCategories(FeatureFilter.featureList));
+      filter.categories = result.checked;
     });
+    await storage.setFeatureFilter(FeatureFilterInst.featureList, filter);
   }
 
   Future<void> onAttributesButtonPressed() async {
@@ -390,11 +336,11 @@ class _PointListState extends State<PointList> {
       context: context,
       builder: (context) => MultiChecker<PointAttribute>(
         switcher: MultiCheckerSwitcher(
-            value: exact,
+            value: filter.exact,
             offLabel: I18N.of(context).intersection,
             onLabel: I18N.of(context).exact),
         items: PointAttribute.attributes,
-        checkedItems: checkedAttributes,
+        checkedItems: filter.attributes,
         titleBuilder: (PointAttribute attr, bool _) =>
             Text(I18N.of(context).attribute(attr)),
         secondaryBuilder: (PointAttribute attr, bool _) => Icon(attr.iconData),
@@ -403,16 +349,11 @@ class _PointListState extends State<PointList> {
     if (result == null) {
       return;
     }
-    await storage.setFeatureFilterAttributesExact(
-        FeatureFilter.featureList, result.switcher);
-    await storage.setFeatureFilterAttributes(
-        FeatureFilter.featureList, result.checked);
     setState(() {
-      exact = result.switcher;
-      checkedAttributes.clear();
-      checkedAttributes.addAll(
-          storage.getFeatureFilterAttributes(FeatureFilter.featureList));
+      filter.exact = result.switcher;
+      filter.attributes = result.checked;
     });
+    await storage.setFeatureFilter(FeatureFilterInst.featureList, filter);
   }
 
   Future<void> onEditStateButtonPressed() async {
@@ -443,7 +384,7 @@ class _PointListState extends State<PointList> {
     EditState? result = await showDialog<EditState>(
       context: context,
       builder: (context) => SingleChooser<EditState>(
-        value: editState,
+        value: filter.editState,
         items: EditState.values,
         titleBuilder: (item, _) => Text(titles[item]!),
         secondaryBuilder: (item, _) => secondaries[item],
@@ -452,10 +393,10 @@ class _PointListState extends State<PointList> {
     if (result == null) {
       return;
     }
-    await storage.setFeatureFilterEditState(FeatureFilter.featureList, result);
     setState(() {
-      editState = result;
+      filter.editState = result;
     });
+    await storage.setFeatureFilter(FeatureFilterInst.featureList, filter);
   }
 
   void doSort() {

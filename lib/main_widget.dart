@@ -129,8 +129,9 @@ class MainWidgetState extends State<MainWidget> {
 
     try {
       storage = await Storage.getInstance();
-    } catch (e) {
+    } catch (e, stacktrace) {
       developer.log(e.toString());
+      developer.log(stacktrace.toString());
       utils.notifySnackbar(
           context,
           'Error while getting storage: ${e.toString()}',
@@ -694,16 +695,16 @@ class MainWidgetState extends State<MainWidget> {
                           children: <Widget>[
                             Text(
                                 '${infoTarget.point.name} | ${storage?.users[infoTarget.point.ownerId]}',
-                                style: Theme.of(context).textTheme.headline6),
+                                style: Theme.of(context).textTheme.titleLarge),
                             Text(
                                 [
                                   utils.formatCoords(infoTarget.coords, false),
                                   '${I18N.of(context).categoryTitle}: ${I18N.of(context).category(infoTarget.point.category)}'
                                 ].join(' '),
-                                style: Theme.of(context).textTheme.caption),
+                                style: Theme.of(context).textTheme.bodySmall),
                             if (isNavigating)
                               Text('$distStr $brgStr $relBrgStr',
-                                  style: Theme.of(context).textTheme.caption),
+                                  style: Theme.of(context).textTheme.bodySmall),
                           ],
                         ),
                       ),
@@ -856,7 +857,7 @@ class MainWidgetState extends State<MainWidget> {
     return BottomAppBar(
       //color: Theme.of(context).colorScheme.primaryVariant,
       child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 4),
+          padding: const EdgeInsets.all(0),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: <Widget>[
@@ -868,16 +869,12 @@ class MainWidgetState extends State<MainWidget> {
                     TableRow(children: <Widget>[
                       Container(),
                       Container(
-                          padding: const EdgeInsets.symmetric(
-                              vertical: 1, horizontal: 4),
                           alignment: Alignment.center,
                           child: Text(
                             'GPS',
                             style: ts,
                           )),
                       Container(
-                        padding: const EdgeInsets.symmetric(
-                            vertical: 1, horizontal: 4),
                         alignment: Alignment.center,
                         child: Text(
                           'TGT',
@@ -887,8 +884,7 @@ class MainWidgetState extends State<MainWidget> {
                     ]),
                     TableRow(children: <Widget>[
                       Container(
-                        padding: const EdgeInsets.symmetric(
-                            vertical: 1, horizontal: 4),
+                        padding: const EdgeInsets.only(right: 1),
                         alignment: Alignment.centerLeft,
                         child: Text(
                           'Lat',
@@ -896,8 +892,7 @@ class MainWidgetState extends State<MainWidget> {
                         ),
                       ),
                       Container(
-                        padding: const EdgeInsets.symmetric(
-                            vertical: 1, horizontal: 4),
+                        padding: const EdgeInsets.symmetric(horizontal: 3, vertical: 1),
                         alignment: Alignment.centerLeft,
                         child: Text(
                           currentLocation == null
@@ -908,8 +903,7 @@ class MainWidgetState extends State<MainWidget> {
                         ),
                       ),
                       Container(
-                        padding: const EdgeInsets.symmetric(
-                            vertical: 1, horizontal: 4),
+                        padding: const EdgeInsets.symmetric(horizontal: 3, vertical: 1),
                         alignment: Alignment.centerLeft,
                         child: Text(
                           !mapReady
@@ -922,8 +916,7 @@ class MainWidgetState extends State<MainWidget> {
                     ]),
                     TableRow(children: <Widget>[
                       Container(
-                        padding: const EdgeInsets.symmetric(
-                            vertical: 1, horizontal: 4),
+                        padding: const EdgeInsets.only(right: 1),
                         alignment: Alignment.centerLeft,
                         child: Text(
                           'Lng',
@@ -931,8 +924,7 @@ class MainWidgetState extends State<MainWidget> {
                         ),
                       ),
                       Container(
-                        padding: const EdgeInsets.symmetric(
-                            vertical: 1, horizontal: 4),
+                        padding: const EdgeInsets.symmetric(horizontal: 3, vertical: 1),
                         alignment: Alignment.centerLeft,
                         child: Text(
                           currentLocation == null
@@ -943,8 +935,7 @@ class MainWidgetState extends State<MainWidget> {
                         ),
                       ),
                       Container(
-                        padding: const EdgeInsets.symmetric(
-                            vertical: 1, horizontal: 4),
+                        padding: const EdgeInsets.symmetric(horizontal: 3, vertical: 1),
                         alignment: Alignment.centerLeft,
                         child: Text(
                           !mapReady
@@ -1309,7 +1300,10 @@ class MainWidgetState extends State<MainWidget> {
     features.addAll(serverData.features);
     await storage!.setFeatures(features);
     if (usersChanged) {
-      await storage!.setFeatureFilterUsers(FeatureFilter.featureList, storage!.users.keys);
+      var ff = storage!.getFeatureFilter(FeatureFilterInst.featureList);
+      ff.users.clear();
+      ff.users.addAll(storage!.users.keys);
+      await storage!.setFeatureFilter(FeatureFilterInst.featureList, ff);
     }
     return true;
   }
@@ -1380,7 +1374,10 @@ class MainWidgetState extends State<MainWidget> {
           serverData.users.keys.toSet(), storage!.users.keys.toSet());
       await storage!.setUsers(serverData.users);
       if (usersChanged) {
-        await storage!.setFeatureFilterUsers(FeatureFilter.featureList, storage!.users.keys);
+        var ff = storage!.getFeatureFilter(FeatureFilterInst.featureList);
+        ff.users.clear();
+        ff.users.addAll(storage!.users.keys);
+        await storage!.setFeatureFilter(FeatureFilterInst.featureList, ff);
       }
 
       List<Feature> localFeatures =
@@ -1872,7 +1869,7 @@ class MainWidgetState extends State<MainWidget> {
             contentPadding: const EdgeInsets.symmetric(horizontal: 8.0),
             title: Text(question(context)),
             content: Scrollbar(
-                isAlwaysShown: true,
+                thumbVisibility: true,
                 child: SingleChildScrollView(
                     child: Column(
                   mainAxisSize: MainAxisSize.min,
