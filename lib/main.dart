@@ -95,7 +95,11 @@ class Home extends StatelessWidget {
           checkboxTheme: CheckboxThemeData(
               checkColor: MaterialStateProperty.all(colorScheme.onPrimary)),
           tooltipTheme: const TooltipThemeData(
-              padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8))),
+              padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8)),
+        badgeTheme: const BadgeThemeData(
+          backgroundColor: cbYellow
+        )
+      ),
       home: const MainWidget(),
       localizationsDelegates: const [
         I18NDelegate(),

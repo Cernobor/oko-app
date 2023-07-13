@@ -179,15 +179,13 @@ class I18N {
         en: 'Synchronization successful'
       }[locale.languageCode]!;
 
-  String get pointCreated => {
-        cs: 'Bod vytvořen',
-        en: 'Point created'
-      }[locale.languageCode]!;
+  String get pointCreated =>
+      {cs: 'Bod vytvořen', en: 'Point created'}[locale.languageCode]!;
 
   String get pointCreatedFiltered => {
-    cs: 'Bod vytvořen - skrytý kvůli aktivnímu filtru',
-    en: 'Point created - hidden due to active filter'
-  }[locale.languageCode]!;
+        cs: 'Bod vytvořen - skrytý kvůli aktivnímu filtru',
+        en: 'Point created - hidden due to active filter'
+      }[locale.languageCode]!;
 
   String get stopNavigationButton =>
       {cs: 'Zastavit navigaci', en: 'Stop navigation'}[locale.languageCode]!;
@@ -310,20 +308,14 @@ class I18N {
         en: 'Filter by edit state'
       }[locale.languageCode]!;
 
-  String get filterByText => {
-    cs: 'Filtrovat podle textu',
-    en: 'Filter by text'
-  }[locale.languageCode]!;
+  String get filterByText =>
+      {cs: 'Filtrovat podle textu', en: 'Filter by text'}[locale.languageCode]!;
 
-  String get clearFilter => {
-    cs: 'Zrušit filtr',
-    en: 'Clear filter'
-  }[locale.languageCode]!;
+  String get clearFilter =>
+      {cs: 'Zrušit filtr', en: 'Clear filter'}[locale.languageCode]!;
 
-  String get filteredOut => {
-    cs: 'skryto filtrem',
-    en: 'hidden by filter'
-  }[locale.languageCode]!;
+  String get filteredOut =>
+      {cs: 'skryto filtrem', en: 'hidden by filter'}[locale.languageCode]!;
 
   String get downloadConfirm =>
       {cs: 'Opravdu stáhnout?', en: 'Really download?'}[locale.languageCode]!;
@@ -529,6 +521,26 @@ class I18N {
 
   String get clearButtonTooltip =>
       {cs: 'Vymazat', en: 'Clear'}[locale.languageCode]!;
+
+  String get addToPathCreation => {
+        cs: 'Zařadit bod do vytváření cesty',
+        en: 'Add point to path creation'
+      }[locale.languageCode]!;
+
+  String get removeFromPathCreation => {
+        cs: 'Odebrat bod zz vytváření cesty',
+        en: 'Remove point to path creation'
+      }[locale.languageCode]!;
+
+  String get goPathCreation => {
+        cs: 'Přejít k vytvoření cesty',
+        en: 'Go to path creation'
+      }[locale.languageCode]!;
+
+  String get clearPathCreation => {
+    cs: 'Zrušit tvoření cesty',
+    en: 'Cancel path creation'
+  }[locale.languageCode]!;
 }
 
 class I18NDelegate extends LocalizationsDelegate<I18N> {

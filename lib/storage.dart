@@ -58,6 +58,7 @@ class Storage {
         await s._loadFeatureFilter(f);
       }
       await s._loadFeatures();
+      await s._loadPathCreation();
 
       _instance = s;
     }
@@ -210,6 +211,10 @@ class Storage {
         'edit_state': EditState.anyState.name,
         'search_term': ''
       });
+
+      await db.execute('CREATE TABLE path_creation ('
+          'id integer primary key,'
+          'ord integer not null)');
     }
   }
 
@@ -715,6 +720,46 @@ class Storage {
     File photoFile = await _getPhotoFile(featureID);
     await photoFile.writeAsBytes(bytes, flush: true);
     return photoFile.path;
+  }
+
+  //endregion
+
+  //region path creation
+  final Map<int, int> _pathCreation = HashMap();
+
+  Map<int, int> get pathCreation => UnmodifiableMapView(_pathCreation);
+
+  Future<void> addPointToPathCreation(Point point) async {
+    await _db.transaction((Transaction tx) async {
+      await tx.insert(
+          'path_creation', {'id': point.id, 'ord': _pathCreation.length},
+          conflictAlgorithm: ConflictAlgorithm.replace);
+      await _loadPathCreation(tx);
+    });
+  }
+
+  Future<void> removePointFromPathCreation(Point point) async {
+    await _db.transaction((Transaction tx) async {
+      await tx.delete('path_creation', where: 'id = ?', whereArgs: [point.id]);
+      await _loadPathCreation(tx);
+    });
+  }
+
+  Future<void> clearPathCreation() async {
+    await _db.transaction((Transaction tx) async {
+      await tx.delete('path_creation');
+      await _loadPathCreation(tx);
+    });
+  }
+
+  Future<void> _loadPathCreation([Transaction? tx]) async {
+    var rows = await (tx ?? _db).query('path_creation', columns: ['id', 'ord']);
+    _pathCreation.clear();
+    for (var row in rows) {
+      int id = row['id'] as int;
+      int order = row['ord'] as int;
+      _pathCreation[id] = order;
+    }
   }
 
   //endregion
