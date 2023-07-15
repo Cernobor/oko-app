@@ -840,13 +840,13 @@ class MainWidgetState extends State<MainWidget> {
             tooltip: I18N.of(context).zoomIn,
             elevation: 0,
             backgroundColor: !mapReady ||
-                mapController.zoom >=
-                    (storage?.mapState?.zoomMax ?? fallbackMaxZoom)
+                    mapController.zoom >=
+                        (storage?.mapState?.zoomMax ?? fallbackMaxZoom)
                 ? Theme.of(context).colorScheme.secondary.withOpacity(.35)
                 : null,
             onPressed: !mapReady ||
-                mapController.zoom >=
-                    (storage?.mapState?.zoomMax ?? fallbackMaxZoom)
+                    mapController.zoom >=
+                        (storage?.mapState?.zoomMax ?? fallbackMaxZoom)
                 ? null
                 : () => onZoom(1),
             child: const Icon(
@@ -859,13 +859,13 @@ class MainWidgetState extends State<MainWidget> {
             tooltip: I18N.of(context).zoomOut,
             elevation: 0,
             backgroundColor: !mapReady ||
-                mapController.zoom <=
-                    (storage?.serverSettings?.minZoom ?? fallbackMinZoom)
+                    mapController.zoom <=
+                        (storage?.serverSettings?.minZoom ?? fallbackMinZoom)
                 ? Theme.of(context).colorScheme.secondary.withOpacity(.35)
                 : null,
             onPressed: !mapReady ||
-                mapController.zoom <=
-                    (storage?.serverSettings?.minZoom ?? fallbackMinZoom)
+                    mapController.zoom <=
+                        (storage?.serverSettings?.minZoom ?? fallbackMinZoom)
                 ? null
                 : () => onZoom(-1),
             child: const Icon(
@@ -912,10 +912,10 @@ class MainWidgetState extends State<MainWidget> {
         spacing: 2,
         children: <Widget>[
           Badge(
-            backgroundColor: storage!.pathCreation.length <= 1 ? Theme.of(context).colorScheme.error : null,
-            label: Text(
-                storage!.pathCreation.length.toString()
-            ),
+            backgroundColor: storage!.pathCreation.length <= 1
+                ? Theme.of(context).colorScheme.error
+                : null,
+            label: Text(storage!.pathCreation.length.toString()),
             child: FloatingActionButton(
               heroTag: 'fab-go-path-creation',
               tooltip: I18N.of(context).goPathCreation,
@@ -923,9 +923,7 @@ class MainWidgetState extends State<MainWidget> {
               backgroundColor: storage!.pathCreation.length <= 1
                   ? Theme.of(context).colorScheme.secondary.withOpacity(.35)
                   : null,
-              onPressed: storage!.pathCreation.length <= 1
-                  ? null
-                  : () {},
+              onPressed: storage!.pathCreation.length <= 1 ? null : () {},
               child: const Icon(
                 Icons.polyline,
                 size: 30,
@@ -962,179 +960,180 @@ class MainWidgetState extends State<MainWidget> {
         runAlignment: WrapAlignment.end,
         spacing: 2,
         children: <Widget>[
-          FloatingActionButton(
-            heroTag: 'fab-filter',
-            tooltip: I18N.of(context).toFilter,
-            elevation: 0,
-            onPressed: () {
-              setState(() {
-                filterExpanded = !filterExpanded;
-                if (!filterExpanded && searchController != null) {
-                  onToggleFilterSearch();
-                }
-              });
-            },
-            child: Icon(
-              Icons.filter_alt,
-              size: 30,
-              color: storage != null &&
-                  storage!
-                      .getFeatureFilter(FeatureFilterInst.map)
-                      .doesFilter(storage!.users.keys)
-                  ? Theme.of(context).colorScheme.primary
-                  : null,
-            ),
-          ),
-        ] +
-            (!filterExpanded
-                ? <Widget>[]
-                : <Widget>[
               FloatingActionButton(
-                heroTag: 'fab-filter-people',
-                tooltip: I18N.of(context).filterByOwner,
+                heroTag: 'fab-filter',
+                tooltip: I18N.of(context).toFilter,
                 elevation: 0,
-                mini: true,
-                onPressed: () async {
-                  FeatureFilter f =
-                  storage!.getFeatureFilter(FeatureFilterInst.map);
-                  bool changed = await f.setUsers(
-                      context: context,
-                      users: storage!.users,
-                      myId: storage!.serverSettings!.id);
-                  if (changed) {
-                    await storage!
-                        .setFeatureFilter(FeatureFilterInst.map, f);
-                    setState(() {});
-                  }
-                },
-                child: Icon(
-                  Icons.people,
-                  size: 16,
-                  color: storage != null &&
-                      storage!
-                          .getFeatureFilter(FeatureFilterInst.map)
-                          .doesFilterUsers(storage!.users.keys)
-                      ? Theme.of(context).colorScheme.primary
-                      : null,
-                ),
-              ),
-              FloatingActionButton(
-                heroTag: 'fab-filter-category',
-                tooltip: I18N.of(context).filterByCategory,
-                elevation: 0,
-                mini: true,
-                onPressed: () async {
-                  FeatureFilter f =
-                  storage!.getFeatureFilter(FeatureFilterInst.map);
-                  bool changed = await f.setCategories(context: context);
-                  if (changed) {
-                    await storage!
-                        .setFeatureFilter(FeatureFilterInst.map, f);
-                    setState(() {});
-                  }
-                },
-                child: Icon(
-                  Icons.category,
-                  size: 16,
-                  color: storage != null &&
-                      storage!
-                          .getFeatureFilter(FeatureFilterInst.map)
-                          .doesFilterCategories()
-                      ? Theme.of(context).colorScheme.primary
-                      : null,
-                ),
-              ),
-              FloatingActionButton(
-                heroTag: 'fab-filter-attributes',
-                tooltip: I18N.of(context).filterByAttributes,
-                elevation: 0,
-                mini: true,
-                onPressed: () async {
-                  FeatureFilter f =
-                  storage!.getFeatureFilter(FeatureFilterInst.map);
-                  bool changed = await f.setAttributes(context: context);
-                  if (changed) {
-                    await storage!
-                        .setFeatureFilter(FeatureFilterInst.map, f);
-                    setState(() {});
-                  }
-                },
-                child: Icon(
-                  Icons.edit_attributes,
-                  size: 16,
-                  color: storage != null &&
-                      storage!
-                          .getFeatureFilter(FeatureFilterInst.map)
-                          .doesFilterAttributes()
-                      ? Theme.of(context).colorScheme.primary
-                      : null,
-                ),
-              ),
-              FloatingActionButton(
-                heroTag: 'fab-filter-editState',
-                tooltip: I18N.of(context).filterByEditState,
-                elevation: 0,
-                mini: true,
-                onPressed: () async {
-                  FeatureFilter f =
-                  storage!.getFeatureFilter(FeatureFilterInst.map);
-                  bool changed = await f.setEditState(context: context);
-                  if (changed) {
-                    await storage!
-                        .setFeatureFilter(FeatureFilterInst.map, f);
-                    setState(() {});
-                  }
-                },
-                child: Icon(
-                  Icons.edit,
-                  size: 16,
-                  color: storage != null &&
-                      storage!
-                          .getFeatureFilter(FeatureFilterInst.map)
-                          .doesFilterEditState()
-                      ? Theme.of(context).colorScheme.primary
-                      : null,
-                ),
-              ),
-              FloatingActionButton(
-                heroTag: 'fab-filter-search',
-                tooltip: I18N.of(context).filterByText,
-                elevation: 0,
-                mini: true,
                 onPressed: () {
                   setState(() {
-                    onToggleFilterSearch();
+                    filterExpanded = !filterExpanded;
+                    if (!filterExpanded && searchController != null) {
+                      onToggleFilterSearch();
+                    }
                   });
                 },
                 child: Icon(
-                  Icons.search,
-                  size: 16,
+                  Icons.filter_alt,
+                  size: 30,
                   color: storage != null &&
-                      storage!
-                          .getFeatureFilter(FeatureFilterInst.map)
-                          .doesFilterSearch()
+                          storage!
+                              .getFeatureFilter(FeatureFilterInst.map)
+                              .doesFilter(storage!.users.keys)
                       ? Theme.of(context).colorScheme.primary
                       : null,
                 ),
               ),
-              FloatingActionButton(
-                heroTag: 'fab-filter-clear',
-                tooltip: I18N.of(context).clearFilter,
-                elevation: 0,
-                mini: true,
-                onPressed: () async {
-                  FeatureFilter f = FeatureFilter.empty();
-                  f.users = Set.of(storage!.users.keys);
-                  f.categories = Set.of(PointCategory.allCategories);
-                  await storage!.setFeatureFilter(FeatureFilterInst.map, f);
-                  setState(() {});
-                },
-                child: const Icon(
-                  Icons.clear,
-                  size: 16,
-                ),
-              )
-            ]),
+            ] +
+            (!filterExpanded
+                ? <Widget>[]
+                : <Widget>[
+                    FloatingActionButton(
+                      heroTag: 'fab-filter-people',
+                      tooltip: I18N.of(context).filterByOwner,
+                      elevation: 0,
+                      mini: true,
+                      onPressed: () async {
+                        FeatureFilter f =
+                            storage!.getFeatureFilter(FeatureFilterInst.map);
+                        bool changed = await f.setUsers(
+                            context: context,
+                            users: storage!.users,
+                            myId: storage!.serverSettings!.id);
+                        if (changed) {
+                          await storage!
+                              .setFeatureFilter(FeatureFilterInst.map, f);
+                          setState(() {});
+                        }
+                      },
+                      child: Icon(
+                        Icons.people,
+                        size: 16,
+                        color: storage != null &&
+                                storage!
+                                    .getFeatureFilter(FeatureFilterInst.map)
+                                    .doesFilterUsers(storage!.users.keys)
+                            ? Theme.of(context).colorScheme.primary
+                            : null,
+                      ),
+                    ),
+                    FloatingActionButton(
+                      heroTag: 'fab-filter-category',
+                      tooltip: I18N.of(context).filterByCategory,
+                      elevation: 0,
+                      mini: true,
+                      onPressed: () async {
+                        FeatureFilter f =
+                            storage!.getFeatureFilter(FeatureFilterInst.map);
+                        bool changed = await f.setCategories(context: context);
+                        if (changed) {
+                          await storage!
+                              .setFeatureFilter(FeatureFilterInst.map, f);
+                          setState(() {});
+                        }
+                      },
+                      child: Icon(
+                        Icons.category,
+                        size: 16,
+                        color: storage != null &&
+                                storage!
+                                    .getFeatureFilter(FeatureFilterInst.map)
+                                    .doesFilterCategories()
+                            ? Theme.of(context).colorScheme.primary
+                            : null,
+                      ),
+                    ),
+                    FloatingActionButton(
+                      heroTag: 'fab-filter-attributes',
+                      tooltip: I18N.of(context).filterByAttributes,
+                      elevation: 0,
+                      mini: true,
+                      onPressed: () async {
+                        FeatureFilter f =
+                            storage!.getFeatureFilter(FeatureFilterInst.map);
+                        bool changed = await f.setAttributes(context: context);
+                        if (changed) {
+                          await storage!
+                              .setFeatureFilter(FeatureFilterInst.map, f);
+                          setState(() {});
+                        }
+                      },
+                      child: Icon(
+                        Icons.edit_attributes,
+                        size: 16,
+                        color: storage != null &&
+                                storage!
+                                    .getFeatureFilter(FeatureFilterInst.map)
+                                    .doesFilterAttributes()
+                            ? Theme.of(context).colorScheme.primary
+                            : null,
+                      ),
+                    ),
+                    FloatingActionButton(
+                      heroTag: 'fab-filter-editState',
+                      tooltip: I18N.of(context).filterByEditState,
+                      elevation: 0,
+                      mini: true,
+                      onPressed: () async {
+                        FeatureFilter f =
+                            storage!.getFeatureFilter(FeatureFilterInst.map);
+                        bool changed = await f.setEditState(context: context);
+                        if (changed) {
+                          await storage!
+                              .setFeatureFilter(FeatureFilterInst.map, f);
+                          setState(() {});
+                        }
+                      },
+                      child: Icon(
+                        Icons.edit,
+                        size: 16,
+                        color: storage != null &&
+                                storage!
+                                    .getFeatureFilter(FeatureFilterInst.map)
+                                    .doesFilterEditState()
+                            ? Theme.of(context).colorScheme.primary
+                            : null,
+                      ),
+                    ),
+                    FloatingActionButton(
+                      heroTag: 'fab-filter-search',
+                      tooltip: I18N.of(context).filterByText,
+                      elevation: 0,
+                      mini: true,
+                      onPressed: () {
+                        setState(() {
+                          onToggleFilterSearch();
+                        });
+                      },
+                      child: Icon(
+                        Icons.search,
+                        size: 16,
+                        color: storage != null &&
+                                storage!
+                                    .getFeatureFilter(FeatureFilterInst.map)
+                                    .doesFilterSearch()
+                            ? Theme.of(context).colorScheme.primary
+                            : null,
+                      ),
+                    ),
+                    FloatingActionButton(
+                      heroTag: 'fab-filter-clear',
+                      tooltip: I18N.of(context).clearFilter,
+                      elevation: 0,
+                      mini: true,
+                      onPressed: () async {
+                        FeatureFilter f = FeatureFilter.empty();
+                        f.users = Set.of(storage!.users.keys);
+                        f.categories = Set.of(PointCategory.allCategories);
+                        await storage!
+                            .setFeatureFilter(FeatureFilterInst.map, f);
+                        setState(() {});
+                      },
+                      child: const Icon(
+                        Icons.clear,
+                        size: 16,
+                      ),
+                    )
+                  ]),
       ),
     );
   }
@@ -1698,10 +1697,12 @@ class MainWidgetState extends State<MainWidget> {
           serverData.users.keys.toSet(), storage!.users.keys.toSet());
       await storage!.setUsers(serverData.users);
       if (usersChanged) {
-        var ff = storage!.getFeatureFilter(FeatureFilterInst.featureList);
-        ff.users.clear();
-        ff.users.addAll(storage!.users.keys);
-        await storage!.setFeatureFilter(FeatureFilterInst.featureList, ff);
+        for (FeatureFilterInst ffi in FeatureFilterInst.values) {
+          var ff = storage!.getFeatureFilter(ffi);
+          ff.users.clear();
+          ff.users.addAll(storage!.users.keys);
+          await storage!.setFeatureFilter(ffi, ff);
+        }
       }
 
       List<Feature> localFeatures =

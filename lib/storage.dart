@@ -205,7 +205,9 @@ class Storage {
       await db.insert('feature_filters', {
         'filter_name': FeatureFilterInst.map.name,
         'users': '[]',
-        'categories': '[]',
+        'categories': jsonEncode(PointCategory.allCategories
+            .map((e) => e.name)
+            .toList(growable: false)),
         'attributes': '[]',
         'attributes_exact': 0,
         'edit_state': EditState.anyState.name,
