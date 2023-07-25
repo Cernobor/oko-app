@@ -721,7 +721,7 @@ class LineString extends Feature {
   List<LatLng> coords;
   List<LatLng> origCoords;
 
-  LineString._(
+  LineString(
       int id,
       int ownerId,
       int origOwnerId,
@@ -754,6 +754,34 @@ class LineString extends Feature {
             origPhotoIDs,
             deleted);
 
+  LineString.origSame(
+      int id,
+      int ownerId,
+      String name,
+      DateTime? deadline,
+      String? description,
+      Color color,
+      Set<int> photoIDs,
+      List<LatLng> coords,
+      bool deleted)
+      : this(
+      id,
+      ownerId,
+      ownerId,
+      name,
+      name,
+      deadline,
+      deadline,
+      description,
+      description,
+      color,
+      color,
+      photoIDs,
+      Set.of(photoIDs),
+      coords,
+      List.of(coords),
+      deleted);
+
   factory LineString.fromGeojson(
       int id,
       int ownerId,
@@ -781,7 +809,7 @@ class LineString extends Feature {
     List<List<double>> origCoords = (origGeom['coordinates'] as List<dynamic>)
         .map((e) => (e as List<dynamic>).cast<double>())
         .toList(growable: false);
-    return LineString._(
+    return LineString(
         id,
         ownerId,
         origOwnerId,
@@ -825,7 +853,7 @@ class LineString extends Feature {
       Set<PointAttribute>? attributes,
       Set<PointAttribute>? origAttributes,
       bool? deleted})
-      : this._(
+      : this(
             id ?? other.id,
             ownerId ?? other.ownerId,
             origOwnerId ?? other.origOwnerId,

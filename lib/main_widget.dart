@@ -22,6 +22,7 @@ import 'package:oko/storage.dart';
 import 'package:oko/subpages/edit_point.dart';
 import 'package:oko/subpages/gallery.dart';
 import 'package:oko/subpages/pairing.dart';
+import 'package:oko/subpages/path_creator.dart';
 import 'package:oko/subpages/point_list.dart';
 import 'package:oko/subpages/proposal.dart';
 import 'package:oko/utils.dart' as utils;
@@ -336,6 +337,20 @@ class MainWidgetState extends State<MainWidget> {
             onTap: () => onLogPoint(PointLogType.crosshair),
             enabled: storage?.serverSettings != null,
           ),
+          ListTile(
+            title: Text(I18N.of(context).createPath),
+            subtitle: Text(I18N.of(context).createPathSubtitle),
+            leading: storage!.pathCreation.isEmpty
+                ? const Icon(Icons.polyline)
+                : Badge(
+                    label: Text(storage!.pathCreation.length.toString()),
+                    child: const Icon(Icons.polyline),
+                  ),
+            //leading: const Icon(Icons.polyline),
+            trailing: const Icon(Icons.arrow_forward),
+            onTap: onCreatePath,
+            enabled: storage?.serverSettings != null,
+          ),
           // point list
           ListTile(
             title: Text(I18N.of(context).poiListTitle),
@@ -413,8 +428,6 @@ class MainWidgetState extends State<MainWidget> {
               ),
             )),
         createMapControls(context),
-        if (storage != null && storage!.pathCreation.isNotEmpty)
-          createPathCreationControl(context),
         createMapFilterControl(context)
       ],
     );
@@ -790,7 +803,7 @@ class MainWidgetState extends State<MainWidget> {
                             label: Icon(
                               storage != null &&
                                       storage!.pathCreation
-                                          .containsKey(infoTarget.point.id)
+                                          .contains(infoTarget.point.id)
                                   ? Icons.remove
                                   : Icons.add,
                               size: 16,
@@ -799,7 +812,7 @@ class MainWidgetState extends State<MainWidget> {
                               icon: const Icon(Icons.polyline),
                               color: storage != null &&
                                       storage!.pathCreation
-                                          .containsKey(infoTarget.point.id)
+                                          .contains(infoTarget.point.id)
                                   ? Theme.of(context).colorScheme.primary
                                   : null,
                               tooltip: I18N.of(context).addToPathCreation,
@@ -808,7 +821,7 @@ class MainWidgetState extends State<MainWidget> {
                                   return;
                                 }
                                 if (storage!.pathCreation
-                                    .containsKey(infoTarget.point.id)) {
+                                    .contains(infoTarget.point.id)) {
                                   await storage!.removePointFromPathCreation(
                                       infoTarget.point);
                                 } else {
@@ -895,55 +908,6 @@ class MainWidgetState extends State<MainWidget> {
               ),
             ),
           ),
-        ],
-      ),
-    );
-  }
-
-  Widget createPathCreationControl(BuildContext context) {
-    return Container(
-      alignment: Alignment.topCenter,
-      padding: const EdgeInsets.all(8.0),
-      child: Wrap(
-        alignment: WrapAlignment.start,
-        direction: Axis.horizontal,
-        crossAxisAlignment: WrapCrossAlignment.center,
-        runAlignment: WrapAlignment.start,
-        spacing: 2,
-        children: <Widget>[
-          Badge(
-            backgroundColor: storage!.pathCreation.length <= 1
-                ? Theme.of(context).colorScheme.error
-                : null,
-            label: Text(storage!.pathCreation.length.toString()),
-            child: FloatingActionButton(
-              heroTag: 'fab-go-path-creation',
-              tooltip: I18N.of(context).goPathCreation,
-              elevation: 0,
-              backgroundColor: storage!.pathCreation.length <= 1
-                  ? Theme.of(context).colorScheme.secondary.withOpacity(.35)
-                  : null,
-              onPressed: storage!.pathCreation.length <= 1 ? null : () {},
-              child: const Icon(
-                Icons.polyline,
-                size: 30,
-              ),
-            ),
-          ),
-          FloatingActionButton(
-            heroTag: 'fab-path-creation-clear',
-            tooltip: I18N.of(context).clearPathCreation,
-            elevation: 0,
-            mini: true,
-            onPressed: () async {
-              await storage!.clearPathCreation();
-              setState(() {});
-            },
-            child: const Icon(
-              Icons.clear,
-              size: 16,
-            ),
-          )
         ],
       ),
     );
@@ -1388,6 +1352,46 @@ class MainWidgetState extends State<MainWidget> {
     }
   }
 
+  void onCreatePath() async {
+    if (storage == null) {
+      utils.notifySnackbar(
+          context, 'No storage!', utils.NotificationLevel.error);
+      Navigator.of(context).pop();
+    }
+    PathCreationResult? res = await Navigator.of(context).push(
+        MaterialPageRoute<PathCreationResult>(
+            builder: (context) => PathCreator(
+                users: storage!.users, myId: storage!.serverSettings!.id)));
+    if (res == null) {
+      return;
+    }
+    if (context.mounted) {
+      Navigator.pop(context);
+    }
+    LineString path = res.path;
+    Set<int> toDelete = res.toDelete;
+    path.id = await storage!.nextLocalId();
+    await storage!.upsertFeature(path);
+    await Future.wait(
+    toDelete.map((e) {
+      data.Feature? f = storage!.featuresMap[e];
+      if (f == null || !f.isPoint() || f.ownerId == 0) {
+        return Future(() => null);
+      }
+      data.Point point = f.asPoint();
+      if (point.isLocal) {
+        return storage!.removeFeature(point.id);
+      } else {
+        return storage!.upsertFeature(data.Point.from(point, deleted: true));
+      }
+    }));
+    setState(() {});
+    if (context.mounted) {
+      utils.notifySnackbar(context, I18N.of(context).pathCreated,
+          utils.NotificationLevel.success);
+    }
+  }
+
   void onToggleLocationContinuous() {
     if (locationSubscription == null) {
       locationSubscription =
@@ -1597,7 +1601,12 @@ class MainWidgetState extends State<MainWidget> {
   }
 
   Future<bool> download(bool withPhotos) async {
-    return withPhotos ? downloadWithPhotos() : downloadBare();
+    bool res = await (withPhotos ? downloadWithPhotos() : downloadBare());
+    if (res) {
+      await storage?.clearPathCreation();
+      setState(() {});
+    }
+    return res;
   }
 
   Future<bool> downloadBare() async {

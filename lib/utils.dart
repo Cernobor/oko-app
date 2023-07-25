@@ -3,6 +3,7 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_archive/flutter_archive.dart';
+import 'package:flutter_colorpicker/flutter_colorpicker.dart';
 import 'package:flutter_vibrate/flutter_vibrate.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:oko/i18n.dart';
@@ -183,4 +184,100 @@ Future<void> unzip(
         onProgress(progress);
         return ZipFileOperation.includeItem;
       });
+}
+
+Future<DateTime?> chooseTime(BuildContext context, {DateTime? initialTime}) async {
+  DateTime? date;
+  TimeOfDay? time;
+  while (true) {
+    date = await showDatePicker(
+      context: context,
+      initialDate: date ?? initialTime?.toLocal() ?? DateTime.now(),
+      firstDate: DateTime.now(),
+      lastDate: DateTime(2100),
+      confirmText: I18N.of(context).dialogNext.toUpperCase(),
+    );
+    if (date == null) {
+      return null;
+    }
+    if (context.mounted) {
+      time = await showTimePicker(
+        context: context,
+        initialTime: time ??
+            (initialTime == null
+                ? TimeOfDay.fromDateTime(date)
+                : TimeOfDay.fromDateTime(initialTime.toLocal())),
+        cancelText: I18N.of(context).dialogBack.toUpperCase(),
+      );
+    } else {
+      return null;
+    }
+    if (time == null) {
+      continue;
+    }
+    break;
+  }
+  return DateTime(date.year, date.month, date.day, time.hour, time.minute);
+}
+
+Future<Color?> chooseColorBlock(BuildContext context, {required List<Color> availableColors, required Color initialColor}) async {
+  Color color = initialColor;
+  bool? ok = await showDialog<bool>(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          content: SingleChildScrollView(
+            child: BlockPicker(
+              availableColors: availableColors,
+              pickerColor: initialColor,
+              onColorChanged: (c) {
+                color = c;
+              },
+              itemBuilder: (Color color,
+                  bool isCurrentColor,
+                  void Function() changeColor) {
+                return Container(
+                  margin: const EdgeInsets.all(7),
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: color,
+                  ),
+                  child: Material(
+                    color: Colors.transparent,
+                    child: InkWell(
+                      onTap: changeColor,
+                      borderRadius:
+                      BorderRadius.circular(50),
+                      child: AnimatedOpacity(
+                        duration: const Duration(
+                            milliseconds: 210),
+                        opacity: isCurrentColor ? 1 : 0,
+                        child: Icon(Icons.done,
+                            color: useWhiteForeground(color)
+                                ? Colors.white
+                                : Colors.black),
+                      ),
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+          actionsAlignment: MainAxisAlignment.center,
+          actions: [
+            TextButton(
+                child: Text(I18N.of(context).ok),
+                onPressed: () =>
+                    Navigator.of(context).pop(true)),
+            TextButton(
+                child: Text(I18N.of(context).dialogCancel),
+                onPressed: () =>
+                    Navigator.of(context).pop(false))
+          ],
+        );
+      });
+  if (ok == true) {
+    return color;
+  }
+  return null;
 }

@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:oko/data.dart';
+import 'package:oko/utils.dart';
 import 'package:sprintf/sprintf.dart';
 
 const cs = 'cs';
@@ -538,9 +539,157 @@ class I18N {
       }[locale.languageCode]!;
 
   String get clearPathCreation => {
-    cs: 'Zrušit tvoření cesty',
-    en: 'Cancel path creation'
-  }[locale.languageCode]!;
+        cs: 'Zrušit tvoření cesty',
+        en: 'Cancel path creation'
+      }[locale.languageCode]!;
+
+  String get createPath =>
+      {cs: 'Vytvořit cestu', en: 'Create path'}[locale.languageCode]!;
+
+  String get createPathSubtitle =>
+      {cs: 'z bodů', en: 'out of points'}[locale.languageCode]!;
+
+  String get pickAPoint =>
+      {cs: 'Vyberte bod', en: 'Pick a point'}[locale.languageCode]!;
+
+  String get pathSettings =>
+      {cs: 'Nastavení', en: 'Settings'}[locale.languageCode]!;
+
+  String get orderPointsByName =>
+      {cs: 'Seřadit dle názvu', en: 'Order by name'}[locale.languageCode]!;
+
+  String get deletePointsAfterPathCreated => {
+        cs: 'Po vytvoření smazat body',
+        en: 'Delete points after creation'
+      }[locale.languageCode]!;
+
+  String get deletePointsNone =>
+      {cs: 'Žádné', en: 'None'}[locale.languageCode]!;
+
+  String get deletePointsChecked =>
+      {cs: 'Zaškrtnuté', en: 'Checked'}[locale.languageCode]!;
+
+  String get deletePointsAll =>
+      {cs: 'Všechny', en: 'All'}[locale.languageCode]!;
+
+  String get closePath =>
+      {cs: 'Uzavřít cestu', en: 'Close path'}[locale.languageCode]!;
+
+  String get closePathSubtitle => {
+        cs: 'Propojit první a poslední bod',
+        en: 'Connect first and last point'
+      }[locale.languageCode]!;
+
+  String get pathCreationConfirm =>
+      {cs: 'Vytvořit', en: 'Create'}[locale.languageCode]!;
+
+  String get pathCreateCheckTitle =>
+      {cs: 'Vytvořit?', en: 'Create?'}[locale.languageCode]!;
+
+  String Function(int n) get pathCreatedFrom => ((int n) {
+        switch (locale.languageCode) {
+          case cs:
+            return 'Cesta bude vytvořena z $n bodů.';
+          case en:
+            return 'The path will be created from $n points.';
+        }
+        throw IllegalStateException(
+            'Invalid language code: ${locale.languageCode}');
+      });
+
+  String Function(int total) get allPointsToBeDeleted => ((int total) {
+        switch (locale.languageCode) {
+          case cs:
+            if (total == 0) {
+              return 'Žádný bod nebude označen ke smazání.';
+            } else if (total < 5) {
+              return 'Všechny $total body budou označeny ke smazání';
+            } else {
+              return 'Všech $total bodů bude označeno ke smazání';
+            }
+          case en:
+            if (total == 0) {
+              return 'No point will be marked for deletion.';
+            } else {
+              return 'All $total points will be marked for deletion';
+            }
+        }
+        throw IllegalStateException(
+            'Invalid language code: ${locale.languageCode}');
+      });
+
+  String Function(int total) get checkedPointsToBeDeleted => ((int total) {
+        switch (locale.languageCode) {
+          case cs:
+            if (total == 0) {
+              return 'Žádný bod nebude označen ke smazání.';
+            } else if (total < 5) {
+              return '$total body budou označeny ke smazání';
+            } else {
+              return '$total bodů bude označeno ke smazání';
+            }
+          case en:
+            if (total == 0) {
+              return 'No point will be marked for deletion.';
+            } else {
+              return '$total points will be marked for deletion';
+            }
+        }
+        throw IllegalStateException(
+            'Invalid language code: ${locale.languageCode}');
+      });
+
+  String get ofWhich =>
+      {cs: ', z toho', en: ', of which'}[locale.languageCode]!;
+
+  String Function(int n) get pathOfWhichLocal => ((int n) {
+        switch (locale.languageCode) {
+          case cs:
+            if (n == 0) {
+              return 'žádný bod není lokální';
+            } else if (n < 5) {
+              return '$n jsou lokální a tedy budou smazány zcela';
+            } else {
+              return '$n je lokálních a tedy budou smazány zcela';
+            }
+          case en:
+            if (n == 0) {
+              return 'no point is local';
+            } else if (n == 1) {
+              return '$n is local and therefore will be deleted completely';
+            } else {
+              return '$n are local and therefore will be deleted completely';
+            }
+        }
+        throw IllegalStateException(
+            'Invalid language code: ${locale.languageCode}');
+      });
+
+  String Function(int n) get pathOfWhichSystem => ((int n) {
+        switch (locale.languageCode) {
+          case cs:
+            if (n == 0) {
+              return 'žádný bod není systémový';
+            } else if (n < 5) {
+              return '$n jsou systémové a tedy nebudou smazány';
+            } else {
+              return '$n je systémových a tedy nebudou smazány';
+            }
+          case en:
+            if (n == 0) {
+              return 'no point is system';
+            } else if (n == 1) {
+              return '$n is system and therefore will not be deleted';
+            } else {
+              return '$n are system and therefore will not be deleted';
+            }
+        }
+        throw IllegalStateException(
+            'Invalid language code: ${locale.languageCode}');
+      });
+
+  String get pathCreated =>
+      {cs: 'Cesta vytvořena', en: 'Path created'}[locale.languageCode]!;
 }
 
 class I18NDelegate extends LocalizationsDelegate<I18N> {

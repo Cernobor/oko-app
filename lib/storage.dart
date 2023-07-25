@@ -727,9 +727,9 @@ class Storage {
   //endregion
 
   //region path creation
-  final Map<int, int> _pathCreation = HashMap();
+  final List<int> _pathCreation = List.empty(growable: true);
 
-  Map<int, int> get pathCreation => UnmodifiableMapView(_pathCreation);
+  List<int> get pathCreation => UnmodifiableListView(_pathCreation);
 
   Future<void> addPointToPathCreation(Point point) async {
     await _db.transaction((Transaction tx) async {
@@ -747,6 +747,18 @@ class Storage {
     });
   }
 
+  Future<void> setPathCreation(List<int> pointIds) async {
+    await _db.transaction((Transaction tx) async {
+      await tx.delete('path_creation');
+      int ord = 0;
+      for (int id in pointIds) {
+        await tx.insert('path_creation', {'id': id, 'ord': ord});
+        ord++;
+      }
+      await _loadPathCreation(tx);
+    });
+  }
+
   Future<void> clearPathCreation() async {
     await _db.transaction((Transaction tx) async {
       await tx.delete('path_creation');
@@ -755,12 +767,12 @@ class Storage {
   }
 
   Future<void> _loadPathCreation([Transaction? tx]) async {
-    var rows = await (tx ?? _db).query('path_creation', columns: ['id', 'ord']);
+    var rows = await (tx ?? _db)
+        .query('path_creation', columns: ['id'], orderBy: 'ord asc');
     _pathCreation.clear();
     for (var row in rows) {
       int id = row['id'] as int;
-      int order = row['ord'] as int;
-      _pathCreation[id] = order;
+      _pathCreation.add(id);
     }
   }
 

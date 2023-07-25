@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_colorpicker/flutter_colorpicker.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:oko/data.dart';
 import 'package:oko/i18n.dart';
+import 'package:oko/utils.dart';
 
 class EditPoint extends StatefulWidget {
   final Point? point;
@@ -262,56 +262,7 @@ class _EditPointState extends State<EditPoint> {
                       icon: const Icon(Icons.circle),
                       iconSize: 30,
                       color: color,
-                      onPressed: () => showDialog(
-                          context: context,
-                          builder: (context) {
-                            return AlertDialog(
-                              content: SingleChildScrollView(
-                                child: BlockPicker(
-                                  availableColors: _colors,
-                                  pickerColor: color,
-                                  onColorChanged: (c) => setState(() {
-                                    color = c;
-                                  }),
-                                  itemBuilder: (Color color,
-                                      bool isCurrentColor,
-                                      void Function() changeColor) {
-                                    return Container(
-                                      margin: const EdgeInsets.all(7),
-                                      decoration: BoxDecoration(
-                                        shape: BoxShape.circle,
-                                        color: color,
-                                      ),
-                                      child: Material(
-                                        color: Colors.transparent,
-                                        child: InkWell(
-                                          onTap: changeColor,
-                                          borderRadius:
-                                              BorderRadius.circular(50),
-                                          child: AnimatedOpacity(
-                                            duration: const Duration(
-                                                milliseconds: 210),
-                                            opacity: isCurrentColor ? 1 : 0,
-                                            child: Icon(Icons.done,
-                                                color: useWhiteForeground(color)
-                                                    ? Colors.white
-                                                    : Colors.black),
-                                          ),
-                                        ),
-                                      ),
-                                    );
-                                  },
-                                ),
-                              ),
-                              actionsAlignment: MainAxisAlignment.center,
-                              actions: [
-                                TextButton(
-                                    child: Text(I18N.of(context).ok),
-                                    onPressed: () =>
-                                        Navigator.of(context).pop())
-                              ],
-                            );
-                          }),
+                      onPressed: onChooseColor,
                     )
                   ],
                 ),
@@ -362,38 +313,24 @@ class _EditPointState extends State<EditPoint> {
         ));
   }
 
-  void onChooseTime() async {
-    DateTime? date;
-    TimeOfDay? time;
-    while (true) {
-      date = await showDatePicker(
-        context: context,
-        initialDate: date ?? deadline?.toLocal() ?? DateTime.now(),
-        firstDate: DateTime.now(),
-        lastDate: DateTime(2100),
-        confirmText: I18N.of(context).dialogNext.toUpperCase(),
-      );
-      if (date == null) {
-        return;
-      }
-      time = await showTimePicker(
-        context: context,
-        initialTime: time ??
-            (deadline == null
-                ? TimeOfDay.fromDateTime(date)
-                : TimeOfDay.fromDateTime(deadline!.toLocal())),
-        cancelText: I18N.of(context).dialogBack.toUpperCase(),
-      );
-      if (time == null) {
-        continue;
-      }
-      break;
+  void onChooseColor() async {
+    Color? c = await chooseColorBlock(context,
+        availableColors: _colors, initialColor: color);
+    if (c != null) {
+      setState(() {
+        color = c;
+      });
     }
-    setState(() {
-      deadline =
-          DateTime(date!.year, date.month, date.day, time!.hour, time.minute)
-              .toUtc();
-    });
+  }
+
+  void onChooseTime() async {
+    DateTime? dateTime =
+        await chooseTime(context, initialTime: deadline?.toLocal());
+    if (dateTime != null) {
+      setState(() {
+        deadline = dateTime.toUtc();
+      });
+    }
   }
 
   bool _isValid() {
