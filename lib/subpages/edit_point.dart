@@ -3,6 +3,7 @@ import 'package:latlong2/latlong.dart';
 import 'package:oko/data.dart';
 import 'package:oko/i18n.dart';
 import 'package:oko/utils.dart';
+import 'package:oko/constants.dart' as constants;
 
 class EditPoint extends StatefulWidget {
   final Point? point;
@@ -23,30 +24,6 @@ class EditPoint extends StatefulWidget {
 }
 
 class _EditPointState extends State<EditPoint> {
-  static final List<Color> _colors = [
-    Colors.red.shade500,
-    Colors.pink.shade500,
-    Colors.purple.shade500,
-    Colors.deepPurple.shade500,
-    Colors.indigo.shade500,
-    Colors.blue.shade500,
-    Colors.lightBlue.shade500,
-    Colors.cyan.shade500,
-    Colors.teal.shade500,
-    Colors.green.shade500,
-    Colors.lightGreen.shade500,
-    Colors.lime.shade500,
-    Colors.yellow.shade500,
-    Colors.amber.shade500,
-    Colors.orange.shade500,
-    Colors.deepOrange.shade500,
-    Colors.brown.shade500,
-    Colors.grey.shade500,
-    Colors.blueGrey.shade500,
-    Colors.black,
-  ];
-  static final Color _defaultColor = Colors.blue.shade500;
-
   late LatLng location;
   late PointCategory category;
   late int ownerId;
@@ -69,7 +46,7 @@ class _EditPointState extends State<EditPoint> {
     nameInputController.text = widget.point?.name ?? '';
     descriptionInputController.text = widget.point?.description ?? '';
     attributes = Set.of(widget.point?.attributes ?? {});
-    color = widget.point?.color ?? _defaultColor;
+    color = widget.point?.color ?? constants.palette[constants.defaultPointColorIndex];
     hasDeadline = widget.point?.deadline != null;
     deadline = widget.point?.deadline;
   }
@@ -315,7 +292,7 @@ class _EditPointState extends State<EditPoint> {
 
   void onChooseColor() async {
     Color? c = await chooseColorBlock(context,
-        availableColors: _colors, initialColor: color);
+        availableColors: constants.palette, initialColor: color);
     if (c != null) {
       setState(() {
         color = c;

@@ -272,20 +272,20 @@ class _GalleryState<T> extends State<Gallery> {
   void _save() async {
     Feature f;
     if (widget.feature.isLocal) {
-      if (widget.feature is Point) {
-        f = Point.from(widget.feature as Point,
+      if (widget.feature.isPoint()) {
+        f = Point.from(widget.feature.asPoint(),
             photoIDs: current, origPhotoIDs: current);
-      } else if (widget.feature is LineString) {
-        f = LineString.from(widget.feature as LineString,
+      } else if (widget.feature.isPoly()) {
+        f = Poly.from(widget.feature.asPoly(),
             photoIDs: current, origPhotoIDs: current);
       } else {
         throw IllegalStateException('unknown feature type');
       }
     } else {
-      if (widget.feature is Point) {
-        f = Point.from(widget.feature as Point, photoIDs: current);
-      } else if (widget.feature is LineString) {
-        f = LineString.from(widget.feature as LineString, photoIDs: current);
+      if (widget.feature.isPoint()) {
+        f = Point.from(widget.feature.asPoint(), photoIDs: current);
+      } else if (widget.feature.isPoly()) {
+        f = Poly.from(widget.feature.asPoly(), photoIDs: current);
       } else {
         throw IllegalStateException('unknown feature type');
       }

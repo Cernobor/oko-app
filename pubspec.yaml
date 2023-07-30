@@ -18,7 +18,7 @@ publish_to: 'none' # Remove this line if you wish to publish to pub.dev
 version: 1.3.0+5
 
 environment:
-  sdk: ">=2.17.0 <3.0.0"
+  sdk: ">=3.0.0"
 
 # Dependencies specify other packages that your package needs in order to work.
 # To automatically upgrade your package dependencies to the latest versions
@@ -38,15 +38,15 @@ dependencies:
   cupertino_icons: ^1.0.2
 
   sprintf: ^7.0.0
-  latlong2: ^0.8.1
-  location: ^4.3.0
+  latlong2: ^0.9.0
+  location: ^5.0.0
   flutter_compass: ^0.7.0
-  flutter_map: ^4.0.0
+  flutter_map: ^5.0.0
+  flutter_map_tappable_polyline: ^5.0.0
   sqflite: ^2.0.3+1
   path_provider: ^2.0.9
   path: ^1.8.1
   qr_code_scanner: ^1.0.0
-  vector_map_tiles: ^4.0.0
   diacritic: ^0.1.3
   find_dropdown: ^1.0.1-dev.1
   filesize: ^2.0.1
@@ -54,17 +54,24 @@ dependencies:
   rxdart: ^0.27.3
   flutter_colorpicker: ^1.0.3
   intl: ^0.18.0
-  image_picker: ^0.8.4+11
+  image_picker: ^1.0.1
   image: ^4.0.17
   flutter_archive: ^5.0.0
   package_info_plus: ^4.0.2
   get_it: ^7.2.0
-  http: ^0.13.5
+  http: ^1.0.0
   http_parser: ^4.0.1
   positioned_tap_detector_2: ^1.0.4
   vector_tile_renderer: ^4.0.0
   url_launcher: ^6.1.5
   collection: ^1.17.1
+  flutter_map_line_editor: ^5.0.0
+  flutter_map_dragmarker: ^5.0.0
+  geodesy: ^0.6.0
+  vector_map_tiles:
+    git:
+      url: https://github.com/greensopinion/flutter-vector-map-tiles.git
+      ref: c816006df2520a0b010bc29edfe824f8be1c7b4a
 
 dev_dependencies:
   flutter_test:

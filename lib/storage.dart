@@ -58,7 +58,6 @@ class Storage {
         await s._loadFeatureFilter(f);
       }
       await s._loadFeatures();
-      await s._loadPathCreation();
 
       _instance = s;
     }
@@ -213,10 +212,6 @@ class Storage {
         'edit_state': EditState.anyState.name,
         'search_term': ''
       });
-
-      await db.execute('CREATE TABLE path_creation ('
-          'id integer primary key,'
-          'ord integer not null)');
     }
   }
 
@@ -722,58 +717,6 @@ class Storage {
     File photoFile = await _getPhotoFile(featureID);
     await photoFile.writeAsBytes(bytes, flush: true);
     return photoFile.path;
-  }
-
-  //endregion
-
-  //region path creation
-  final List<int> _pathCreation = List.empty(growable: true);
-
-  List<int> get pathCreation => UnmodifiableListView(_pathCreation);
-
-  Future<void> addPointToPathCreation(Point point) async {
-    await _db.transaction((Transaction tx) async {
-      await tx.insert(
-          'path_creation', {'id': point.id, 'ord': _pathCreation.length},
-          conflictAlgorithm: ConflictAlgorithm.replace);
-      await _loadPathCreation(tx);
-    });
-  }
-
-  Future<void> removePointFromPathCreation(Point point) async {
-    await _db.transaction((Transaction tx) async {
-      await tx.delete('path_creation', where: 'id = ?', whereArgs: [point.id]);
-      await _loadPathCreation(tx);
-    });
-  }
-
-  Future<void> setPathCreation(List<int> pointIds) async {
-    await _db.transaction((Transaction tx) async {
-      await tx.delete('path_creation');
-      int ord = 0;
-      for (int id in pointIds) {
-        await tx.insert('path_creation', {'id': id, 'ord': ord});
-        ord++;
-      }
-      await _loadPathCreation(tx);
-    });
-  }
-
-  Future<void> clearPathCreation() async {
-    await _db.transaction((Transaction tx) async {
-      await tx.delete('path_creation');
-      await _loadPathCreation(tx);
-    });
-  }
-
-  Future<void> _loadPathCreation([Transaction? tx]) async {
-    var rows = await (tx ?? _db)
-        .query('path_creation', columns: ['id'], orderBy: 'ord asc');
-    _pathCreation.clear();
-    for (var row in rows) {
-      int id = row['id'] as int;
-      _pathCreation.add(id);
-    }
   }
 
   //endregion

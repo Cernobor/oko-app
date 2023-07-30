@@ -22,6 +22,8 @@ class I18N {
 
   String appTitleWithVersion(String version) => '$appTitle v$version';
 
+  String get help => {cs: 'Nápověda', en: 'Help'}[locale.languageCode]!;
+
   String get drawerPaired => {
         cs: 'Spárováno se serverem',
         en: 'Paired to server'
@@ -210,14 +212,14 @@ class I18N {
 
   String get no => {cs: 'Ne', en: 'No'}[locale.languageCode]!;
 
-  String get aboutToDeleteLocalPoi => {
-        cs: 'Opravdu smazat lokální bod? Tuto operaci nelze vrátit.',
-        en: 'Really delete local point? This operation cannot be undone.'
+  String get aboutToDeleteLocalFeature => {
+        cs: 'Opravdu smazat lokální objekt? Tuto operaci nelze vrátit.',
+        en: 'Really delete local feature? This operation cannot be undone.'
       }[locale.languageCode]!;
 
-  String get aboutToRevertGlobalPoi => {
-        cs: 'Opravdu vrátit původní data k tomuto bodu? Tuto operaci nelze vrátit.',
-        en: 'Really revert to the original data for thsi point? This operation cannot be undone.'
+  String get aboutToRevertGlobalFeature => {
+        cs: 'Opravdu vrátit původní data k tomuto objektu? Tuto operaci nelze vrátit.',
+        en: 'Really revert to the original data for this feature? This operation cannot be undone.'
       }[locale.languageCode]!;
 
   String Function(int n) get nPois => (int n) {
@@ -443,6 +445,8 @@ class I18N {
 
   String get color => {cs: 'Barva', en: 'Colour'}[locale.languageCode]!;
 
+  String get colorFill => {cs: 'Barva výplně', en: 'Fill colour'}[locale.languageCode]!;
+
   String get deadline => {
         cs: 'Automaticky smazat',
         en: 'Automatically delete'
@@ -538,13 +542,36 @@ class I18N {
         en: 'Go to path creation'
       }[locale.languageCode]!;
 
-  String get clearPathCreation => {
-        cs: 'Zrušit tvoření cesty',
-        en: 'Cancel path creation'
+  String get creatingPath =>
+      {cs: 'Tvoření/úprava cesty', en: 'Creating/editing path'}[locale.languageCode]!;
+
+  String get creatingPathHelpAddingNodes => {
+        cs: 'Klepnutím do mapy nebo na existující bod přidáte uzel cesty/polygonu.',
+        en: 'You can add a node to the path/polygon by tapping on map or an existing point.'
       }[locale.languageCode]!;
 
-  String get createPath =>
-      {cs: 'Vytvořit cestu', en: 'Create path'}[locale.languageCode]!;
+  String get creatingPathHelpNodes => {
+        cs: 'Toto je uzel ("roh" cesty). Přemístíte ho tažením. Dlouhým podržením ho smažete.',
+        en: 'This is a node (a "corner" of the path). Move it by dragging. Long press on it deletes it.'
+      }[locale.languageCode]!;
+
+  String get creatingPathHelpMidpoints => {
+        cs: 'Klepnutím do mapy nebo na existující bod přidáte uzel cesty/polygonu.',
+        en: 'This is a midpoint of a path segment. Dragging it creates a new node in between the adjacent nodes.'
+      }[locale.languageCode]!;
+
+  String get creatingPathHelpClosePath => {
+        cs: 'Toto cestu uzavře, čímž se z ní stane polygon.',
+        en: 'This closes the path which turns it into a polygon.'
+      }[locale.languageCode]!;
+
+  String get creatingPathHelpSettings => {
+        cs: 'Toto cestu uzavře, čímž se z ní stane polygon.',
+        en: 'This opens the settings of the path/polygon. You can finish path/polygon creation (save it) there.'
+      }[locale.languageCode]!;
+
+  String get createPoly =>
+      {cs: 'Vytvořit cestu/polygon', en: 'Create path/polygon'}[locale.languageCode]!;
 
   String get createPathSubtitle =>
       {cs: 'z bodů', en: 'out of points'}[locale.languageCode]!;
@@ -558,26 +585,12 @@ class I18N {
   String get orderPointsByName =>
       {cs: 'Seřadit dle názvu', en: 'Order by name'}[locale.languageCode]!;
 
-  String get deletePointsAfterPathCreated => {
-        cs: 'Po vytvoření smazat body',
-        en: 'Delete points after creation'
-      }[locale.languageCode]!;
-
-  String get deletePointsNone =>
-      {cs: 'Žádné', en: 'None'}[locale.languageCode]!;
-
-  String get deletePointsChecked =>
-      {cs: 'Zaškrtnuté', en: 'Checked'}[locale.languageCode]!;
-
-  String get deletePointsAll =>
-      {cs: 'Všechny', en: 'All'}[locale.languageCode]!;
-
   String get closePath =>
       {cs: 'Uzavřít cestu', en: 'Close path'}[locale.languageCode]!;
 
   String get closePathSubtitle => {
-        cs: 'Propojit první a poslední bod',
-        en: 'Connect first and last point'
+        cs: 'Propojit první a poslední bod => polygon',
+        en: 'Connect first and last point => polygon'
       }[locale.languageCode]!;
 
   String get pathCreationConfirm =>
@@ -688,8 +701,8 @@ class I18N {
             'Invalid language code: ${locale.languageCode}');
       });
 
-  String get pathCreated =>
-      {cs: 'Cesta vytvořena', en: 'Path created'}[locale.languageCode]!;
+  String get polyCreated =>
+      {cs: 'Cesta/polygon vytvořen(a)', en: 'Path/polygon created'}[locale.languageCode]!;
 }
 
 class I18NDelegate extends LocalizationsDelegate<I18N> {

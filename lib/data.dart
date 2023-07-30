@@ -1,5 +1,6 @@
 import 'dart:developer' as developer;
 import 'dart:io';
+import 'dart:math';
 
 import 'package:collection/collection.dart';
 import 'package:flutter/foundation.dart';
@@ -7,6 +8,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:oko/utils.dart';
+import 'package:oko/constants.dart' as constants;
 
 class ServerSettings {
   final String serverAddress;
@@ -188,6 +190,7 @@ class PointCategory implements Comparable {
 
   AnchorPos anchorPos(double w, double h) =>
       AnchorPos.exactly(Anchor(w * xAlign, h * yAlign));
+
   Alignment rotationAlignment() => Alignment(-2 * xAlign + 1, -2 * yAlign + 1);
 }
 
@@ -374,13 +377,17 @@ abstract class Feature {
           deleted,
           geometry,
           origGeometry);
-    } else if (Feature.isGeojsonLineString(geometry)) {
-      Color color =
-          colorValue == null ? LineString.defaultColor : Color(colorValue);
+    } else if (Feature.isGeojsonPoly(geometry)) {
+      Color color = colorValue == null
+          ? constants.palette[constants.defaultPolyStrokeColorIndex]
+          : Color(colorValue);
       Color origColor = origColorValue == null
-          ? LineString.defaultColor
+          ? constants.palette[constants.defaultPolyStrokeColorIndex]
           : Color(origColorValue);
-      return LineString.fromGeojson(
+      Color? colorFill = colorValue == null ? null : Color(colorValue);
+      Color? origColorFill =
+          origColorValue == null ? null : Color(origColorValue);
+      return Poly.fromGeojson(
           id,
           ownerId,
           origOwnerId,
@@ -392,6 +399,8 @@ abstract class Feature {
           origDescription,
           color,
           origColor,
+          colorFill,
+          origColorFill,
           photoIDs,
           origPhotoIDs,
           deleted,
@@ -405,14 +414,17 @@ abstract class Feature {
     return geojson['type'] == 'Point';
   }
 
-  static bool isGeojsonLineString(Map<String, dynamic> geojson) {
-    return geojson['type'] == 'LineString';
+  static bool isGeojsonPoly(Map<String, dynamic> geojson) {
+    return geojson['type'] == 'LineString' || geojson['type'] == 'Polygon';
   }
 
   bool isPoint();
+
   Point asPoint();
-  bool isLineString();
-  LineString asLineString();
+
+  bool isPoly();
+
+  Poly asPoly();
 
   bool get isEdited =>
       ownerId != origOwnerId ||
@@ -459,6 +471,10 @@ abstract class Feature {
         },
         'deleted': deleted
       };
+
+  Feature copy();
+
+  LatLng center();
 }
 
 class Point extends Feature {
@@ -507,6 +523,7 @@ class Point extends Feature {
             photoIDs,
             origPhotoIDs,
             deleted);
+
   Point.origSame(
       int id,
       int ownerId,
@@ -640,13 +657,13 @@ class Point extends Feature {
   Point asPoint() => this;
 
   @override
-  bool isLineString() {
+  bool isPoly() {
     return false;
   }
 
   @override
-  LineString asLineString() {
-    throw IllegalStateException('not a LineString');
+  Poly asPoly() {
+    throw IllegalStateException('not a Poly');
   }
 
   @override
@@ -690,6 +707,7 @@ class Point extends Feature {
     return js;
   }
 
+  @override
   Point copy() {
     return Point(
         id,
@@ -713,15 +731,20 @@ class Point extends Feature {
         Set.of(origAttributes),
         deleted);
   }
+
+  @override
+  LatLng center() => coords;
 }
 
-class LineString extends Feature {
-  static const Color defaultColor = Colors.black;
-
+class Poly extends Feature {
   List<LatLng> coords;
   List<LatLng> origCoords;
+  bool polygon;
+  bool origPolygon;
+  Color? colorFill;
+  Color? origColorFill;
 
-  LineString(
+  Poly(
       int id,
       int ownerId,
       int origOwnerId,
@@ -733,10 +756,14 @@ class LineString extends Feature {
       String? origDescription,
       Color color,
       Color origColor,
+      this.colorFill,
+      this.origColorFill,
       Set<int> photoIDs,
       Set<int> origPhotoIDs,
       this.coords,
       this.origCoords,
+      this.polygon,
+      this.origPolygon,
       bool deleted)
       : super._(
             id,
@@ -754,35 +781,41 @@ class LineString extends Feature {
             origPhotoIDs,
             deleted);
 
-  LineString.origSame(
+  Poly.origSame(
       int id,
       int ownerId,
       String name,
       DateTime? deadline,
       String? description,
       Color color,
+      Color? colorFill,
       Set<int> photoIDs,
       List<LatLng> coords,
+      bool polygon,
       bool deleted)
       : this(
-      id,
-      ownerId,
-      ownerId,
-      name,
-      name,
-      deadline,
-      deadline,
-      description,
-      description,
-      color,
-      color,
-      photoIDs,
-      Set.of(photoIDs),
-      coords,
-      List.of(coords),
-      deleted);
+            id,
+            ownerId,
+            ownerId,
+            name,
+            name,
+            deadline,
+            deadline,
+            description,
+            description,
+            color,
+            color,
+            colorFill,
+            colorFill,
+            photoIDs,
+            Set.of(photoIDs),
+            coords,
+            List.of(coords),
+            polygon,
+            polygon,
+            deleted);
 
-  factory LineString.fromGeojson(
+  factory Poly.fromGeojson(
       int id,
       int ownerId,
       int origOwnerId,
@@ -794,22 +827,51 @@ class LineString extends Feature {
       String? origDescription,
       Color color,
       Color origColor,
+      Color? colorFill,
+      Color? origColorFill,
       Set<int> photoIDs,
       Set<int> origPhotoIDs,
       bool deleted,
       Map<String, dynamic> geom,
       Map<String, dynamic> origGeom) {
-    assert(geom['type'] == 'LineString');
-    assert(origGeom['type'] == 'LineString');
+    var type = geom['type'];
+    var origType = origGeom['type'];
+    assert(type == 'LineString' || type == 'Polygon');
+    assert(origType == 'LineString' || origType == 'Polygon');
 
     developer.log("coords: ${geom['coordinates']}");
-    List<List<double>> coords = (geom['coordinates'] as List<dynamic>)
-        .map((e) => (e as List<dynamic>).cast<double>())
-        .toList(growable: false);
-    List<List<double>> origCoords = (origGeom['coordinates'] as List<dynamic>)
-        .map((e) => (e as List<dynamic>).cast<double>())
-        .toList(growable: false);
-    return LineString(
+    List<List<double>> coords = [];
+    if (type == 'Polygon') {
+      List<List<List<double>>> tmpCoords =
+          (geom['coordinates'] as List<dynamic>)
+              .cast<List<dynamic>>()
+              .map((e) =>
+                  e.cast<List<dynamic>>().map((e) => e.cast<double>()).toList())
+              .toList();
+      assert(tmpCoords.length == 1);
+      assert(tmpCoords[0].first.equals(tmpCoords[0].last));
+      coords = tmpCoords[0];
+      coords.length = coords.length - 1;
+    } else if (type == 'LineString') {
+      coords = geom['coordinates'] as List<List<double>>;
+    }
+
+    List<List<double>> origCoords = [];
+    if (origType == 'Polygon') {
+      List<List<List<double>>> tmpCoords =
+          (origGeom['coordinates'] as List<dynamic>)
+              .cast<List<dynamic>>()
+              .map((e) =>
+                  e.cast<List<dynamic>>().map((e) => e.cast<double>()).toList())
+              .toList();
+      assert(tmpCoords.length == 1);
+      assert(tmpCoords[0].first.equals(tmpCoords[0].last));
+      origCoords = tmpCoords[0];
+      origCoords.length = origCoords.length - 1;
+    } else if (origType == 'LineString') {
+      origCoords = origGeom['coordinates'] as List<List<double>>;
+    }
+    return Poly(
         id,
         ownerId,
         origOwnerId,
@@ -821,6 +883,8 @@ class LineString extends Feature {
         origDescription,
         color,
         origColor,
+        colorFill,
+        origColorFill,
         photoIDs,
         origPhotoIDs,
         coords
@@ -829,10 +893,12 @@ class LineString extends Feature {
         origCoords
             .map((List<double> c) => LatLng(c[1], c[0]))
             .toList(growable: false),
+        type == 'Polygon',
+        origType == 'Polygon',
         deleted);
   }
 
-  LineString.from(LineString other,
+  Poly.from(Poly other,
       {int? id,
       int? ownerId,
       int? origOwnerId,
@@ -844,14 +910,14 @@ class LineString extends Feature {
       String? origDescription,
       Color? color,
       Color? origColor,
+      Color? colorFill,
+      Color? origColorFill,
       Set<int>? photoIDs,
       Set<int>? origPhotoIDs,
       List<LatLng>? coords,
       List<LatLng>? origCoords,
-      PointCategory? category,
-      PointCategory? origCategory,
-      Set<PointAttribute>? attributes,
-      Set<PointAttribute>? origAttributes,
+      bool? polygon,
+      bool? origPolygon,
       bool? deleted})
       : this(
             id ?? other.id,
@@ -865,10 +931,14 @@ class LineString extends Feature {
             origDescription ?? other.origDescription,
             color ?? other.color,
             origColor ?? other.origColor,
+            colorFill ?? other.colorFill,
+            origColorFill ?? other.origColorFill,
             photoIDs ?? other.photoIDs,
             origPhotoIDs ?? other.origPhotoIDs,
             coords ?? other.coords,
             origCoords ?? other.origCoords,
+            polygon ?? other.polygon,
+            origPolygon ?? other.origPolygon,
             deleted ?? other.deleted);
 
   @override
@@ -882,16 +952,19 @@ class LineString extends Feature {
   }
 
   @override
-  bool isLineString() {
+  bool isPoly() {
     return true;
   }
 
   @override
-  LineString asLineString() => this;
+  Poly asPoly() => this;
 
   @override
   bool get isEdited =>
-      super.isEdited || const IterableEquality().equals(coords, origCoords);
+      super.isEdited ||
+      const IterableEquality().equals(coords, origCoords) ||
+      colorFill != origColorFill ||
+      polygon != origPolygon;
 
   @override
   void revert() {
@@ -899,19 +972,45 @@ class LineString extends Feature {
     coords = List.of(origCoords);
   }
 
-  Map<String, dynamic> _geometry() => {
+  Map<String, dynamic> _geometry() {
+    if (polygon) {
+      return {
+        'type': 'Polygon',
+        'coordinates': [
+          (coords + [coords.first])
+              .map((LatLng c) => [c.longitude, c.latitude])
+              .toList(growable: false)
+        ]
+      };
+    } else {
+      return {
         'type': 'LineString',
         'coordinates': coords
             .map((LatLng c) => [c.longitude, c.latitude])
             .toList(growable: false)
       };
+    }
+  }
 
-  Map<String, dynamic> _origGeometry() => {
+  Map<String, dynamic> _origGeometry() {
+    if (polygon) {
+      return {
+        'type': 'Polygon',
+        'coordinates': [
+          (origCoords + [origCoords.first])
+              .map((LatLng c) => [c.longitude, c.latitude])
+              .toList(growable: false)
+        ]
+      };
+    } else {
+      return {
         'type': 'LineString',
         'coordinates': origCoords
             .map((LatLng c) => [c.longitude, c.latitude])
             .toList(growable: false)
       };
+    }
+  }
 
   @override
   Map<String, dynamic> toJson() {
@@ -919,6 +1018,34 @@ class LineString extends Feature {
     js.addAll({'geometry': _geometry(), 'orig_geometry': _origGeometry()});
     return js;
   }
+
+  @override
+  Poly copy() {
+    return Poly(
+        id,
+        ownerId,
+        origOwnerId,
+        name,
+        origName,
+        deadline,
+        origDeadline,
+        description,
+        origDescription,
+        color,
+        origColor,
+        colorFill,
+        origColorFill,
+        Set.of(photoIDs),
+        Set.of(origPhotoIDs),
+        List.of(coords),
+        List.of(origCoords),
+        polygon,
+        origPolygon,
+        deleted);
+  }
+
+  @override
+  LatLng center() => geodesy.findPolygonCentroid(coords);
 }
 
 abstract class FeaturePhoto implements Comparable<FeaturePhoto> {
@@ -932,9 +1059,11 @@ abstract class FeaturePhoto implements Comparable<FeaturePhoto> {
       this.contentType, this.photoDataSize);
 
   Future<Uint8List> get thumbnailData;
+
   Stream<List<int>> get thumbnailDataStream;
 
   Future<Uint8List> get photoData;
+
   Stream<List<int>> get photoDataStream;
 
   bool get isLocal => id < 0;
@@ -968,11 +1097,13 @@ class FileFeaturePhoto extends FeaturePhoto {
 
   @override
   Future<Uint8List> get thumbnailData => _thumbnailFile.readAsBytes();
+
   @override
   Stream<List<int>> get thumbnailDataStream => _thumbnailFile.openRead();
 
   @override
   Future<Uint8List> get photoData => _photoFile.readAsBytes();
+
   @override
   Stream<List<int>> get photoDataStream => _photoFile.openRead();
 }
@@ -992,11 +1123,13 @@ class MemoryFeaturePhoto extends FeaturePhoto {
 
   @override
   Future<Uint8List> get thumbnailData => Future.value(_thumbnailData);
+
   @override
   Stream<List<int>> get thumbnailDataStream => Stream.value(_thumbnailData);
 
   @override
   Future<Uint8List> get photoData => Future.value(_photoData);
+
   @override
   Stream<List<int>> get photoDataStream => Stream.value(_photoData);
 }
@@ -1014,13 +1147,16 @@ class ThumbnailMemoryPhotoFileFeaturePhoto extends FeaturePhoto {
       : super(id, featureID, thumbnailContentType, contentType, photoDataSize);
 
   Uint8List get thumbnailDataSync => _thumbnailData;
+
   @override
   Future<Uint8List> get thumbnailData => Future.value(_thumbnailData);
+
   @override
   Stream<List<int>> get thumbnailDataStream => Stream.value(_thumbnailData);
 
   @override
   Future<Uint8List> get photoData => _photoFile.readAsBytes();
+
   @override
   Stream<List<int>> get photoDataStream => _photoFile.openRead();
 }

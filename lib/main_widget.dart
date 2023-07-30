@@ -8,8 +8,11 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_compass/flutter_compass.dart';
 import 'package:flutter_map/plugin_api.dart';
+import 'package:flutter_map_tappable_polyline/flutter_map_tappable_polyline.dart';
+import 'package:flutter_map_line_editor/flutter_map_line_editor.dart';
+import 'package:flutter_map_dragmarker/flutter_map_dragmarker.dart';
+import 'package:geodesy/geodesy.dart';
 import 'package:get_it/get_it.dart';
-import 'package:latlong2/latlong.dart';
 import 'package:location/location.dart';
 import 'package:oko/communication.dart' as comm;
 import 'package:oko/data.dart' as data;
@@ -22,10 +25,11 @@ import 'package:oko/storage.dart';
 import 'package:oko/subpages/edit_point.dart';
 import 'package:oko/subpages/gallery.dart';
 import 'package:oko/subpages/pairing.dart';
-import 'package:oko/subpages/path_creator.dart';
+import 'package:oko/subpages/edit_poly.dart';
 import 'package:oko/subpages/point_list.dart';
 import 'package:oko/subpages/proposal.dart';
 import 'package:oko/utils.dart' as utils;
+import 'package:oko/constants.dart' as constants;
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:path/path.dart' show join;
 import 'package:rxdart/rxdart.dart';
@@ -36,42 +40,6 @@ import 'package:vector_tile_renderer/vector_tile_renderer.dart' hide Theme;
 import 'mbtiles.dart';
 
 GetIt getIt = GetIt.instance;
-
-enum PointLogType { currentLocation, crosshair }
-
-class Target {
-  final data.Point? _point;
-
-  static final Target _none = Target._(null);
-
-  Target._(this._point);
-
-  Target(data.Point p) : _point = p;
-
-  static Target none() {
-    return _none;
-  }
-
-  data.Point get point => _point!;
-
-  bool get isSet => _point != null;
-
-  LatLng get coords => _point!.coords;
-
-  bool isSamePoint(data.Point p) {
-    return identical(_point, p);
-  }
-
-  @override
-  bool operator ==(Object other) =>
-      identical(this, other) ||
-      other is Target &&
-          runtimeType == other.runtimeType &&
-          _point == other._point;
-
-  @override
-  int get hashCode => _point.hashCode;
-}
 
 class MainWidget extends StatefulWidget {
   const MainWidget({Key? key}) : super(key: key);
@@ -90,7 +58,7 @@ class MainWidgetState extends State<MainWidget> {
 
   // location and map
   final Location location = Location();
-  final MapControllerImpl mapController = MapControllerImpl();
+  final MapController mapController = MapController();
   late final StreamSubscription<MapEvent> mapSubscription;
   late final StreamController<MapEvent> mapStateStorageController =
       StreamController<MapEvent>(sync: true);
@@ -107,10 +75,15 @@ class MainWidgetState extends State<MainWidget> {
   bool viewLockedToLocation = false;
   LatLng? currentLocation;
   double? currentHeading;
-  Target infoTarget = Target.none();
-  Target navigationTarget = Target.none();
+  utils.Target infoTarget = utils.Target.none;
+  utils.PointTarget? navigationTarget;
   bool filterExpanded = false;
   TextEditingController? searchController;
+
+  bool polyEditing = false;
+  utils.EditedPoly editedPoly = utils.EditedPoly.fresh();
+  int? editedPolySourceFeature;
+  late PolyEditor polyEditor;
 
   // settings
   Storage? storage;
@@ -119,6 +92,15 @@ class MainWidgetState extends State<MainWidget> {
 
   @override
   void initState() {
+    polyEditor = PolyEditor(
+        points: editedPoly.coords,
+        pointIcon: const Icon(constants.polyNode, size: 32, color: Colors.red),
+        intermediateIcon:
+            const Icon(constants.polyMidpoint, size: 32, color: Colors.red),
+        callbackRefresh: () {
+          setState(() {});
+        },
+        addClosePathMarker: editedPoly.closed);
     super.initState();
     initResult = init();
   }
@@ -290,7 +272,7 @@ class MainWidgetState extends State<MainWidget> {
           ListTile(
             title: Text(I18N.of(context).sync),
             leading: const Icon(Icons.sync),
-            enabled: storage?.serverSettings != null,
+            enabled: storage?.serverSettings != null && !polyEditing,
             onTap: onSync,
             onLongPress: () {
               showDialog(
@@ -326,30 +308,28 @@ class MainWidgetState extends State<MainWidget> {
             title: Text(I18N.of(context).logPoiCurrentLocation),
             leading: const Icon(Icons.add_location_alt_outlined),
             trailing: const Icon(Icons.my_location),
-            onTap: () => onLogPoint(PointLogType.currentLocation),
-            enabled: storage?.serverSettings != null && currentLocation != null,
+            onTap: () => onLogPoint(utils.PointLogType.currentLocation),
+            enabled: storage?.serverSettings != null &&
+                currentLocation != null &&
+                !polyEditing,
           ),
           // log on crosshair
           ListTile(
             title: Text(I18N.of(context).logPoiCrosshair),
             leading: const Icon(Icons.add_location_alt_outlined),
             trailing: const Icon(Icons.add),
-            onTap: () => onLogPoint(PointLogType.crosshair),
-            enabled: storage?.serverSettings != null,
+            onTap: () => onLogPoint(utils.PointLogType.crosshair),
+            enabled: storage?.serverSettings != null && !polyEditing,
           ),
+          // create poly
           ListTile(
-            title: Text(I18N.of(context).createPath),
-            subtitle: Text(I18N.of(context).createPathSubtitle),
-            leading: storage!.pathCreation.isEmpty
-                ? const Icon(Icons.polyline)
-                : Badge(
-                    label: Text(storage!.pathCreation.length.toString()),
-                    child: const Icon(Icons.polyline),
-                  ),
-            //leading: const Icon(Icons.polyline),
-            trailing: const Icon(Icons.arrow_forward),
-            onTap: onCreatePath,
-            enabled: storage?.serverSettings != null,
+            title: Text(I18N.of(context).createPoly),
+            leading: const Icon(Icons.polyline),
+            onTap: () {
+              onStartPolyEdit();
+              Navigator.pop(context);
+            },
+            enabled: storage?.serverSettings != null && !polyEditing,
           ),
           // point list
           ListTile(
@@ -357,7 +337,7 @@ class MainWidgetState extends State<MainWidget> {
             leading: const Icon(Icons.place),
             trailing: const Icon(Icons.arrow_forward),
             onTap: onPointListTap,
-            enabled: storage?.serverSettings != null,
+            enabled: storage?.serverSettings != null && !polyEditing,
           ),
           // user list
           ListTile(
@@ -367,17 +347,20 @@ class MainWidgetState extends State<MainWidget> {
             onTap: onUserListTap,
             enabled: storage?.serverSettings != null,
           ),
+          // propose improvements
           ListTile(
             title: Text(I18N.of(context).proposeImprovement),
             leading: const Icon(Icons.settings_suggest),
             onTap: onProposeImprovement,
-            enabled: storage?.serverSettings != null,
+            enabled: storage?.serverSettings != null && !polyEditing,
           ),
+          // app reset
           ListTile(
             title: Text(I18N.of(context).reset),
             subtitle: Text(I18N.of(context).resetInfo),
             leading: const Icon(Icons.warning),
             onLongPress: onReset,
+            enabled: !polyEditing,
           )
         ],
       ),
@@ -395,13 +378,13 @@ class MainWidgetState extends State<MainWidget> {
           alignment: Alignment.bottomCenter,
           constraints: const BoxConstraints.expand(),
           child: createFilterSearch(context));
-    } else if (infoTarget.isSet) {
+    } else if (infoTarget.isNotNone) {
       bottomCard = Container(
         alignment: Alignment.bottomCenter,
         constraints: const BoxConstraints.expand(),
         child: createInfoContentFull(context),
       );
-    } else if (navigationTarget.isSet && currentLocation != null) {
+    } else if (navigationTarget != null && currentLocation != null) {
       bottomCard = Container(
         alignment: Alignment.bottomCenter,
         constraints: const BoxConstraints.expand(),
@@ -428,7 +411,9 @@ class MainWidgetState extends State<MainWidget> {
               ),
             )),
         createMapControls(context),
-        createMapFilterControl(context)
+        createMapFilterControl(context),
+        if (polyEditing) createPolyEditingChip(),
+        if (polyEditing) createPolyEditingControls(context)
       ],
     );
   }
@@ -442,66 +427,105 @@ class MainWidgetState extends State<MainWidget> {
         children.add(const SolidColorLayer(color: mapBackgroundColor));
       }
     }
+
+    // Polylines
+    List<Polyline> polylines = [];
     // limits
-    children.add(PolylineLayer(
-        polylines: storage?.mapState?.hasPanLimits ?? false
-            ? <Polyline>[
-                Polyline(points: <LatLng>[
-                  LatLng(storage!.mapState!.swBound!.latitude,
-                      storage!.mapState!.swBound!.longitude),
-                  LatLng(storage!.mapState!.swBound!.latitude,
-                      storage!.mapState!.neBound!.longitude),
-                  LatLng(storage!.mapState!.neBound!.latitude,
-                      storage!.mapState!.neBound!.longitude),
-                  LatLng(storage!.mapState!.neBound!.latitude,
-                      storage!.mapState!.swBound!.longitude),
-                ], strokeWidth: 5, color: Colors.red),
-              ]
-            : []));
-    // line to target
-    if (currentLocation != null && navigationTarget.isSet) {
-      children.add(PolylineLayer(polylines: <Polyline>[
-        Polyline(points: <LatLng>[
-          currentLocation!,
-          navigationTarget.coords,
-        ], strokeWidth: 5, color: Colors.blue),
+    if (storage?.mapState?.hasPanLimits ?? false) {
+      polylines.add(Polyline(points: <LatLng>[
+        LatLng(storage!.mapState!.swBound!.latitude,
+            storage!.mapState!.swBound!.longitude),
+        LatLng(storage!.mapState!.swBound!.latitude,
+            storage!.mapState!.neBound!.longitude),
+        LatLng(storage!.mapState!.neBound!.latitude,
+            storage!.mapState!.neBound!.longitude),
+        LatLng(storage!.mapState!.neBound!.latitude,
+            storage!.mapState!.swBound!.longitude)
       ]));
     }
+    // line to target
+    if (navigationTarget != null && currentLocation != null) {
+      polylines.add(Polyline(points: <LatLng>[
+        currentLocation!,
+        navigationTarget!.point.coords,
+      ], strokeWidth: 5, color: Colors.blue));
+    }
+    // edited polyline
+    if (polyEditing && !editedPoly.closed) {
+      polylines.add(Polyline(
+          points: editedPoly.coords, strokeWidth: 2, color: editedPoly.color));
+    }
+    children.add(PolylineLayer(polylines: polylines));
+
+    // Polygons
+    List<Polygon> polygons = [];
+    // edited polygon
+    if (polyEditing && editedPoly.closed) {
+      polygons.add(Polygon(
+          points: editedPoly.coords,
+          color: editedPoly.colorFill
+                  ?.withOpacity(constants.polySelectedFillColorOpacity) ??
+              Colors.transparent,
+          borderColor: editedPoly.color,
+          isFilled: true,
+          borderStrokeWidth: 2));
+    }
+    // polygons
+    polygons.addAll(createPolygons());
+    children.add(PolygonLayer(polygons: polygons));
+
+    // Tappable polylines
+    List<TaggedPolyline> tappablePolylines = createPolylines();
+    children.add(TappablePolylineLayer(
+        polylines: tappablePolylines,
+        onTap: (List<TaggedPolyline> polylines, TapUpDetails tapPosition) {
+          if (storage == null) {
+            return;
+          }
+          TaggedPolyline tp = polylines.first;
+          int id = int.parse(tp.tag!);
+          onPolylineTap(storage!.featuresMap[id]!.asPoly());
+        }));
+
+    // Markers
+    List<Marker> markers = [];
     // current location
     if (currentLocation != null) {
-      children.add(MarkerLayer(markers: [
-        Marker(
-            height: 40,
-            width: 40,
-            anchorPos: AnchorPos.align(AnchorAlign.center),
-            point: currentLocation!,
-            builder: (context) {
-              if (currentHeading != null && locationSubscription != null) {
-                return Transform.rotate(
-                  angle: currentHeading!,
-                  child: const Icon(
-                    Icons.navigation,
-                    color: Color(0xffff0000),
-                    size: 40,
-                  ),
-                );
-              }
+      markers.add(Marker(
+          height: 40,
+          width: 40,
+          anchorPos: AnchorPos.align(AnchorAlign.center),
+          point: currentLocation!,
+          builder: (context) {
+            if (currentHeading != null && locationSubscription != null) {
               return Transform.rotate(
-                  angle: -mapController.rotation * math.pi / 180.0,
-                  child: Icon(
-                    Icons.my_location,
-                    color: locationSubscription == null
-                        ? const Color(0xff000000)
-                        : const Color(0xffff0000),
-                    size: 40,
-                  ));
-            })
-      ]));
+                angle: currentHeading!,
+                child: const Icon(
+                  Icons.navigation,
+                  color: Color(0xffff0000),
+                  size: 40,
+                ),
+              );
+            }
+            return Transform.rotate(
+                angle: -mapController.rotation * math.pi / 180.0,
+                child: Icon(
+                  Icons.my_location,
+                  color: locationSubscription == null
+                      ? const Color(0xff000000)
+                      : const Color(0xffff0000),
+                  size: 40,
+                ));
+          }));
     }
-    // extra geometry
-    children.addAll(createGeometry());
-    // Points
-    children.add(MarkerLayer(markers: createMarkers()));
+    // points
+    markers.addAll(createMarkers());
+    children.add(MarkerLayer(markers: markers));
+
+    // Poly editor
+    if (polyEditing) {
+      children.add(DragMarkers(markers: polyEditor.edit()));
+    }
 
     return FlutterMap(
       options: MapOptions(
@@ -569,10 +593,15 @@ class MainWidgetState extends State<MainWidget> {
     FeatureFilter filter = storage!.getFeatureFilter(FeatureFilterInst.map);
     Iterable<data.Point> points = storage!.features.whereType<data.Point>();
     return filter.filter(points).map((data.Point point) {
-      var baseSize = 35.0;
-      var badgeSize = 12.0;
-      var width = baseSize * (infoTarget.isSamePoint(point) ? 1.5 : 1);
-      var height = baseSize * (infoTarget.isSamePoint(point) ? 1.5 : 1);
+      bool sameAsTarget = infoTarget.isSameFeature(point);
+      double size = 35.0;
+      double badgeSize = 12.0;
+      if (sameAsTarget) {
+        size *= 1.5;
+        badgeSize *= 1.5;
+      }
+      double width = size;
+      double height = size;
       return Marker(
         point: point.coords,
         anchorPos: point.category.anchorPos(width, height),
@@ -590,24 +619,21 @@ class MainWidgetState extends State<MainWidget> {
                   children: [
                     Icon(
                       point.category.iconData,
-                      size:
-                          baseSize * (infoTarget.isSamePoint(point) ? 1.5 : 1),
+                      size: size,
                       color: point.color,
                     ),
                     if (point.isLocal)
                       Align(
                         alignment: const Alignment(1, -1),
                         child: Icon(Icons.star,
-                            size: badgeSize *
-                                (infoTarget.isSamePoint(point) ? 1.5 : 1),
+                            size: badgeSize,
                             color: Theme.of(context).colorScheme.primary),
                       ),
                     if (point.isEdited)
                       Align(
                         alignment: const Alignment(1, -1),
                         child: Icon(Icons.edit,
-                            size: badgeSize *
-                                (infoTarget.isSamePoint(point) ? 1.5 : 1),
+                            size: badgeSize,
                             color: Theme.of(context).colorScheme.primary),
                       ),
                     if (point.deleted)
@@ -616,25 +642,21 @@ class MainWidgetState extends State<MainWidget> {
                             ? const Alignment(1, 0)
                             : const Alignment(1, -1),
                         child: Icon(Icons.delete,
-                            size: badgeSize *
-                                (infoTarget.isSamePoint(point) ? 1.5 : 1),
+                            size: badgeSize,
                             color: Theme.of(context).colorScheme.primary),
                       ),
                     if (point.ownerId == 0)
                       Align(
                         alignment: const Alignment(1, -1),
                         child: Icon(Icons.lock,
-                            size: badgeSize *
-                                (infoTarget.isSamePoint(point) ? 1.5 : 1),
+                            size: badgeSize,
                             color: Theme.of(context).colorScheme.primary),
                       ),
                     for (var attr in point.attributes)
                       Align(
                         alignment: Alignment(attr.xAlign, attr.yAlign),
                         child: Icon(attr.iconData,
-                            size: badgeSize *
-                                (infoTarget.isSamePoint(point) ? 1.5 : 1),
-                            color: attr.color),
+                            size: badgeSize, color: attr.color),
                       )
                   ],
                 ))),
@@ -642,31 +664,45 @@ class MainWidgetState extends State<MainWidget> {
     }).toList();
   }
 
-  List<Widget> createGeometry() {
+  List<Polygon> createPolygons() {
     if (storage == null) {
       return [];
     }
-    return [
-      PolylineLayer(
-          polylines: storage!.features
-              .whereType<data.LineString>()
-              .map((data.LineString ls) =>
-                  Polyline(points: ls.coords, color: extraGeometryColor))
-              .toList(growable: false)),
-      /*PolygonLayerOptions(
-          polygons: grp.polygons
-              .map((p) => Polygon(
-                    points: p.boundary,
-                    holePointsList: p.holes,
-                    color: extraGeometryColor,
-                  ))
-              .toList(growable: false))*/
-    ];
+    return storage!.features
+        .whereType<data.Poly>()
+        .where((e) => e.polygon)
+        .map((data.Poly ls) => Polygon(
+            points: ls.coords,
+            borderColor: ls.color,
+            color: (ls.colorFill ?? Colors.transparent).withOpacity(
+                infoTarget.isSameFeature(ls)
+                    ? constants.polySelectedFillColorOpacity
+                    : constants.polyFillColorOpacity),
+            isFilled: ls.colorFill != null,
+            isDotted: ls.isLocal,
+            borderStrokeWidth: infoTarget.isSameFeature(ls) ? 4 : 2))
+        .toList(growable: false);
+  }
+
+  List<TaggedPolyline> createPolylines() {
+    if (storage == null) {
+      return [];
+    }
+    return storage!.features
+        .whereType<data.Poly>()
+        .where((e) => !e.polygon)
+        .map((data.Poly ls) => TaggedPolyline(
+            tag: '${ls.id}',
+            points: ls.coords,
+            color: ls.color,
+            isDotted: ls.isLocal,
+            strokeWidth: infoTarget.isSameFeature(ls) ? 4 : 2))
+        .toList(growable: false);
   }
 
   Widget createInfoContentDistance(BuildContext context) {
     utils.NavigationData nav = utils.NavigationData.compute(
-        currentLocation!, navigationTarget.coords, currentHeading);
+        currentLocation!, navigationTarget!.point.coords, currentHeading);
     return Card(
         child: InkWell(
       onTap: onInfoDistanceTap,
@@ -682,159 +718,154 @@ class MainWidgetState extends State<MainWidget> {
   }
 
   Widget createInfoContentFull(BuildContext context) {
-    bool isNavigating = navigationTarget.isSet &&
+    bool isNavigating = navigationTarget != null &&
         currentLocation != null &&
         navigationTarget == infoTarget;
-    String distStr = '', brgStr = '', relBrgStr = '';
+    String? navText;
     if (isNavigating) {
       utils.NavigationData nav = utils.NavigationData.compute(
-          currentLocation!, navigationTarget.coords, currentHeading);
-      distStr = '${I18N.of(context).distance}: ${nav.distanceM} m';
-      brgStr =
+          currentLocation!, navigationTarget!.point.coords, currentHeading);
+      var distStr = '${I18N.of(context).distance}: ${nav.distanceM} m';
+      var brgStr =
           '${I18N.of(context).bearing}: ${nav.bearingDeg.toStringAsFixed(1)}°';
-      relBrgStr =
+      var relBrgStr =
           '${I18N.of(context).relativeBearing}: ${nav.relativeBearingDeg == null ? '-' : nav.relativeBearingDeg!.toStringAsFixed(1)}°';
+      navText = '$distStr $brgStr $relBrgStr';
+    }
+    Widget content;
+    if (infoTarget.isPoint()) {
+      content = createInfoContent(
+          context, (infoTarget as utils.PointTarget).point, navText);
+    } else if (infoTarget.isPoly()) {
+      content = createInfoContent(
+          context, (infoTarget as utils.PolyTarget).poly, null);
+    } else {
+      throw utils.IllegalStateException('invalid type of infoTarget');
     }
     return Dismissible(
         key: const Key('fullInfoDismissible'),
         onDismissed: (DismissDirection dd) {
           setState(() {
-            infoTarget = Target.none();
+            infoTarget = utils.Target.none;
           });
         },
         resizeDuration: null,
         child: Card(
             child: Container(
                 padding: const EdgeInsets.only(top: 16.0, bottom: 8.0),
-                child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.only(
-                            top: 0.0, left: 16.0, right: 16.0, bottom: 4.0),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: <Widget>[
-                            Text(
-                                ('${infoTarget.point.name} | '
-                                    '${storage?.users[infoTarget.point.ownerId]}'
-                                    '${storage?.getFeatureFilter(FeatureFilterInst.map).passes(infoTarget.point) == true ? '' : ' (${I18N.of(context).filteredOut})'}'),
-                                style: Theme.of(context).textTheme.titleLarge),
-                            Text(
-                                [
-                                  utils.formatCoords(infoTarget.coords, false),
-                                  '${I18N.of(context).categoryTitle}: ${I18N.of(context).category(infoTarget.point.category)}'
-                                ].join(' '),
-                                style: Theme.of(context).textTheme.bodySmall),
-                            if (isNavigating)
-                              Text('$distStr $brgStr $relBrgStr',
-                                  style: Theme.of(context).textTheme.bodySmall),
-                          ],
-                        ),
-                      ),
-                      if (infoTarget.point.description?.isNotEmpty ?? false)
-                        Container(
-                            padding: const EdgeInsets.only(
-                                left: 16.0, right: 16.0, bottom: 4.0),
-                            child: Text(infoTarget.point.description!)),
-                      ButtonBar(
-                        alignment: MainAxisAlignment.spaceEvenly,
-                        buttonHeight: 0,
-                        buttonPadding: EdgeInsets.zero,
-                        layoutBehavior: ButtonBarLayoutBehavior.padded,
-                        mainAxisSize: MainAxisSize.min,
-                        children: <Widget>[
-                          IconButton(
-                            icon: navigationTarget == infoTarget
-                                ? const Icon(Icons.navigation)
-                                : const Icon(Icons.navigation_outlined),
-                            tooltip: navigationTarget == infoTarget
-                                ? I18N.of(context).stopNavigationButton
-                                : I18N.of(context).navigateToButton,
-                            onPressed: currentLocation == null
-                                ? null
-                                : () => onInfoNavigate(infoTarget),
-                          ),
-                          GestureDetector(
-                            child: IconButton(
-                                icon: const Icon(Icons.center_focus_strong),
-                                tooltip: I18N.of(context).centerViewInfoButton,
-                                onPressed: () =>
-                                    onCenterView(infoTarget, false)),
-                            onDoubleTap: () => onCenterView(infoTarget, true),
-                          ),
-                          if (infoTarget.point.ownerId != 0)
-                            if (infoTarget.point.deleted)
-                              IconButton(
-                                icon: const Icon(Icons.restore_from_trash),
-                                tooltip: I18N.of(context).undelete,
-                                onPressed: () =>
-                                    onUndeletePoint(infoTarget.point),
-                              )
-                            else
-                              IconButton(
-                                icon: const Icon(Icons.delete),
-                                tooltip: I18N.of(context).delete,
-                                onPressed: () =>
-                                    onDeletePoint(infoTarget.point),
-                              ),
-                          if (infoTarget.point.ownerId != 0)
-                            IconButton(
-                                icon: const Icon(Icons.edit),
-                                tooltip: I18N.of(context).edit,
-                                onPressed: () => onEditPoint(infoTarget.point)),
-                          if (infoTarget.point.ownerId != 0 &&
-                              infoTarget.point.isEdited)
-                            IconButton(
-                                icon: const Icon(Icons.restore),
-                                tooltip: I18N.of(context).revert,
-                                onPressed: () => onRevertPoi(infoTarget.point)),
-                          if (infoTarget.point.ownerId != 0)
-                            IconButton(
-                              icon: const Icon(Icons.photo_library),
-                              tooltip: I18N.of(context).managePhotos,
-                              onPressed: () => onOpenGallery(infoTarget.point),
-                            ),
-                          Badge(
-                            backgroundColor: Colors.transparent,
-                            offset: Offset.fromDirection(-math.pi / 4, -5),
-                            label: Icon(
-                              storage != null &&
-                                      storage!.pathCreation
-                                          .contains(infoTarget.point.id)
-                                  ? Icons.remove
-                                  : Icons.add,
-                              size: 16,
-                            ),
-                            child: IconButton(
-                              icon: const Icon(Icons.polyline),
-                              color: storage != null &&
-                                      storage!.pathCreation
-                                          .contains(infoTarget.point.id)
-                                  ? Theme.of(context).colorScheme.primary
-                                  : null,
-                              tooltip: I18N.of(context).addToPathCreation,
-                              onPressed: () async {
-                                if (storage == null) {
-                                  return;
-                                }
-                                if (storage!.pathCreation
-                                    .contains(infoTarget.point.id)) {
-                                  await storage!.removePointFromPathCreation(
-                                      infoTarget.point);
-                                } else {
-                                  await storage!
-                                      .addPointToPathCreation(infoTarget.point);
-                                }
-                                setState(() {});
-                              },
-                            ),
-                          )
-                        ],
-                      ),
-                    ]))));
+                child: content)));
+  }
+
+  Widget createInfoContent(
+      BuildContext context, data.Feature feature, String? navText) {
+    return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        mainAxisAlignment: MainAxisAlignment.center,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            padding: const EdgeInsets.only(
+                top: 0.0, left: 16.0, right: 16.0, bottom: 4.0),
+            child: createInfoContentTitleRow(context, feature, navText),
+          ),
+          if (feature.description?.isNotEmpty ?? false)
+            Container(
+                padding:
+                    const EdgeInsets.only(left: 16.0, right: 16.0, bottom: 4.0),
+                child: Text(feature.description!)),
+          ButtonBar(
+              alignment: MainAxisAlignment.spaceEvenly,
+              buttonHeight: 0,
+              buttonPadding: EdgeInsets.zero,
+              layoutBehavior: ButtonBarLayoutBehavior.padded,
+              mainAxisSize: MainAxisSize.min,
+              children: createInfoContentButtons(context, feature)),
+        ]);
+  }
+
+  Widget createInfoContentTitleRow(
+      BuildContext context, data.Feature feature, String? navText) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        Text(
+            ('${feature.name} | '
+                '${storage?.users[feature.ownerId]}'
+                '${storage?.getFeatureFilter(FeatureFilterInst.map).passes(feature) == true ? '' : ' (${I18N.of(context).filteredOut})'}'),
+            style: Theme.of(context).textTheme.titleLarge),
+        if (feature.isPoint())
+          Text(
+              [
+                utils.formatCoords(feature.asPoint().coords, false),
+                '${I18N.of(context).categoryTitle}: ${I18N.of(context).category(feature.asPoint().category)}'
+              ].join(' '),
+              style: Theme.of(context).textTheme.bodySmall),
+        if (navText != null)
+          Text(navText, style: Theme.of(context).textTheme.bodySmall),
+      ],
+    );
+  }
+
+  List<Widget> createInfoContentButtons(
+      BuildContext context, data.Feature feature) {
+    return <Widget>[
+      if (feature.isPoint())
+        IconButton(
+          icon: navigationTarget != null &&
+                  navigationTarget!.isSameFeature(feature)
+              ? const Icon(Icons.navigation)
+              : const Icon(Icons.navigation_outlined),
+          tooltip: navigationTarget != null &&
+                  navigationTarget!.isSameFeature(feature)
+              ? I18N.of(context).stopNavigationButton
+              : I18N.of(context).navigateToButton,
+          onPressed: currentLocation == null
+              ? null
+              : () => toggleNavigation(feature.asPoint()),
+        ),
+      GestureDetector(
+        child: IconButton(
+            icon: const Icon(Icons.center_focus_strong),
+            tooltip: I18N.of(context).centerViewInfoButton,
+            onPressed: () => onCenterView(feature, false)),
+        onDoubleTap: () => onCenterView(feature, true),
+      ),
+      if (feature.ownerId != 0)
+        if (feature.deleted)
+          IconButton(
+            icon: const Icon(Icons.restore_from_trash),
+            tooltip: I18N.of(context).undelete,
+            onPressed: () => onUndeleteFeature(feature),
+          )
+        else
+          IconButton(
+            icon: const Icon(Icons.delete),
+            tooltip: I18N.of(context).delete,
+            onPressed: () => onDeleteFeature(feature),
+          ),
+      if (feature.ownerId != 0)
+        IconButton(
+            icon: const Icon(Icons.edit),
+            tooltip: I18N.of(context).edit,
+            onPressed: () {
+              if (feature.isPoint()) {
+                onEditPoint(feature.asPoint());
+              } else if (feature.isPoly()) {
+                onStartPolyEdit(feature.asPoly());
+              }
+            }),
+      if (feature.ownerId != 0 && feature.isEdited)
+        IconButton(
+            icon: const Icon(Icons.restore),
+            tooltip: I18N.of(context).revert,
+            onPressed: () => onRevertFeature(feature)),
+      if (feature.ownerId != 0)
+        IconButton(
+          icon: const Icon(Icons.photo_library),
+          tooltip: I18N.of(context).managePhotos,
+          onPressed: () => onOpenGallery(feature),
+        ),
+    ];
   }
 
   Widget createMapControls(BuildContext context) {
@@ -1102,6 +1133,118 @@ class MainWidgetState extends State<MainWidget> {
     );
   }
 
+  Widget createPolyEditingChip() {
+    return Container(
+      alignment: Alignment.bottomCenter,
+      child: ActionChip(
+        label: Text(I18N.of(context).creatingPath),
+        tooltip: I18N.of(context).help,
+        avatar: const Icon(Icons.help),
+        backgroundColor: Theme.of(context).colorScheme.primaryContainer,
+        onPressed: () {
+          showDialog(
+              context: context,
+              builder: (context) => SimpleDialog(
+                      title: Text(I18N.of(context).creatingPath),
+                      children: [
+                        ListTile(
+                          contentPadding: const EdgeInsets.symmetric(
+                              vertical: 0, horizontal: 24),
+                          title: Text(
+                              I18N.of(context).creatingPathHelpAddingNodes),
+                        ),
+                        ListTile(
+                          contentPadding: const EdgeInsets.symmetric(
+                              vertical: 0, horizontal: 24),
+                          leading: const Icon(Icons.adjust),
+                          title: Text(I18N.of(context).creatingPathHelpNodes),
+                        ),
+                        ListTile(
+                          contentPadding: const EdgeInsets.symmetric(
+                              vertical: 0, horizontal: 24),
+                          leading: const Icon(Icons.filter_tilt_shift),
+                          title:
+                              Text(I18N.of(context).creatingPathHelpMidpoints),
+                        ),
+                        ListTile(
+                          contentPadding: const EdgeInsets.symmetric(
+                              vertical: 0, horizontal: 24),
+                          leading: const Icon(Icons.all_inclusive),
+                          title:
+                              Text(I18N.of(context).creatingPathHelpClosePath),
+                        ),
+                        ListTile(
+                          contentPadding: const EdgeInsets.symmetric(
+                              vertical: 0, horizontal: 24),
+                          leading: const Icon(Icons.settings),
+                          title:
+                              Text(I18N.of(context).creatingPathHelpSettings),
+                        ),
+                        TextButton(
+                            onPressed: () {
+                              Navigator.of(context).pop();
+                            },
+                            child: Text(I18N.of(context).dismiss))
+                      ]));
+        },
+      ),
+    );
+  }
+
+  Widget createPolyEditingControls(BuildContext context) {
+    return Container(
+      alignment: Alignment.bottomRight,
+      padding: const EdgeInsets.all(8.0),
+      child: Wrap(
+        alignment: WrapAlignment.start,
+        direction: Axis.vertical,
+        crossAxisAlignment: WrapCrossAlignment.center,
+        runAlignment: WrapAlignment.end,
+        spacing: 10,
+        children: <Widget>[
+          FloatingActionButton(
+            heroTag: 'fab-close-path',
+            tooltip: I18N.of(context).closePath,
+            elevation: 0,
+            onPressed: () => setState(() {
+              editedPoly.closed = !editedPoly.closed;
+            }),
+            child: Icon(
+              Icons.all_inclusive,
+              size: 30,
+              color: editedPoly.closed
+                  ? Theme.of(context).colorScheme.primary
+                  : null,
+            ),
+          ),
+          FloatingActionButton(
+            heroTag: 'fab-path-settings',
+            tooltip: I18N.of(context).pathSettings,
+            elevation: 0,
+            onPressed: onEditPolySettings,
+            child: const Icon(
+              Icons.settings,
+              size: 30,
+            ),
+          ),
+          FloatingActionButton(
+            heroTag: 'fab-path-cancel',
+            tooltip: I18N.of(context).dialogCancel,
+            elevation: 0,
+            onPressed: () => setState(() {
+              polyEditing = false;
+              editedPoly.copyFrom(utils.EditedPoly.fresh());
+            }),
+            child: const Icon(
+              Icons.clear,
+              size: 30,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget createFilterSearch(BuildContext context) {
     return Dismissible(
         key: const Key('filterSearchDismissible'),
@@ -1331,8 +1474,8 @@ class MainWidgetState extends State<MainWidget> {
     }
   }
 
-  void onToggleFilterSearch() {
-    if (searchController == null) {
+  void onToggleFilterSearch({bool disable = false}) {
+    if (searchController == null && !disable) {
       TextEditingController controller = TextEditingController();
       FeatureFilter filter = storage!.getFeatureFilter(FeatureFilterInst.map);
       controller.text = filter.searchTerm;
@@ -1345,51 +1488,61 @@ class MainWidgetState extends State<MainWidget> {
         });
       });
       searchController = controller;
-    } else {
+    } else if (searchController != null) {
       TextEditingController controller = searchController!;
-      searchController = null;
+      setState(() {
+        searchController = null;
+      });
       controller.dispose();
     }
   }
 
-  void onCreatePath() async {
+  void onStartPolyEdit([data.Poly? source]) {
+    setState(() {
+      if (source != null) {
+        editedPolySourceFeature = source.id;
+        editedPoly.copyFrom(utils.EditedPoly.fresh(
+                color: source.color,
+                colorFill: source.colorFill,
+                closed: source.polygon,
+                coords: List.of(source.coords)));
+      }
+      infoTarget = utils.Target.none;
+      navigationTarget = null;
+      polyEditing = true;
+    });
+  }
+
+  void onEditPolySettings() async {
     if (storage == null) {
       utils.notifySnackbar(
           context, 'No storage!', utils.NotificationLevel.error);
-      Navigator.of(context).pop();
     }
-    PathCreationResult? res = await Navigator.of(context).push(
-        MaterialPageRoute<PathCreationResult>(
-            builder: (context) => PathCreator(
-                users: storage!.users, myId: storage!.serverSettings!.id)));
-    if (res == null) {
+    var res = await Navigator.of(context).push(MaterialPageRoute(
+        builder: (context) => EditPoly(
+            editedPoly: editedPoly,
+            source: editedPolySourceFeature == null
+                ? null
+                : storage!.featuresMap[editedPolySourceFeature!]!.asPoly())));
+    if (res is utils.EditedPoly) {
+      setState(() {
+        editedPoly.copyFrom(res);
+      });
       return;
     }
-    if (context.mounted) {
-      Navigator.pop(context);
+    Poly poly = res as Poly;
+    if (editedPolySourceFeature == null) {
+      poly.id = await storage!.nextLocalId();
     }
-    LineString path = res.path;
-    Set<int> toDelete = res.toDelete;
-    path.id = await storage!.nextLocalId();
-    await storage!.upsertFeature(path);
-    await Future.wait(
-    toDelete.map((e) {
-      data.Feature? f = storage!.featuresMap[e];
-      if (f == null || !f.isPoint() || f.ownerId == 0) {
-        return Future(() => null);
-      }
-      data.Point point = f.asPoint();
-      if (point.isLocal) {
-        return storage!.removeFeature(point.id);
-      } else {
-        return storage!.upsertFeature(data.Point.from(point, deleted: true));
-      }
-    }));
-    setState(() {});
-    if (context.mounted) {
-      utils.notifySnackbar(context, I18N.of(context).pathCreated,
+    await storage!.upsertFeature(poly);
+    if (context.mounted && editedPolySourceFeature == null) {
+      utils.notifySnackbar(context, I18N.of(context).polyCreated,
           utils.NotificationLevel.success);
     }
+    editedPolySourceFeature = null;
+    polyEditing = false;
+    editedPoly.copyFrom(utils.EditedPoly.fresh());
+    setState(() {});
   }
 
   void onToggleLocationContinuous() {
@@ -1603,7 +1756,6 @@ class MainWidgetState extends State<MainWidget> {
   Future<bool> download(bool withPhotos) async {
     bool res = await (withPhotos ? downloadWithPhotos() : downloadBare());
     if (res) {
-      await storage?.clearPathCreation();
       setState(() {});
     }
     return res;
@@ -1791,7 +1943,7 @@ class MainWidgetState extends State<MainWidget> {
       }
     }
     setState(() {
-      infoTarget = Target.none();
+      infoTarget = utils.Target.none;
     });
   }
 
@@ -1880,7 +2032,7 @@ class MainWidgetState extends State<MainWidget> {
       return;
     }
     setState(() {
-      infoTarget = Target.none();
+      infoTarget = utils.Target.none;
     });
 
     if (!mounted) return;
@@ -1888,10 +2040,10 @@ class MainWidgetState extends State<MainWidget> {
         utils.NotificationLevel.success);
   }
 
-  void onLogPoint(PointLogType type) async {
+  void onLogPoint(utils.PointLogType type) async {
     developer.log('Log poi $type');
     LatLng loc = mapController.center;
-    if (type == PointLogType.currentLocation && currentLocation != null) {
+    if (type == utils.PointLogType.currentLocation && currentLocation != null) {
       loc = currentLocation!;
     }
     data.Point? point = await Navigator.of(context).push(
@@ -1934,9 +2086,9 @@ class MainWidgetState extends State<MainWidget> {
     }
     await storage!.upsertFeature(replacement);
     setState(() {});
-    if (infoTarget.isSamePoint(point)) {
+    if (infoTarget.isSameFeature(point)) {
       setState(() {
-        infoTarget = Target(storage!.featuresMap[point.id]! as data.Point);
+        infoTarget = utils.Target.of(storage!.featuresMap[point.id]!.asPoint());
       });
     }
   }
@@ -1944,10 +2096,24 @@ class MainWidgetState extends State<MainWidget> {
   void onMapTap(TapPosition tapPosition, LatLng coords) {
     developer.log('onMapTap: $coords');
     setState(() {
+      if (polyEditing) {
+        onToggleFilterSearch(disable: true);
+        editedPoly.coords.add(utils.ReferencedLatLng.latLng(coords));
+        return;
+      }
+      for (Feature f in storage!.features) {
+        if (!f.isPoly() || !f.asPoly().polygon) {
+          continue;
+        }
+        if (utils.geodesy.isGeoPointInPolygon(coords, f.asPoly().coords)) {
+          infoTarget = utils.Target.of(f);
+          return;
+        }
+      }
       if (searchController != null) {
         onToggleFilterSearch();
       } else {
-        infoTarget = Target.none();
+        infoTarget = utils.Target.none;
       }
     });
   }
@@ -1958,21 +2124,17 @@ class MainWidgetState extends State<MainWidget> {
           context, 'No storage!', utils.NotificationLevel.error);
       Navigator.of(context).pop();
     }
-    Map<int, String>? users = Map.of(storage!.users);
     data.Point? selected = await Navigator.of(context).push(
         MaterialPageRoute<data.Point>(
-            builder: (context) => PointList(
-                storage!.features
-                    .whereType<data.Point>()
-                    .toList(growable: false),
-                storage!.serverSettings!.id,
-                users)));
+            builder: (context) => PointList(storage!.features
+                .whereType<data.Point>()
+                .toList(growable: false))));
     if (selected == null) {
       setState(() {});
       return;
     }
     setState(() {
-      infoTarget = Target(selected);
+      infoTarget = utils.Target.of(selected);
     });
     if (context.mounted) {
       Navigator.of(context).pop();
@@ -2022,38 +2184,46 @@ class MainWidgetState extends State<MainWidget> {
   }
 
   void onPointTap(data.Point point) {
-    developer.log('Poi ${point.name} tap.');
+    developer.log('Point ${point.name} (ID ${point.id}) tap.');
     setState(() {
-      if (infoTarget.isSamePoint(point)) {
-        infoTarget = Target.none();
+      if (polyEditing) {
+        editedPoly.coords.add(utils.ReferencedLatLng.fromPoint(point));
+        return;
+      }
+      if (infoTarget.isSameFeature(point)) {
+        infoTarget = utils.Target.none;
       } else {
-        infoTarget = Target(point);
+        infoTarget = utils.Target.of(point);
       }
     });
   }
 
   void onPointLongPress(data.Point point) {
     developer.log('Poi ${point.name} long press.');
-    toggleNavigation(Target(point));
+    if (!polyEditing) {
+      toggleNavigation(point);
+    }
   }
 
-  void onInfoNavigate(Target t) {
-    developer.log('onInfoNavigate: ${t.point.name}');
-    toggleNavigation(t);
+  void onPolylineTap(data.Poly polyline) {
+    developer.log('LineString ${polyline.name} (ID ${polyline.id}) tap.');
+    setState(() {
+      infoTarget = utils.Target.of(polyline);
+    });
   }
 
   void onInfoDistanceTap() {
     developer.log('onInfoDistanceTap');
     setState(() {
-      infoTarget = navigationTarget;
+      infoTarget = navigationTarget!;
     });
   }
 
-  void onDeletePoint(data.Point toDelete) async {
-    developer.log('onDeletePoint');
+  void onDeleteFeature(data.Feature toDelete) async {
+    developer.log('onDeleteFeature');
     if (toDelete.isLocal) {
       bool confirmed = await pointDataConfirm(
-          (context) => I18N.of(context).aboutToDeleteLocalPoi, toDelete);
+          (context) => I18N.of(context).aboutToDeleteLocalFeature, toDelete);
       if (!confirmed) {
         return;
       }
@@ -2064,44 +2234,44 @@ class MainWidgetState extends State<MainWidget> {
       await storage!.upsertFeature(replacement);
     }
     data.Feature? r = storage!.featuresMap[toDelete.id];
-    if (infoTarget.isSamePoint(toDelete)) {
+    if (infoTarget.isSameFeature(toDelete)) {
       if (r != null) {
-        assert(r.isPoint());
-        infoTarget = Target(r.asPoint());
+        infoTarget = utils.Target.of(r);
       } else {
-        infoTarget = Target.none();
+        infoTarget = utils.Target.none;
       }
     }
-    if (navigationTarget.isSamePoint(toDelete)) {
+    if (navigationTarget != null && navigationTarget!.isSameFeature(toDelete)) {
       if (r != null) {
         assert(r.isPoint());
-        navigationTarget = Target(r.asPoint());
+        navigationTarget = utils.Target.of(r.asPoint());
       } else {
-        navigationTarget = Target.none();
+        navigationTarget = null;
       }
     }
     setState(() {});
   }
 
-  void onUndeletePoint(data.Point toUndelete) async {
+  void onUndeleteFeature(data.Feature toUndelete) async {
     var replacement = toUndelete.copy();
     replacement.deleted = false;
     await storage!.upsertFeature(replacement);
     data.Feature? r = storage!.featuresMap[toUndelete.id];
-    if (infoTarget.isSamePoint(toUndelete)) {
-      assert(r != null && r.isPoint());
-      infoTarget = Target(r!.asPoint());
+    if (infoTarget.isSameFeature(toUndelete)) {
+      assert(r != null);
+      infoTarget = utils.Target.of(r!);
     }
-    if (navigationTarget.isSamePoint(toUndelete)) {
+    if (navigationTarget != null &&
+        navigationTarget!.isSameFeature(toUndelete)) {
       assert(r != null && r.isPoint());
-      navigationTarget = Target(r!.asPoint());
+      navigationTarget = utils.Target.of(r!.asPoint());
     }
     setState(() {});
   }
 
-  void onRevertPoi(data.Point toRevert) async {
+  void onRevertFeature(data.Feature toRevert) async {
     bool confirmed = await pointDataConfirm(
-        (context) => I18N.of(context).aboutToRevertGlobalPoi, toRevert);
+        (context) => I18N.of(context).aboutToRevertGlobalFeature, toRevert);
     if (!confirmed) {
       return;
     }
@@ -2109,16 +2279,16 @@ class MainWidgetState extends State<MainWidget> {
     //await storage!.delete
     replacement.revert();
     await storage!.upsertFeature(replacement);
-    if (infoTarget.isSamePoint(toRevert)) {
+    if (infoTarget.isSameFeature(toRevert)) {
       data.Feature? r = storage!.featuresMap[toRevert.id];
-      assert(r != null && r.isPoint());
-      infoTarget = Target(r!.asPoint());
+      assert(r != null);
+      infoTarget = utils.Target.of(r!);
     }
     setState(() {});
   }
 
-  void onOpenGallery(data.Point point) async {
-    developer.log('onOpenGallery $point');
+  void onOpenGallery(data.Feature feature) async {
+    developer.log('onOpenGallery $feature');
     if (storage == null) {
       utils.notifySnackbar(
           context, 'TODO no storage', utils.NotificationLevel.error);
@@ -2127,15 +2297,15 @@ class MainWidgetState extends State<MainWidget> {
     data.Point? replacement = await Navigator.of(context).push(
         MaterialPageRoute<data.Point>(
             builder: (context) =>
-                Gallery(storage: storage!, feature: point, editable: true)));
+                Gallery(storage: storage!, feature: feature, editable: true)));
     if (replacement == null) {
       return;
     }
     await storage!.upsertFeature(replacement);
     setState(() {});
-    if (infoTarget.isSamePoint(point)) {
+    if (infoTarget.isSameFeature(feature)) {
       setState(() {
-        infoTarget = Target(storage!.featuresMap[point.id]! as data.Point);
+        infoTarget = utils.Target.of(storage!.featuresMap[feature.id]!);
       });
     }
   }
@@ -2192,7 +2362,7 @@ class MainWidgetState extends State<MainWidget> {
       return;
     }
     storage = await Storage.getInstance(reset: true);
-    infoTarget = Target.none();
+    infoTarget = utils.Target.none;
     progressValue = null;
     getIt.get<comm.AppClient>().unsetUserID();
     setState(() {});
@@ -2203,7 +2373,7 @@ class MainWidgetState extends State<MainWidget> {
   }
 
   Future<bool> pointDataConfirm(
-      String Function(BuildContext) question, data.Point point) async {
+      String Function(BuildContext) question, data.Feature feature) async {
     return await showDialog(
         context: context,
         builder: (BuildContext context) {
@@ -2218,48 +2388,57 @@ class MainWidgetState extends State<MainWidget> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     ListTile(
-                      title: Text(point.name),
+                      title: Text(feature.name),
                       subtitle: Text(I18N.of(context).nameLabel),
                     ),
                     ListTile(
-                        title: Text(storage?.users[point.ownerId] ??
-                            '<unknown ID: ${point.ownerId}>'),
+                        title: Text(storage?.users[feature.ownerId] ??
+                            '<unknown ID: ${feature.ownerId}>'),
                         subtitle: Text(I18N.of(context).owner)),
-                    ListTile(
-                      title: Text(utils.formatCoords(point.coords, true)),
-                      subtitle: Text(I18N.of(context).position),
-                    ),
-                    if (point.description?.isNotEmpty ?? false)
+                    if (feature.isPoint())
                       ListTile(
-                        title: Text(point.description!),
+                        title: Text(
+                            utils.formatCoords(feature.asPoint().coords, true)),
+                        subtitle: Text(I18N.of(context).position),
+                      ),
+                    if (feature.description?.isNotEmpty ?? false)
+                      ListTile(
+                        title: Text(feature.description!),
                         subtitle: Text(I18N.of(context).descriptionLabel),
                       ),
-                    ListTile(
-                        title: Text(I18N.of(context).category(point.category)),
-                        subtitle: Text(I18N.of(context).categoryTitle),
-                        trailing: Icon(point.category.iconData)),
-                    ListTile(
-                        title: point.attributes.isEmpty
-                            ? Text(I18N.of(context).noAttributes)
-                            : Row(
-                                mainAxisSize: MainAxisSize.max,
-                                mainAxisAlignment: MainAxisAlignment.start,
-                                crossAxisAlignment: CrossAxisAlignment.center,
-                                children: point.attributes
-                                    .map((attr) => Tooltip(
-                                          message:
-                                              I18N.of(context).attribute(attr),
-                                          child: Icon(attr.iconData),
-                                        ))
-                                    .toList(growable: false),
-                              ),
-                        subtitle: Text(I18N.of(context).attributes)),
-                    if (point.deadline != null)
+                    if (feature.isPoint())
+                      ListTile(
+                          title: Text(I18N
+                              .of(context)
+                              .category(feature.asPoint().category)),
+                          subtitle: Text(I18N.of(context).categoryTitle),
+                          trailing: Icon(feature.asPoint().category.iconData)),
+                    if (feature.isPoint())
+                      ListTile(
+                          title: feature.asPoint().attributes.isEmpty
+                              ? Text(I18N.of(context).noAttributes)
+                              : Row(
+                                  mainAxisSize: MainAxisSize.max,
+                                  mainAxisAlignment: MainAxisAlignment.start,
+                                  crossAxisAlignment: CrossAxisAlignment.center,
+                                  children: feature
+                                      .asPoint()
+                                      .attributes
+                                      .map((attr) => Tooltip(
+                                            message: I18N
+                                                .of(context)
+                                                .attribute(attr),
+                                            child: Icon(attr.iconData),
+                                          ))
+                                      .toList(growable: false),
+                                ),
+                          subtitle: Text(I18N.of(context).attributes)),
+                    if (feature.deadline != null)
                       ListTile(
                         title: Text(I18N
                             .of(context)
                             .dateFormat
-                            .format(point.deadline!)),
+                            .format(feature.deadline!)),
                         subtitle: Text(I18N.of(context).deadline),
                       ),
                   ],
@@ -2279,20 +2458,20 @@ class MainWidgetState extends State<MainWidget> {
         });
   }
 
-  void onCenterView(Target t, bool zoom) {
+  void onCenterView(data.Feature feature, bool zoom) {
     mapController.move(
-        t.coords,
+        feature.center(),
         zoom
             ? (storage?.mapState?.zoomMax ?? fallbackMaxZoom).toDouble()
             : mapController.zoom);
   }
 
-  void toggleNavigation(Target t) {
+  void toggleNavigation(data.Point p) {
     setState(() {
-      if (navigationTarget == t) {
-        navigationTarget = Target.none();
+      if (navigationTarget != null && navigationTarget!.isSameFeature(p)) {
+        navigationTarget = null;
       } else {
-        navigationTarget = t;
+        navigationTarget = utils.PointTarget(p);
       }
     });
   }

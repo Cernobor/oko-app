@@ -5,8 +5,103 @@ import 'package:flutter/material.dart';
 import 'package:flutter_archive/flutter_archive.dart';
 import 'package:flutter_colorpicker/flutter_colorpicker.dart';
 import 'package:flutter_vibrate/flutter_vibrate.dart';
-import 'package:latlong2/latlong.dart';
+import 'package:geodesy/geodesy.dart';
 import 'package:oko/i18n.dart';
+import 'package:oko/data.dart' as data;
+import 'package:oko/constants.dart' as constants;
+
+enum PointLogType { currentLocation, crosshair }
+
+Geodesy geodesy = Geodesy();
+
+abstract class Target {
+  static final Target none = _NoneTarget._();
+
+  static of(data.Feature feature) {
+    if (feature.isPoint()) {
+      return PointTarget(feature.asPoint());
+    } else if (feature.isPoly()) {
+      return PolyTarget(feature.asPoly());
+    }
+  }
+
+  bool get isNone => identical(this, none);
+
+  bool get isNotNone => !identical(this, none);
+
+  bool isSameFeature(data.Feature feature);
+
+  bool isPoint();
+
+  bool isPoly();
+}
+
+class _NoneTarget extends Target {
+  _NoneTarget._();
+
+  @override
+  bool isSameFeature(data.Feature _) => false;
+
+  @override
+  bool isPoly() => false;
+
+  @override
+  bool isPoint() => false;
+}
+
+class PointTarget extends Target {
+  final data.Point point;
+
+  PointTarget(this.point);
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is PointTarget &&
+          runtimeType == other.runtimeType &&
+          point == other.point;
+
+  @override
+  int get hashCode => point.hashCode;
+
+  @override
+  bool isSameFeature(data.Feature feature) {
+    return identical(feature, point);
+  }
+
+  @override
+  bool isPoly() => false;
+
+  @override
+  bool isPoint() => true;
+}
+
+class PolyTarget extends Target {
+  final data.Poly poly;
+
+  PolyTarget(this.poly);
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is PolyTarget &&
+          runtimeType == other.runtimeType &&
+          poly == other.poly;
+
+  @override
+  int get hashCode => poly.hashCode;
+
+  @override
+  bool isSameFeature(data.Feature feature) {
+    return identical(feature, poly);
+  }
+
+  @override
+  bool isPoly() => true;
+
+  @override
+  bool isPoint() => false;
+}
 
 const Distance _distance = Distance();
 
@@ -45,6 +140,62 @@ String formatCoords(LatLng coords, bool onLines) {
     return 'Lat: ${coords.latitude.toStringAsFixed(6)}\nLng: ${coords.longitude.toStringAsFixed(6)}';
   } else {
     return 'Lat: ${coords.latitude.toStringAsFixed(6)} Lng: ${coords.longitude.toStringAsFixed(6)}';
+  }
+}
+
+class ReferencedLatLng extends LatLng {
+  int? pointRef;
+
+  ReferencedLatLng(super.latitude, super.longitude, [this.pointRef]);
+
+  ReferencedLatLng.latLng(LatLng coords)
+      : this(coords.latitude, coords.longitude);
+
+  ReferencedLatLng.fromPoint(data.Point point)
+      : this(point.coords.latitude, point.coords.longitude, point.id);
+}
+
+class Tuple<A, B> {
+  A a;
+  B b;
+
+  Tuple(this.a, this.b);
+}
+
+class EditedPoly {
+  List<LatLng> coords;
+  bool closed;
+  Color color;
+  Color? colorFill;
+
+  EditedPoly(
+      {required this.coords,
+      required this.closed,
+      required this.color,
+      required this.colorFill});
+
+  EditedPoly.fresh(
+      {List<LatLng>? coords, bool? closed, Color? color, Color? colorFill})
+      : this(
+            coords: coords ?? [],
+            closed: closed ?? false,
+            color: color ??
+                constants.palette[constants.defaultPolyStrokeColorIndex],
+            colorFill: color ??
+                constants.palette[constants.defaultPolyFillColorIndex]);
+
+  void copyInto(EditedPoly other) {
+    other.coords.replaceRange(0, other.coords.length, coords);
+    other.closed = closed;
+    other.color = color;
+    other.colorFill = colorFill;
+  }
+
+  void copyFrom(EditedPoly other) {
+    coords.replaceRange(0, coords.length, other.coords);
+    closed = other.closed;
+    color = other.color;
+    colorFill = other.colorFill;
   }
 }
 
@@ -186,7 +337,8 @@ Future<void> unzip(
       });
 }
 
-Future<DateTime?> chooseTime(BuildContext context, {DateTime? initialTime}) async {
+Future<DateTime?> chooseTime(BuildContext context,
+    {DateTime? initialTime}) async {
   DateTime? date;
   TimeOfDay? time;
   while (true) {
@@ -220,7 +372,8 @@ Future<DateTime?> chooseTime(BuildContext context, {DateTime? initialTime}) asyn
   return DateTime(date.year, date.month, date.day, time.hour, time.minute);
 }
 
-Future<Color?> chooseColorBlock(BuildContext context, {required List<Color> availableColors, required Color initialColor}) async {
+Future<Color?> chooseColorBlock(BuildContext context,
+    {required List<Color> availableColors, required Color initialColor}) async {
   Color color = initialColor;
   bool? ok = await showDialog<bool>(
       context: context,
@@ -233,8 +386,7 @@ Future<Color?> chooseColorBlock(BuildContext context, {required List<Color> avai
               onColorChanged: (c) {
                 color = c;
               },
-              itemBuilder: (Color color,
-                  bool isCurrentColor,
+              itemBuilder: (Color color, bool isCurrentColor,
                   void Function() changeColor) {
                 return Container(
                   margin: const EdgeInsets.all(7),
@@ -246,11 +398,9 @@ Future<Color?> chooseColorBlock(BuildContext context, {required List<Color> avai
                     color: Colors.transparent,
                     child: InkWell(
                       onTap: changeColor,
-                      borderRadius:
-                      BorderRadius.circular(50),
+                      borderRadius: BorderRadius.circular(50),
                       child: AnimatedOpacity(
-                        duration: const Duration(
-                            milliseconds: 210),
+                        duration: const Duration(milliseconds: 210),
                         opacity: isCurrentColor ? 1 : 0,
                         child: Icon(Icons.done,
                             color: useWhiteForeground(color)
@@ -267,12 +417,10 @@ Future<Color?> chooseColorBlock(BuildContext context, {required List<Color> avai
           actions: [
             TextButton(
                 child: Text(I18N.of(context).ok),
-                onPressed: () =>
-                    Navigator.of(context).pop(true)),
+                onPressed: () => Navigator.of(context).pop(true)),
             TextButton(
                 child: Text(I18N.of(context).dialogCancel),
-                onPressed: () =>
-                    Navigator.of(context).pop(false))
+                onPressed: () => Navigator.of(context).pop(false))
           ],
         );
       });

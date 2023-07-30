@@ -17,12 +17,10 @@ String _sortToString(Sort sort, BuildContext context) {
 
 class PointList extends StatefulWidget {
   final List<Point> points;
-  final int? myId;
-  final Users users;
   final String? title;
   final bool multiple;
 
-  const PointList(this.points, this.myId, this.users,
+  const PointList(this.points,
       {this.title, this.multiple = false, Key? key})
       : super(key: key);
 
@@ -169,7 +167,7 @@ class _PointListState extends State<PointList> {
                     tooltip: I18N.of(context).filterByOwner,
                     icon: Icon(
                       Icons.people,
-                      color: filter.doesFilterUsers(widget.users.keys)
+                      color: filter.doesFilterUsers(storage.users.keys)
                           ? Theme.of(context).colorScheme.primary
                           : null,
                     ),
@@ -399,7 +397,7 @@ class _PointListState extends State<PointList> {
 
   Future<void> onUsersButtonPressed() async {
     bool changed = await filter.setUsers(
-        context: context, users: widget.users, myId: widget.myId);
+        context: context, users: storage.users, myId: storage.serverSettings?.id);
     if (changed) {
       setState(() {});
       await storage.setFeatureFilter(FeatureFilterInst.featureList, filter);
@@ -441,8 +439,8 @@ class _PointListState extends State<PointList> {
         break;
       case Sort.owner:
         points.sort((a, b) {
-          var ua = widget.users[a.ownerId];
-          var ub = widget.users[b.ownerId];
+          var ua = storage.users[a.ownerId];
+          var ub = storage.users[b.ownerId];
           int c;
           if (ua == null && ub == null) {
             c = a.ownerId.compareTo(b.ownerId);

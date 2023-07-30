@@ -21,23 +21,26 @@ class FeatureFilter {
 
   FeatureFilter.copy(FeatureFilter other)
       : this(
-            other.users,
-            Set<PointCategory>.of(other.categories),
-            Set<PointAttribute>.of(other.attributes),
-            other.exact,
-            other.editState,
-            other.searchTerm);
+      other.users,
+      Set<PointCategory>.of(other.categories),
+      Set<PointAttribute>.of(other.attributes),
+      other.exact,
+      other.editState,
+      other.searchTerm);
 
-  bool passes(Point feature) =>
+  bool passes(Feature feature) =>
       passesUsers(feature) &&
-      passesCategories(feature) &&
-      passesEditState(feature) &&
-      passesAttributes(feature) &&
-      passesSearch(feature);
+          passesCategories(feature) &&
+          passesEditState(feature) &&
+          passesAttributes(feature) &&
+          passesSearch(feature);
 
-  bool passesUsers(Point feature) => users.contains(feature.ownerId);
+  bool passesUsers(Feature feature) => users.contains(feature.ownerId);
 
-  bool passesCategories(Point feature) => categories.contains(feature.category);
+  bool passesCategories(Feature feature) =>
+      feature.isPoint() ? categories.contains(feature
+          .asPoint()
+          .category) : true;
 
   /*anyState,
   pristineState,
@@ -45,25 +48,32 @@ class FeatureFilter {
   editedState,
   deletedState,
   editedDeletedState*/
-  bool passesEditState(Point feature) =>
+  bool passesEditState(Feature feature) =>
       editState == EditState.anyState ||
-      (editState == EditState.pristineState &&
-          !feature.isEdited &&
-          !feature.isLocal &&
-          !feature.deleted) ||
-      (editState == EditState.newState && feature.isLocal) ||
-      (editState == EditState.editedState && feature.isEdited) ||
-      (editState == EditState.deletedState && feature.deleted) ||
-      (editState == EditState.editedDeletedState &&
-          feature.deleted &&
-          feature.isEdited);
+          (editState == EditState.pristineState &&
+              !feature.isEdited &&
+              !feature.isLocal &&
+              !feature.deleted) ||
+          (editState == EditState.newState && feature.isLocal) ||
+          (editState == EditState.editedState && feature.isEdited) ||
+          (editState == EditState.deletedState && feature.deleted) ||
+          (editState == EditState.editedDeletedState &&
+              feature.deleted &&
+              feature.isEdited);
 
-  bool passesAttributes(Point feature) => exact
-      ? setEquals(feature.attributes, attributes)
-      : (feature.attributes.any((attr) => attributes.contains(attr))) ||
+  bool passesAttributes(Feature feature) {
+    if (feature.isPoint()) {
+      Point point = feature.asPoint();
+      if (exact) {
+        return setEquals(point.attributes, attributes);
+      }
+      return (point.attributes.any((attr) => attributes.contains(attr))) ||
           attributes.isEmpty;
+    }
+    return true;
+  }
 
-  bool passesSearch(Point feature) {
+  bool passesSearch(Feature feature) {
     String n = removeDiacritics(searchTerm).toLowerCase();
     return removeDiacritics(feature.name).toLowerCase().contains(n) ||
         removeDiacritics(feature.description ?? '').toLowerCase().contains(n);
@@ -84,23 +94,28 @@ class FeatureFilter {
 
   bool doesFilter(Iterable<int> allUsers) =>
       doesFilterUsers(allUsers) ||
-      doesFilterCategories() ||
-      doesFilterEditState() ||
-      doesFilterAttributes() ||
-      doesFilterSearch();
+          doesFilterCategories() ||
+          doesFilterEditState() ||
+          doesFilterAttributes() ||
+          doesFilterSearch();
 
-  Future<bool> setUsers(
-      {required BuildContext context,
-      required Map<int, String> users,
-      int? myId}) async {
+  Future<bool> setUsers({required BuildContext context,
+    required Map<int, String> users,
+    int? myId}) async {
     MultiCheckerResult<int>? result = await showDialog<MultiCheckerResult<int>>(
       context: context,
-      builder: (context) => MultiChecker<int>(
-        items: users.keys.toList(growable: false),
-        checkedItems: this.users,
-        titleBuilder: (int uid, bool _) => Text(
-            '${users[uid] ?? '<unknown ID: $uid>'}${uid == myId ? ' (${I18N.of(context).me})' : ''}'),
-      ),
+      builder: (context) =>
+          MultiChecker<int>(
+            items: users.keys.toList(growable: false),
+            checkedItems: this.users,
+            titleBuilder: (int uid, bool _) =>
+                Text(
+                    '${users[uid] ?? '<unknown ID: $uid>'}${uid == myId
+                        ? ' (${I18N
+                        .of(context)
+                        .me})'
+                        : ''}'),
+          ),
     );
     if (result == null) {
       return false;
@@ -111,15 +126,16 @@ class FeatureFilter {
 
   Future<bool> setCategories({required BuildContext context}) async {
     MultiCheckerResult<PointCategory>? result =
-        await showDialog<MultiCheckerResult<PointCategory>>(
+    await showDialog<MultiCheckerResult<PointCategory>>(
       context: context,
-      builder: (context) => MultiChecker<PointCategory>(
-        items: PointCategory.allCategories,
-        checkedItems: categories,
-        titleBuilder: (PointCategory cat, bool _) =>
-            Text(I18N.of(context).category(cat)),
-        secondaryBuilder: (PointCategory cat, bool _) => Icon(cat.iconData),
-      ),
+      builder: (context) =>
+          MultiChecker<PointCategory>(
+            items: PointCategory.allCategories,
+            checkedItems: categories,
+            titleBuilder: (PointCategory cat, bool _) =>
+                Text(I18N.of(context).category(cat)),
+            secondaryBuilder: (PointCategory cat, bool _) => Icon(cat.iconData),
+          ),
     );
     if (result == null) {
       return false;
@@ -130,19 +146,25 @@ class FeatureFilter {
 
   Future<bool> setAttributes({required BuildContext context}) async {
     MultiCheckerResult<PointAttribute>? result =
-        await showDialog<MultiCheckerResult<PointAttribute>>(
+    await showDialog<MultiCheckerResult<PointAttribute>>(
       context: context,
-      builder: (context) => MultiChecker<PointAttribute>(
-        switcher: MultiCheckerSwitcher(
-            value: exact,
-            offLabel: I18N.of(context).intersection,
-            onLabel: I18N.of(context).exact),
-        items: PointAttribute.attributes,
-        checkedItems: attributes,
-        titleBuilder: (PointAttribute attr, bool _) =>
-            Text(I18N.of(context).attribute(attr)),
-        secondaryBuilder: (PointAttribute attr, bool _) => Icon(attr.iconData),
-      ),
+      builder: (context) =>
+          MultiChecker<PointAttribute>(
+            switcher: MultiCheckerSwitcher(
+                value: exact,
+                offLabel: I18N
+                    .of(context)
+                    .intersection,
+                onLabel: I18N
+                    .of(context)
+                    .exact),
+            items: PointAttribute.attributes,
+            checkedItems: attributes,
+            titleBuilder: (PointAttribute attr, bool _) =>
+                Text(I18N.of(context).attribute(attr)),
+            secondaryBuilder: (PointAttribute attr, bool _) =>
+                Icon(attr.iconData),
+          ),
     );
     if (result == null) {
       return false;
@@ -154,12 +176,24 @@ class FeatureFilter {
 
   Future<bool> setEditState({required BuildContext context}) async {
     var titles = {
-      EditState.newState: I18N.of(context).newState,
-      EditState.editedState: I18N.of(context).editedState,
-      EditState.deletedState: I18N.of(context).deletedState,
-      EditState.editedDeletedState: I18N.of(context).editedDeletedState,
-      EditState.pristineState: I18N.of(context).pristineState,
-      EditState.anyState: I18N.of(context).anyState,
+      EditState.newState: I18N
+          .of(context)
+          .newState,
+      EditState.editedState: I18N
+          .of(context)
+          .editedState,
+      EditState.deletedState: I18N
+          .of(context)
+          .deletedState,
+      EditState.editedDeletedState: I18N
+          .of(context)
+          .editedDeletedState,
+      EditState.pristineState: I18N
+          .of(context)
+          .pristineState,
+      EditState.anyState: I18N
+          .of(context)
+          .anyState,
     };
     var secondaries = {
       EditState.newState: const Icon(Icons.star),
@@ -179,12 +213,13 @@ class FeatureFilter {
     };
     EditState? result = await showDialog<EditState>(
       context: context,
-      builder: (context) => SingleChooser<EditState>(
-        value: editState,
-        items: EditState.values,
-        titleBuilder: (item, _) => Text(titles[item]!),
-        secondaryBuilder: (item, _) => secondaries[item],
-      ),
+      builder: (context) =>
+          SingleChooser<EditState>(
+            value: editState,
+            items: EditState.values,
+            titleBuilder: (item, _) => Text(titles[item]!),
+            secondaryBuilder: (item, _) => secondaries[item],
+          ),
     );
     if (result == null) {
       return false;
