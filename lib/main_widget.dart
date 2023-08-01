@@ -4,6 +4,7 @@ import 'dart:developer' as developer;
 import 'dart:io';
 import 'dart:math' as math;
 
+import 'package:collection/collection.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_compass/flutter_compass.dart';
@@ -27,7 +28,7 @@ import 'package:oko/subpages/edit_point.dart';
 import 'package:oko/subpages/gallery.dart';
 import 'package:oko/subpages/pairing.dart';
 import 'package:oko/subpages/edit_poly.dart';
-import 'package:oko/subpages/point_list.dart';
+import 'package:oko/subpages/feature_list.dart';
 import 'package:oko/subpages/proposal.dart';
 import 'package:oko/utils.dart' as utils;
 import 'package:oko/constants.dart' as constants;
@@ -385,7 +386,9 @@ class MainWidgetState extends State<MainWidget> {
         constraints: const BoxConstraints.expand(),
         child: createInfoContentFull(context),
       );
-    } else if (navigationTarget.isNotNone && currentLocation != null && !polyEditing) {
+    } else if (navigationTarget.isNotNone &&
+        currentLocation != null &&
+        !polyEditing) {
       bottomCard = Container(
         alignment: Alignment.bottomCenter,
         constraints: const BoxConstraints.expand(),
@@ -593,7 +596,8 @@ class MainWidgetState extends State<MainWidget> {
     }
     FeatureFilter filter = storage!.getFeatureFilter(FeatureFilterInst.map);
     Iterable<data.Point> points = storage!.features.whereType<data.Point>();
-    return filter.filter(points).map((data.Point point) {
+    return filter.filter(points).map((data.Feature feature) {
+      data.Point point = feature.asPoint();
       bool sameAsTarget = infoTarget == point;
       double size = 35.0;
       double badgeSize = 12.0;
@@ -669,36 +673,40 @@ class MainWidgetState extends State<MainWidget> {
     if (storage == null) {
       return [];
     }
-    return storage!.features
-        .whereType<data.Poly>()
-        .where((e) => e.polygon)
-        .map((data.Poly ls) => Polygon(
-            points: ls.coords,
-            borderColor: ls.color,
-            color: (ls.colorFill ?? Colors.transparent).withOpacity(
-                infoTarget == ls
-                    ? constants.polySelectedFillColorOpacity
-                    : constants.polyFillColorOpacity),
-            isFilled: ls.colorFill != null,
-            isDotted: ls.isLocal,
-            borderStrokeWidth: infoTarget == ls ? 4 : 2))
-        .toList(growable: false);
+    FeatureFilter filter = storage!.getFeatureFilter(FeatureFilterInst.map);
+    Iterable<data.Poly> polys =
+        storage!.features.whereType<data.Poly>().where((e) => e.polygon);
+    return filter.filter(polys).map((data.Feature feature) {
+      data.Poly polygon = feature.asPoly();
+      return Polygon(
+          points: polygon.coords,
+          borderColor: polygon.color,
+          color: (polygon.colorFill ?? Colors.transparent).withOpacity(
+              infoTarget == polygon
+                  ? constants.polySelectedFillColorOpacity
+                  : constants.polyFillColorOpacity),
+          isFilled: polygon.colorFill != null,
+          isDotted: polygon.isLocal,
+          borderStrokeWidth: infoTarget == polygon ? 4 : 2);
+    }).toList(growable: false);
   }
 
   List<TaggedPolyline> createPolylines() {
     if (storage == null) {
       return [];
     }
-    return storage!.features
-        .whereType<data.Poly>()
-        .where((e) => !e.polygon)
-        .map((data.Poly ls) => TaggedPolyline(
-            tag: '${ls.id}',
-            points: ls.coords,
-            color: ls.color,
-            isDotted: ls.isLocal,
-            strokeWidth: infoTarget == ls ? 4 : 2))
-        .toList(growable: false);
+    FeatureFilter filter = storage!.getFeatureFilter(FeatureFilterInst.map);
+    Iterable<data.Poly> polys =
+        storage!.features.whereType<data.Poly>().whereNot((e) => e.polygon);
+    return filter.filter(polys).map((data.Feature feature) {
+      data.Poly polyline = feature.asPoly();
+      return TaggedPolyline(
+          tag: '${polyline.id}',
+          points: polyline.coords,
+          color: polyline.color,
+          isDotted: polyline.isLocal,
+          strokeWidth: infoTarget == polyline ? 4 : 2);
+    }).toList(growable: false);
   }
 
   Widget createInfoContentDistance(BuildContext context) {
@@ -989,6 +997,32 @@ class MainWidgetState extends State<MainWidget> {
             (!filterExpanded
                 ? <Widget>[]
                 : <Widget>[
+                    FloatingActionButton(
+                      heroTag: 'fab-filter-type',
+                      tooltip: I18N.of(context).filterByType,
+                      elevation: 0,
+                      mini: true,
+                      onPressed: () async {
+                        FeatureFilter f =
+                            storage!.getFeatureFilter(FeatureFilterInst.map);
+                        bool changed = await f.setTypes(context);
+                        if (changed) {
+                          await storage!
+                              .setFeatureFilter(FeatureFilterInst.map, f);
+                          setState(() {});
+                        }
+                      },
+                      child: Icon(
+                        constants.typeFilterIcon,
+                        size: 16,
+                        color: storage != null &&
+                                storage!
+                                    .getFeatureFilter(FeatureFilterInst.map)
+                                    .doesFilterType()
+                            ? Theme.of(context).colorScheme.primary
+                            : null,
+                      ),
+                    ),
                     FloatingActionButton(
                       heroTag: 'fab-filter-people',
                       tooltip: I18N.of(context).filterByOwner,
@@ -2164,11 +2198,9 @@ class MainWidgetState extends State<MainWidget> {
           context, 'No storage!', utils.NotificationLevel.error);
       Navigator.of(context).pop();
     }
-    data.Point? selected = await Navigator.of(context).push(
-        MaterialPageRoute<data.Point>(
-            builder: (context) => PointList(storage!.features
-                .whereType<data.Point>()
-                .toList(growable: false))));
+    data.Feature? selected = await Navigator.of(context).push(
+        MaterialPageRoute<data.Feature>(
+            builder: (context) => const FeatureList()));
     if (selected == null) {
       setState(() {});
       return;

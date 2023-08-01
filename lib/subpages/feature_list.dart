@@ -1,3 +1,6 @@
+import 'dart:developer' as developer;
+
+import 'package:collection/collection.dart';
 import 'package:diacritic/diacritic.dart';
 import 'package:flutter/material.dart';
 import 'package:oko/data.dart';
@@ -5,6 +8,7 @@ import 'package:oko/feature_filters.dart';
 import 'package:oko/i18n.dart';
 import 'package:oko/storage.dart';
 import 'package:oko/utils.dart';
+import 'package:oko/constants.dart' as constants;
 
 String _sortToString(Sort sort, BuildContext context) {
   switch (sort) {
@@ -15,22 +19,23 @@ String _sortToString(Sort sort, BuildContext context) {
   }
 }
 
-class PointList extends StatefulWidget {
-  final List<Point> points;
+class FeatureList extends StatefulWidget {
   final String? title;
   final bool multiple;
+  final FeatureType? typeRestriction;
 
-  const PointList(this.points,
-      {this.title, this.multiple = false, Key? key})
+  const FeatureList(
+      {this.title, this.multiple = false, this.typeRestriction, Key? key})
       : super(key: key);
 
   @override
-  State createState() => _PointListState();
+  State createState() => _FeatureListState();
 }
 
-class _PointListState extends State<PointList> {
+class _FeatureListState extends State<FeatureList> {
+  late Future<void> storageWait;
   late Storage storage;
-  late final List<Point> points;
+  late final List<Feature> features;
   final Set<int> checked = {};
   FeatureFilter filter = FeatureFilter.empty();
   Sort sort = Sort.name;
@@ -41,37 +46,61 @@ class _PointListState extends State<PointList> {
   @override
   void initState() {
     super.initState();
-    points = List.of(widget.points, growable: false);
-    searchController.addListener(() {
+    storageWait = Storage.getInstance().then((value) {
       setState(() {
-        filter.searchTerm = searchController.text;
-        storage.setFeatureFilter(FeatureFilterInst.featureList, filter);
+        storage = value;
+        switch (widget.typeRestriction) {
+          case null:
+            features = storage.features;
+            break;
+          case FeatureType.point:
+            features =
+                storage.features.whereType<Point>().toList(growable: false);
+            break;
+          case FeatureType.polyline:
+            features = storage.features
+                .whereType<Poly>()
+                .whereNot((e) => e.polygon)
+                .toList(growable: false);
+            break;
+          case FeatureType.polygon:
+            features = storage.features
+                .whereType<Poly>()
+                .where((e) => e.polygon)
+                .toList(growable: false);
+            break;
+        }
+        asc = storage.featureListSortDir;
+        sort = storage.featureListSortKey;
+        filter = storage.getFeatureFilter(FeatureFilterInst.featureList);
+        searchController.text = filter.searchTerm;
+        doSort();
+        searchController.addListener(() {
+          setState(() {
+            filter.searchTerm = searchController.text;
+            storage.setFeatureFilter(FeatureFilterInst.featureList, filter);
+          });
+        });
       });
     });
-
-    getStorage().whenComplete(() => setState(() {
-          asc = storage.featureListSortDir;
-          sort = storage.featureListSortKey;
-
-          filter = storage.getFeatureFilter(FeatureFilterInst.featureList);
-          searchController.text = filter.searchTerm;
-          doSort();
-        }));
-  }
-
-  Future<void> getStorage() async {
-    storage = await Storage.getInstance();
   }
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: () => FocusManager.instance.primaryFocus?.unfocus(),
-      child: Scaffold(
-        appBar: buildAppBar(context),
-        body: buildBody(context),
-      ),
-    );
+    return FutureBuilder(
+        future: storageWait,
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.done) {
+            return GestureDetector(
+              onTap: () => FocusManager.instance.primaryFocus?.unfocus(),
+              child: Scaffold(
+                appBar: buildAppBar(context),
+                body: buildBody(context),
+              ),
+            );
+          }
+          return Container();
+        });
   }
 
   PreferredSizeWidget buildAppBar(BuildContext context) {
@@ -83,8 +112,8 @@ class _PointListState extends State<PointList> {
           child: const Icon(Icons.check),
         ),
         onPressed: () {
-          Navigator.of(context).pop(points
-              .where((p) => checked.contains(p.id))
+          Navigator.of(context).pop(features
+              .where((f) => checked.contains(f.id))
               .toList(growable: false));
         },
       );
@@ -145,13 +174,12 @@ class _PointListState extends State<PointList> {
             height: 0,
           ),
         ),
-        Expanded(child: buildPointList(context))
+        Expanded(child: buildList(context))
       ],
     );
   }
 
   Widget buildFilterRow(BuildContext context) {
-    const double filterButtonIconSize = 35;
     return Row(
         mainAxisSize: MainAxisSize.max,
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -163,7 +191,20 @@ class _PointListState extends State<PointList> {
               Expanded(
                   flex: 0,
                   child: IconButton(
-                    iconSize: filterButtonIconSize,
+                    iconSize: constants.filterButtonIconSize,
+                    tooltip: I18N.of(context).filterByType,
+                    icon: Icon(
+                      constants.typeFilterIcon,
+                      color: filter.doesFilterType()
+                          ? Theme.of(context).colorScheme.primary
+                          : null,
+                    ),
+                    onPressed: onTypesButtonPressed,
+                  )),
+              Expanded(
+                  flex: 0,
+                  child: IconButton(
+                    iconSize: constants.filterButtonIconSize,
                     tooltip: I18N.of(context).filterByOwner,
                     icon: Icon(
                       Icons.people,
@@ -176,7 +217,7 @@ class _PointListState extends State<PointList> {
               Expanded(
                   flex: 0,
                   child: IconButton(
-                    iconSize: filterButtonIconSize,
+                    iconSize: constants.filterButtonIconSize,
                     tooltip: I18N.of(context).filterByCategory,
                     icon: Icon(
                       Icons.category,
@@ -189,7 +230,7 @@ class _PointListState extends State<PointList> {
               Expanded(
                   flex: 0,
                   child: IconButton(
-                    iconSize: filterButtonIconSize,
+                    iconSize: constants.filterButtonIconSize,
                     tooltip: I18N.of(context).filterByAttributes,
                     icon: Icon(
                       Icons.edit_attributes,
@@ -202,7 +243,7 @@ class _PointListState extends State<PointList> {
               Expanded(
                   flex: 0,
                   child: IconButton(
-                    iconSize: filterButtonIconSize,
+                    iconSize: constants.filterButtonIconSize,
                     tooltip: I18N.of(context).filterByEditState,
                     icon: Icon(
                       Icons.edit,
@@ -240,76 +281,80 @@ class _PointListState extends State<PointList> {
         ]);
   }
 
-  Widget buildPointList(BuildContext context) {
+  Widget buildList(BuildContext context) {
     return ListView(
         children: filter
-            .filter(points)
-            .map((Point point) => buildListTile(context, point))
+            .filter(features)
+            .map((Feature feature) => buildListTile(context, feature))
             .toList(growable: false));
   }
 
-  Widget buildListTile(BuildContext context, Point point) {
-    const badgeSize = 13.7;
+  Widget buildListTile(BuildContext context, Feature feature) {
     Widget icon = SizedBox(
         width: 40,
         child: Stack(
           children: [
             Icon(
-              point.category.iconData,
-              color: point.color,
+              feature.isPoint()
+                  ? feature.asPoint().category.iconData
+                  : (feature.asPoly().polygon
+                      ? constants.polygonIcon
+                      : constants.polylineIcon),
+              color: feature.color,
               size: 40,
             ),
-            if (point.isLocal)
+            if (feature.isLocal)
               Align(
                 alignment: const Alignment(1, -1),
                 child: Icon(Icons.star,
-                    size: badgeSize,
+                    size: constants.badgeSize,
                     color: Theme.of(context).colorScheme.primary),
               ),
-            if (point.isEdited)
+            if (feature.isEdited)
               Align(
                 alignment: const Alignment(1, -1),
                 child: Icon(Icons.edit,
-                    size: badgeSize,
+                    size: constants.badgeSize,
                     color: Theme.of(context).colorScheme.primary),
               ),
-            if (point.deleted)
+            if (feature.deleted)
               Align(
-                alignment: point.isEdited
+                alignment: feature.isEdited
                     ? const Alignment(1, 0)
                     : const Alignment(1, -1),
                 child: Icon(Icons.delete,
-                    size: badgeSize,
+                    size: constants.badgeSize,
                     color: Theme.of(context).colorScheme.primary),
               ),
-            if (point.ownerId == 0)
+            if (feature.ownerId == 0)
               Align(
                 alignment: const Alignment(1, -1),
                 child: Icon(Icons.lock,
-                    size: badgeSize,
+                    size: constants.badgeSize,
                     color: Theme.of(context).colorScheme.primary),
               ),
-            for (var attr in point.attributes)
-              Align(
-                  alignment: Alignment(attr.xAlign, attr.yAlign),
-                  child: Icon(
-                    attr.iconData,
-                    color: attr.color,
-                    size: badgeSize,
-                  ))
+            if (feature.isPoint())
+              for (var attr in feature.asPoint().attributes)
+                Align(
+                    alignment: Alignment(attr.xAlign, attr.yAlign),
+                    child: Icon(
+                      attr.iconData,
+                      color: attr.color,
+                      size: constants.badgeSize,
+                    ))
           ],
         ));
-    Widget title = Text('${point.name} | ${storage.users[point.ownerId]}');
+    Widget title = Text('${feature.name} | ${storage.users[feature.ownerId]}');
     Widget subtitle = Text(
         [
-          if (point.description?.isNotEmpty ?? false) point.description,
-          formatCoords(point.coords, false)
+          if (feature.description?.isNotEmpty ?? false) feature.description,
+          formatCoords(feature.center(), false) + (feature.isPoly() ? ' (${I18N.of(context).centroid})' : 'xxx')
         ].join('\n'),
         maxLines: 2);
-    bool isThreeLine = point.description?.isNotEmpty ?? false;
+    bool isThreeLine = feature.description?.isNotEmpty ?? false;
     if (widget.multiple) {
       return CheckboxListTile(
-        value: checked.contains(point.id),
+        value: checked.contains(feature.id),
         secondary: icon,
         title: title,
         subtitle: subtitle,
@@ -317,75 +362,22 @@ class _PointListState extends State<PointList> {
         onChanged: (bool? value) {
           setState(() {
             if (value ?? false) {
-              checked.add(point.id);
+              checked.add(feature.id);
             } else {
-              checked.remove(point.id);
+              checked.remove(feature.id);
             }
           });
         },
       );
     } else {
       return ListTile(
-        leading: SizedBox(
-            width: 40,
-            child: Stack(
-              children: [
-                Icon(
-                  point.category.iconData,
-                  color: point.color,
-                  size: 40,
-                ),
-                if (point.isLocal)
-                  Align(
-                    alignment: const Alignment(1, -1),
-                    child: Icon(Icons.star,
-                        size: badgeSize,
-                        color: Theme.of(context).colorScheme.primary),
-                  ),
-                if (point.isEdited)
-                  Align(
-                    alignment: const Alignment(1, -1),
-                    child: Icon(Icons.edit,
-                        size: badgeSize,
-                        color: Theme.of(context).colorScheme.primary),
-                  ),
-                if (point.deleted)
-                  Align(
-                    alignment: point.isEdited
-                        ? const Alignment(1, 0)
-                        : const Alignment(1, -1),
-                    child: Icon(Icons.delete,
-                        size: badgeSize,
-                        color: Theme.of(context).colorScheme.primary),
-                  ),
-                if (point.ownerId == 0)
-                  Align(
-                    alignment: const Alignment(1, -1),
-                    child: Icon(Icons.lock,
-                        size: badgeSize,
-                        color: Theme.of(context).colorScheme.primary),
-                  ),
-                for (var attr in point.attributes)
-                  Align(
-                      alignment: Alignment(attr.xAlign, attr.yAlign),
-                      child: Icon(
-                        attr.iconData,
-                        color: attr.color,
-                        size: badgeSize,
-                      ))
-              ],
-            )),
-        title: Text('${point.name} | ${storage.users[point.ownerId]}'),
-        subtitle: Text(
-            [
-              if (point.description?.isNotEmpty ?? false) point.description,
-              formatCoords(point.coords, false)
-            ].join('\n'),
-            maxLines: 2),
+        leading: icon,
+        title: Text('${feature.name} | ${storage.users[feature.ownerId]}'),
+        subtitle: subtitle,
         dense: true,
-        isThreeLine: point.description?.isNotEmpty ?? false,
+        isThreeLine: feature.description?.isNotEmpty ?? false,
         onTap: () {
-          Navigator.of(context).pop(point);
+          Navigator.of(context).pop(feature);
         },
       );
     }
@@ -395,9 +387,19 @@ class _PointListState extends State<PointList> {
     storage.setFeatureFilter(FeatureFilterInst.map, filter);
   }
 
+  Future<void> onTypesButtonPressed() async {
+    bool changed = await filter.setTypes(context);
+    if (changed) {
+      setState(() {});
+      await storage.setFeatureFilter(FeatureFilterInst.featureList, filter);
+    }
+  }
+
   Future<void> onUsersButtonPressed() async {
     bool changed = await filter.setUsers(
-        context: context, users: storage.users, myId: storage.serverSettings?.id);
+        context: context,
+        users: storage.users,
+        myId: storage.serverSettings?.id);
     if (changed) {
       setState(() {});
       await storage.setFeatureFilter(FeatureFilterInst.featureList, filter);
@@ -431,14 +433,14 @@ class _PointListState extends State<PointList> {
   void doSort() {
     switch (sort) {
       case Sort.name:
-        points.sort((a, b) =>
+        features.sort((a, b) =>
             asc *
             removeDiacritics(a.name)
                 .toLowerCase()
                 .compareTo(removeDiacritics(b.name).toLowerCase()));
         break;
       case Sort.owner:
-        points.sort((a, b) {
+        features.sort((a, b) {
           var ua = storage.users[a.ownerId];
           var ub = storage.users[b.ownerId];
           int c;

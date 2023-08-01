@@ -154,6 +154,7 @@ class Storage {
           'feature_list_sorting', {'sort_key': 'name', 'sort_direction': 1});
       await db.execute('CREATE TABLE feature_filters ('
           'filter_name text not null PRIMARY KEY,'
+          'types text not null,'
           'users text not null,'
           'categories text not null,'
           'attributes text not null,'
@@ -162,6 +163,8 @@ class Storage {
           'search_term text not null)');
       await db.insert('feature_filters', {
         'filter_name': FeatureFilterInst.featureList.name,
+        'types': jsonEncode(
+            FeatureType.values.map((e) => e.name).toList(growable: false)),
         'users': jsonEncode(
             (await db.query('point_list_checked_users', columns: ['id']))
                 .map((e) => e['id'])
@@ -203,6 +206,8 @@ class Storage {
 
       await db.insert('feature_filters', {
         'filter_name': FeatureFilterInst.map.name,
+        'types': jsonEncode(
+            FeatureType.values.map((e) => e.name).toList(growable: false)),
         'users': '[]',
         'categories': jsonEncode(PointCategory.allCategories
             .map((e) => e.name)
@@ -417,6 +422,8 @@ class Storage {
     await _db.update(
         'feature_filters',
         {
+          'types': jsonEncode(
+              filter.types.map((e) => e.name).toList(growable: false)),
           'users': jsonEncode(filter.users.toList(growable: false)),
           'categories': jsonEncode(
               filter.categories.map((e) => e.name).toList(growable: false)),
@@ -435,6 +442,7 @@ class Storage {
     Future<void> f(Transaction tx) async {
       var rows = await tx.query('feature_filters',
           columns: [
+            'types',
             'users',
             'categories',
             'attributes',
@@ -447,6 +455,9 @@ class Storage {
           limit: 1);
       for (var row in rows) {
         _featureFilters[filter] = FeatureFilter(
+            (jsonDecode(row['types'] as String) as List<dynamic>)
+                .map((e) => parseFeatureType(e))
+                .toSet(),
             (jsonDecode(row['users'] as String) as List<dynamic>)
                 .map((e) => e as int)
                 .toSet(),

@@ -252,13 +252,19 @@ class I18N {
       {cs: 'Vycentrovat mapu', en: 'Center map'}[locale.languageCode]!;
 
   String get poiListTitle =>
-      {cs: 'Seznam bodů', en: 'Point list'}[locale.languageCode]!;
+      {cs: 'Seznam objektů', en: 'Feature list'}[locale.languageCode]!;
 
   String get userListTitle =>
       {cs: 'Seznam uživatelů', en: 'User list'}[locale.languageCode]!;
 
   String get infoOnly =>
       {cs: 'Pouze informativní', en: 'Informative only'}[locale.languageCode]!;
+
+  String Function(FeatureType t) get featureTypeName => ((FeatureType t) => {
+        FeatureType.point: {cs: 'Bod', en: 'Point'},
+        FeatureType.polyline: {cs: 'Cesta', en: 'Path'},
+        FeatureType.polygon: {cs: 'Plygon', en: 'Polygon'}
+      }[t]![locale.languageCode]!);
 
   String get categoryTitle =>
       {cs: 'Kategorie', en: 'Category'}[locale.languageCode]!;
@@ -300,6 +306,9 @@ class I18N {
         cs: 'Použít současný filtr na mapě',
         en: 'Use current filter on map'
       }[locale.languageCode]!;
+
+  String get filterByType =>
+      {cs: 'Filtrovat podle typu', en: 'Filter by type'}[locale.languageCode]!;
 
   String get filterByOwner => {
         cs: 'Filtrovat podle vlastníka',
@@ -722,19 +731,17 @@ class I18N {
       }[locale.languageCode]!;
 
   String get pickPolyNavTarget => {
-    cs: 'Vyberte bod pro navigaci',
-    en: 'Pick a point for navigation'
-  }[locale.languageCode]!;
+        cs: 'Vyberte bod pro navigaci',
+        en: 'Pick a point for navigation'
+      }[locale.languageCode]!;
 
   String get centroid => {
-    cs: 'Vyberte bod pro navigaci',
-    en: 'Centroid (average)'
-  }[locale.languageCode]!;
+        cs: 'Vyberte bod pro navigaci',
+        en: 'Centroid (average)'
+      }[locale.languageCode]!;
 
-  String get nodeNo => {
-    cs: 'Vyberte bod pro navigaci',
-    en: 'Node No.:'
-  }[locale.languageCode]!;
+  String get nodeNo =>
+      {cs: 'Vyberte bod pro navigaci', en: 'Node No.:'}[locale.languageCode]!;
 }
 
 class I18NDelegate extends LocalizationsDelegate<I18N> {

@@ -5,7 +5,7 @@ import 'package:latlong2/latlong.dart';
 import 'package:oko/data.dart';
 import 'package:oko/i18n.dart';
 import 'package:oko/storage.dart';
-import 'package:oko/subpages/point_list.dart';
+import 'package:oko/subpages/feature_list.dart';
 import 'package:oko/utils.dart';
 import 'package:oko/constants.dart' as constants;
 
@@ -22,7 +22,6 @@ class EditPoly extends StatefulWidget {
 
 class _EditPolyState extends State<EditPoly>
     with TickerProviderStateMixin {
-  final badgeSize = 13.7;
 
   late Future<void> storageWait;
   late Storage storage;
@@ -326,14 +325,14 @@ class _EditPolyState extends State<EditPoly>
                 Align(
                   alignment: const Alignment(1, -1),
                   child: Icon(constants.pointLocalBadge,
-                      size: badgeSize,
+                      size: constants.badgeSize,
                       color: Theme.of(context).colorScheme.primary),
                 ),
               if (point?.isEdited ?? false)
                 Align(
                   alignment: const Alignment(1, -1),
                   child: Icon(constants.pointEditedBadge,
-                      size: badgeSize,
+                      size: constants.badgeSize,
                       color: Theme.of(context).colorScheme.primary),
                 ),
               if (point?.deleted ?? false)
@@ -342,14 +341,14 @@ class _EditPolyState extends State<EditPoly>
                       ? const Alignment(1, 0)
                       : const Alignment(1, -1),
                   child: Icon(constants.pointDeletedBadge,
-                      size: badgeSize,
+                      size: constants.badgeSize,
                       color: Theme.of(context).colorScheme.primary),
                 ),
               if (point?.ownerId == 0)
                 Align(
                   alignment: const Alignment(1, -1),
                   child: Icon(constants.pointLocked,
-                      size: badgeSize,
+                      size: constants.badgeSize,
                       color: Theme.of(context).colorScheme.primary),
                 ),
               for (var attr in (point?.attributes ?? <PointAttribute>[]))
@@ -358,7 +357,7 @@ class _EditPolyState extends State<EditPoly>
                     child: Icon(
                       attr.iconData,
                       color: attr.color,
-                      size: badgeSize,
+                      size: constants.badgeSize,
                     ))
             ],
           )),
@@ -386,9 +385,9 @@ class _EditPolyState extends State<EditPoly>
     developer.log('onAddPoint');
     List<Point>? selected = await Navigator.of(context).push(
         MaterialPageRoute<List<Point>>(
-            builder: (context) => PointList(
-                storage.features.whereType<Point>().toList(growable: false),
+            builder: (context) => FeatureList(
                 title: I18N.of(context).pickAPoint,
+                typeRestriction: FeatureType.point,
                 multiple: true)));
     if (selected == null) {
       setState(() {});

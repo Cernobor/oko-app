@@ -256,13 +256,20 @@ enum EditState {
   editedDeletedState
 }
 
+final UnmodifiableMapView<String, EditState> _editStateParsingMap =
+    UnmodifiableMapView({for (var t in EditState.values) t.name: t});
+
 EditState parseEditState(String str) {
-  return {
-    EditState.anyState.name: EditState.anyState,
-    EditState.pristineState.name: EditState.pristineState,
-    EditState.newState.name: EditState.newState,
-    EditState.editedState.name: EditState.editedState
-  }[str]!;
+  return _editStateParsingMap[str]!;
+}
+
+enum FeatureType { point, polyline, polygon }
+
+final UnmodifiableMapView<String, FeatureType> _featureTypeParsingMap =
+    UnmodifiableMapView({for (var t in FeatureType.values) t.name: t});
+
+FeatureType parseFeatureType(String s) {
+  return _featureTypeParsingMap[s]!;
 }
 
 abstract class Feature {
@@ -864,7 +871,10 @@ class Poly extends Feature {
       coords = tmpCoords[0];
       coords.length = coords.length - 1;
     } else if (type == 'LineString') {
-      coords = (geom['coordinates'] as List<dynamic>).cast<List<dynamic>>().map((e) => e.cast<double>()).toList();
+      coords = (geom['coordinates'] as List<dynamic>)
+          .cast<List<dynamic>>()
+          .map((e) => e.cast<double>())
+          .toList();
     }
 
     List<List<double>> origCoords = [];
@@ -880,7 +890,10 @@ class Poly extends Feature {
       origCoords = tmpCoords[0];
       origCoords.length = origCoords.length - 1;
     } else if (origType == 'LineString') {
-      origCoords = (origGeom['coordinates'] as List<dynamic>).cast<List<dynamic>>().map((e) => e.cast<double>()).toList();
+      origCoords = (origGeom['coordinates'] as List<dynamic>)
+          .cast<List<dynamic>>()
+          .map((e) => e.cast<double>())
+          .toList();
     }
     return Poly(
         id,
@@ -973,7 +986,7 @@ class Poly extends Feature {
   @override
   bool get isEdited =>
       super.isEdited ||
-      const IterableEquality().equals(_coords, _origCoords) ||
+      !const IterableEquality().equals(_coords, _origCoords) ||
       colorFill != origColorFill ||
       polygon != origPolygon;
 

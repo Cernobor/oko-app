@@ -7,6 +7,10 @@ const IconData pointEditedBadge = Icons.edit;
 const IconData pointDeletedBadge = Icons.delete;
 const IconData pointLocked = Icons.lock;
 const IconData closePath = Icons.all_inclusive;
+const IconData pointIcon = Icons.place;
+const IconData polygonIcon = Icons.pentagon_outlined;
+const IconData polylineIcon = Icons.polyline;
+const IconData typeFilterIcon = Icons.token;
 const Color polyEditColor = Colors.red;
 final Color polyEditFillColor = Colors.grey.withOpacity(.5);
 final List<Color> palette = List.unmodifiable([
@@ -31,8 +35,10 @@ final List<Color> palette = List.unmodifiable([
   Colors.blueGrey.shade500,
   Colors.black,
 ]);
-const double polyFillColorOpacity = .5;
-const double polySelectedFillColorOpacity = .75;
-const int defaultPointColorIndex = 5;
-const int defaultPolyStrokeColorIndex = 5;
-const int defaultPolyFillColorIndex = 17;
+const polyFillColorOpacity = .5;
+const polySelectedFillColorOpacity = .75;
+const defaultPointColorIndex = 5;
+const defaultPolyStrokeColorIndex = 5;
+const defaultPolyFillColorIndex = 17;
+const badgeSize = 13.7;
+const filterButtonIconSize = 35.0;
