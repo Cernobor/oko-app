@@ -24,6 +24,16 @@ class I18N {
 
   String get help => {cs: 'Nápověda', en: 'Help'}[locale.languageCode]!;
 
+  String get noLocationService => {
+        cs: 'Služba zjišťování polohy není k dispozici.',
+        en: 'Location service is not available.'
+      }[locale.languageCode]!;
+
+  String get noLocationPermissions => {
+        cs: 'Aplikace nemá oprávnění zjišťovat polohu.',
+        en: 'The app does not have the permission to acquire the location.'
+      }[locale.languageCode]!;
+
   String get drawerPaired => {
         cs: 'Spárováno se serverem',
         en: 'Paired to server'
@@ -445,7 +455,8 @@ class I18N {
 
   String get color => {cs: 'Barva', en: 'Colour'}[locale.languageCode]!;
 
-  String get colorFill => {cs: 'Barva výplně', en: 'Fill colour'}[locale.languageCode]!;
+  String get colorFill =>
+      {cs: 'Barva výplně', en: 'Fill colour'}[locale.languageCode]!;
 
   String get deadline => {
         cs: 'Automaticky smazat',
@@ -542,8 +553,10 @@ class I18N {
         en: 'Go to path creation'
       }[locale.languageCode]!;
 
-  String get creatingPath =>
-      {cs: 'Tvoření/úprava cesty', en: 'Creating/editing path'}[locale.languageCode]!;
+  String get creatingPath => {
+        cs: 'Tvoření/úprava cesty',
+        en: 'Creating/editing path'
+      }[locale.languageCode]!;
 
   String get creatingPathHelpAddingNodes => {
         cs: 'Klepnutím do mapy nebo na existující bod přidáte uzel cesty/polygonu.',
@@ -570,8 +583,10 @@ class I18N {
         en: 'This opens the settings of the path/polygon. You can finish path/polygon creation (save it) there.'
       }[locale.languageCode]!;
 
-  String get createPoly =>
-      {cs: 'Vytvořit cestu/polygon', en: 'Create path/polygon'}[locale.languageCode]!;
+  String get createPoly => {
+        cs: 'Vytvořit cestu/polygon',
+        en: 'Create path/polygon'
+      }[locale.languageCode]!;
 
   String get createPathSubtitle =>
       {cs: 'z bodů', en: 'out of points'}[locale.languageCode]!;
@@ -701,8 +716,25 @@ class I18N {
             'Invalid language code: ${locale.languageCode}');
       });
 
-  String get polyCreated =>
-      {cs: 'Cesta/polygon vytvořen(a)', en: 'Path/polygon created'}[locale.languageCode]!;
+  String get polyCreated => {
+        cs: 'Cesta/polygon vytvořen(a)',
+        en: 'Path/polygon created'
+      }[locale.languageCode]!;
+
+  String get pickPolyNavTarget => {
+    cs: 'Vyberte bod pro navigaci',
+    en: 'Pick a point for navigation'
+  }[locale.languageCode]!;
+
+  String get centroid => {
+    cs: 'Vyberte bod pro navigaci',
+    en: 'Centroid (average)'
+  }[locale.languageCode]!;
+
+  String get nodeNo => {
+    cs: 'Vyberte bod pro navigaci',
+    en: 'Node No.:'
+  }[locale.languageCode]!;
 }
 
 class I18NDelegate extends LocalizationsDelegate<I18N> {

@@ -422,13 +422,13 @@ packages:
     source: hosted
     version: "5.0.1"
   location_platform_interface:
-    dependency: transitive
+    dependency: "direct overridden"
     description:
       name: location_platform_interface
-      sha256: "069476ccddce7fa162d37522cb823fb0df1c43176b38fba7ee2d7712e233f8ba"
+      sha256: "7ef30443cffadad54d534dfd370fe126bc087655aaa53f181570b9812a87a806"
       url: "https://pub.dev"
     source: hosted
-    version: "3.1.0"
+    version: "3.0.0"
   location_web:
     dependency: transitive
     description:

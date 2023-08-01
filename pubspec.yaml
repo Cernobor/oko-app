@@ -39,7 +39,7 @@ dependencies:
 
   sprintf: ^7.0.0
   latlong2: ^0.9.0
-  location: ^5.0.0
+  location: ^5.0.1
   flutter_compass: ^0.7.0
   flutter_map: ^5.0.0
   flutter_map_tappable_polyline: ^5.0.0
@@ -72,6 +72,9 @@ dependencies:
     git:
       url: https://github.com/greensopinion/flutter-vector-map-tiles.git
       ref: c816006df2520a0b010bc29edfe824f8be1c7b4a
+
+dependency_overrides:
+  location_platform_interface: 3.0.0
 
 dev_dependencies:
   flutter_test:

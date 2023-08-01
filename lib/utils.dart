@@ -14,93 +14,25 @@ enum PointLogType { currentLocation, crosshair }
 
 Geodesy geodesy = Geodesy();
 
-abstract class Target {
-  static final Target none = _NoneTarget._();
+class Target {
+  final LatLng? _coords;
+  final data.Feature? _feature;
 
-  static of(data.Feature feature) {
-    if (feature.isPoint()) {
-      return PointTarget(feature.asPoint());
-    } else if (feature.isPoly()) {
-      return PolyTarget(feature.asPoly());
-    }
-  }
+  static final none = Target._(null, null);
+
+  Target._(this._coords, this._feature);
+
+  Target(data.Feature feature, [LatLng? coords]) : this._(coords ?? feature.center(), feature);
 
   bool get isNone => identical(this, none);
 
   bool get isNotNone => !identical(this, none);
 
-  bool isSameFeature(data.Feature feature);
+  LatLng get coords => _coords!;
 
-  bool isPoint();
+  data.Feature get feature => _feature!;
 
-  bool isPoly();
-}
-
-class _NoneTarget extends Target {
-  _NoneTarget._();
-
-  @override
-  bool isSameFeature(data.Feature _) => false;
-
-  @override
-  bool isPoly() => false;
-
-  @override
-  bool isPoint() => false;
-}
-
-class PointTarget extends Target {
-  final data.Point point;
-
-  PointTarget(this.point);
-
-  @override
-  bool operator ==(Object other) =>
-      identical(this, other) ||
-      other is PointTarget &&
-          runtimeType == other.runtimeType &&
-          point == other.point;
-
-  @override
-  int get hashCode => point.hashCode;
-
-  @override
-  bool isSameFeature(data.Feature feature) {
-    return identical(feature, point);
-  }
-
-  @override
-  bool isPoly() => false;
-
-  @override
-  bool isPoint() => true;
-}
-
-class PolyTarget extends Target {
-  final data.Poly poly;
-
-  PolyTarget(this.poly);
-
-  @override
-  bool operator ==(Object other) =>
-      identical(this, other) ||
-      other is PolyTarget &&
-          runtimeType == other.runtimeType &&
-          poly == other.poly;
-
-  @override
-  int get hashCode => poly.hashCode;
-
-  @override
-  bool isSameFeature(data.Feature feature) {
-    return identical(feature, poly);
-  }
-
-  @override
-  bool isPoly() => true;
-
-  @override
-  bool isPoint() => false;
+  bool isSameFeature(data.Feature feature) => identical(feature, _feature);
 }
 
 const Distance _distance = Distance();

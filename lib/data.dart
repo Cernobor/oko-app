@@ -1,6 +1,5 @@
 import 'dart:developer' as developer;
 import 'dart:io';
-import 'dart:math';
 
 import 'package:collection/collection.dart';
 import 'package:flutter/foundation.dart';
@@ -737,12 +736,20 @@ class Point extends Feature {
 }
 
 class Poly extends Feature {
-  List<LatLng> coords;
-  List<LatLng> origCoords;
-  bool polygon;
-  bool origPolygon;
-  Color? colorFill;
-  Color? origColorFill;
+  final List<LatLng> _coords;
+  final List<LatLng> _origCoords;
+  final bool polygon;
+  final bool origPolygon;
+  final Color? colorFill;
+  final Color? origColorFill;
+  LatLng _centroid;
+  final LatLng origCentroid;
+
+  List<LatLng> get coords => UnmodifiableListView(_coords);
+
+  List<LatLng> get origCoords => UnmodifiableListView(_origCoords);
+
+  LatLng get centroid => _centroid;
 
   Poly(
       int id,
@@ -760,12 +767,16 @@ class Poly extends Feature {
       this.origColorFill,
       Set<int> photoIDs,
       Set<int> origPhotoIDs,
-      this.coords,
-      this.origCoords,
+      List<LatLng> coords,
+      List<LatLng> origCoords,
       this.polygon,
       this.origPolygon,
       bool deleted)
-      : super._(
+      : _coords = coords,
+        _origCoords = origCoords,
+        _centroid = geodesy.findPolygonCentroid(coords),
+        origCentroid = geodesy.findPolygonCentroid(origCoords),
+        super._(
             id,
             ownerId,
             origOwnerId,
@@ -853,7 +864,7 @@ class Poly extends Feature {
       coords = tmpCoords[0];
       coords.length = coords.length - 1;
     } else if (type == 'LineString') {
-      coords = geom['coordinates'] as List<List<double>>;
+      coords = (geom['coordinates'] as List<dynamic>).cast<List<dynamic>>().map((e) => e.cast<double>()).toList();
     }
 
     List<List<double>> origCoords = [];
@@ -869,7 +880,7 @@ class Poly extends Feature {
       origCoords = tmpCoords[0];
       origCoords.length = origCoords.length - 1;
     } else if (origType == 'LineString') {
-      origCoords = origGeom['coordinates'] as List<List<double>>;
+      origCoords = (origGeom['coordinates'] as List<dynamic>).cast<List<dynamic>>().map((e) => e.cast<double>()).toList();
     }
     return Poly(
         id,
@@ -935,8 +946,8 @@ class Poly extends Feature {
             origColorFill ?? other.origColorFill,
             photoIDs ?? other.photoIDs,
             origPhotoIDs ?? other.origPhotoIDs,
-            coords ?? other.coords,
-            origCoords ?? other.origCoords,
+            coords ?? other._coords,
+            origCoords ?? other._origCoords,
             polygon ?? other.polygon,
             origPolygon ?? other.origPolygon,
             deleted ?? other.deleted);
@@ -962,14 +973,15 @@ class Poly extends Feature {
   @override
   bool get isEdited =>
       super.isEdited ||
-      const IterableEquality().equals(coords, origCoords) ||
+      const IterableEquality().equals(_coords, _origCoords) ||
       colorFill != origColorFill ||
       polygon != origPolygon;
 
   @override
   void revert() {
     super.revert();
-    coords = List.of(origCoords);
+    _coords.replaceRange(0, _coords.length, _origCoords);
+    _centroid = origCentroid;
   }
 
   Map<String, dynamic> _geometry() {
@@ -977,7 +989,7 @@ class Poly extends Feature {
       return {
         'type': 'Polygon',
         'coordinates': [
-          (coords + [coords.first])
+          (_coords + [_coords.first])
               .map((LatLng c) => [c.longitude, c.latitude])
               .toList(growable: false)
         ]
@@ -985,7 +997,7 @@ class Poly extends Feature {
     } else {
       return {
         'type': 'LineString',
-        'coordinates': coords
+        'coordinates': _coords
             .map((LatLng c) => [c.longitude, c.latitude])
             .toList(growable: false)
       };
@@ -997,7 +1009,7 @@ class Poly extends Feature {
       return {
         'type': 'Polygon',
         'coordinates': [
-          (origCoords + [origCoords.first])
+          (_origCoords + [_origCoords.first])
               .map((LatLng c) => [c.longitude, c.latitude])
               .toList(growable: false)
         ]
@@ -1005,7 +1017,7 @@ class Poly extends Feature {
     } else {
       return {
         'type': 'LineString',
-        'coordinates': origCoords
+        'coordinates': _origCoords
             .map((LatLng c) => [c.longitude, c.latitude])
             .toList(growable: false)
       };
@@ -1037,15 +1049,15 @@ class Poly extends Feature {
         origColorFill,
         Set.of(photoIDs),
         Set.of(origPhotoIDs),
-        List.of(coords),
-        List.of(origCoords),
+        List.of(_coords),
+        List.of(_origCoords),
         polygon,
         origPolygon,
         deleted);
   }
 
   @override
-  LatLng center() => geodesy.findPolygonCentroid(coords);
+  LatLng center() => centroid;
 }
 
 abstract class FeaturePhoto implements Comparable<FeaturePhoto> {

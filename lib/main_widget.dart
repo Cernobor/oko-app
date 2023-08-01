@@ -17,6 +17,7 @@ import 'package:location/location.dart';
 import 'package:oko/communication.dart' as comm;
 import 'package:oko/data.dart' as data;
 import 'package:oko/data.dart';
+import 'package:oko/dialogs/poly_nav_point_chooser.dart';
 import 'package:oko/feature_filters.dart';
 import 'package:oko/i18n.dart';
 import 'package:oko/main.dart';
@@ -75,8 +76,8 @@ class MainWidgetState extends State<MainWidget> {
   bool viewLockedToLocation = false;
   LatLng? currentLocation;
   double? currentHeading;
-  utils.Target infoTarget = utils.Target.none;
-  utils.PointTarget? navigationTarget;
+  Feature? infoTarget;
+  utils.Target navigationTarget = utils.Target.none;
   bool filterExpanded = false;
   TextEditingController? searchController;
 
@@ -378,13 +379,13 @@ class MainWidgetState extends State<MainWidget> {
           alignment: Alignment.bottomCenter,
           constraints: const BoxConstraints.expand(),
           child: createFilterSearch(context));
-    } else if (infoTarget.isNotNone) {
+    } else if (infoTarget != null && !polyEditing) {
       bottomCard = Container(
         alignment: Alignment.bottomCenter,
         constraints: const BoxConstraints.expand(),
         child: createInfoContentFull(context),
       );
-    } else if (navigationTarget != null && currentLocation != null) {
+    } else if (navigationTarget.isNotNone && currentLocation != null && !polyEditing) {
       bottomCard = Container(
         alignment: Alignment.bottomCenter,
         constraints: const BoxConstraints.expand(),
@@ -444,10 +445,10 @@ class MainWidgetState extends State<MainWidget> {
       ]));
     }
     // line to target
-    if (navigationTarget != null && currentLocation != null) {
+    if (navigationTarget.isNotNone && currentLocation != null) {
       polylines.add(Polyline(points: <LatLng>[
         currentLocation!,
-        navigationTarget!.point.coords,
+        navigationTarget.coords,
       ], strokeWidth: 5, color: Colors.blue));
     }
     // edited polyline
@@ -593,7 +594,7 @@ class MainWidgetState extends State<MainWidget> {
     FeatureFilter filter = storage!.getFeatureFilter(FeatureFilterInst.map);
     Iterable<data.Point> points = storage!.features.whereType<data.Point>();
     return filter.filter(points).map((data.Point point) {
-      bool sameAsTarget = infoTarget.isSameFeature(point);
+      bool sameAsTarget = infoTarget == point;
       double size = 35.0;
       double badgeSize = 12.0;
       if (sameAsTarget) {
@@ -675,12 +676,12 @@ class MainWidgetState extends State<MainWidget> {
             points: ls.coords,
             borderColor: ls.color,
             color: (ls.colorFill ?? Colors.transparent).withOpacity(
-                infoTarget.isSameFeature(ls)
+                infoTarget == ls
                     ? constants.polySelectedFillColorOpacity
                     : constants.polyFillColorOpacity),
             isFilled: ls.colorFill != null,
             isDotted: ls.isLocal,
-            borderStrokeWidth: infoTarget.isSameFeature(ls) ? 4 : 2))
+            borderStrokeWidth: infoTarget == ls ? 4 : 2))
         .toList(growable: false);
   }
 
@@ -696,13 +697,13 @@ class MainWidgetState extends State<MainWidget> {
             points: ls.coords,
             color: ls.color,
             isDotted: ls.isLocal,
-            strokeWidth: infoTarget.isSameFeature(ls) ? 4 : 2))
+            strokeWidth: infoTarget == ls ? 4 : 2))
         .toList(growable: false);
   }
 
   Widget createInfoContentDistance(BuildContext context) {
     utils.NavigationData nav = utils.NavigationData.compute(
-        currentLocation!, navigationTarget!.point.coords, currentHeading);
+        currentLocation!, navigationTarget.coords, currentHeading);
     return Card(
         child: InkWell(
       onTap: onInfoDistanceTap,
@@ -718,13 +719,14 @@ class MainWidgetState extends State<MainWidget> {
   }
 
   Widget createInfoContentFull(BuildContext context) {
-    bool isNavigating = navigationTarget != null &&
+    bool isNavigating = navigationTarget.isNotNone &&
         currentLocation != null &&
-        navigationTarget == infoTarget;
+        infoTarget != null &&
+        navigationTarget.isSameFeature(infoTarget!);
     String? navText;
     if (isNavigating) {
       utils.NavigationData nav = utils.NavigationData.compute(
-          currentLocation!, navigationTarget!.point.coords, currentHeading);
+          currentLocation!, navigationTarget.coords, currentHeading);
       var distStr = '${I18N.of(context).distance}: ${nav.distanceM} m';
       var brgStr =
           '${I18N.of(context).bearing}: ${nav.bearingDeg.toStringAsFixed(1)}°';
@@ -732,21 +734,12 @@ class MainWidgetState extends State<MainWidget> {
           '${I18N.of(context).relativeBearing}: ${nav.relativeBearingDeg == null ? '-' : nav.relativeBearingDeg!.toStringAsFixed(1)}°';
       navText = '$distStr $brgStr $relBrgStr';
     }
-    Widget content;
-    if (infoTarget.isPoint()) {
-      content = createInfoContent(
-          context, (infoTarget as utils.PointTarget).point, navText);
-    } else if (infoTarget.isPoly()) {
-      content = createInfoContent(
-          context, (infoTarget as utils.PolyTarget).poly, null);
-    } else {
-      throw utils.IllegalStateException('invalid type of infoTarget');
-    }
+    Widget content = createInfoContent(context, infoTarget!, navText);
     return Dismissible(
         key: const Key('fullInfoDismissible'),
         onDismissed: (DismissDirection dd) {
           setState(() {
-            infoTarget = utils.Target.none;
+            infoTarget = null;
           });
         },
         resizeDuration: null,
@@ -809,20 +802,34 @@ class MainWidgetState extends State<MainWidget> {
   List<Widget> createInfoContentButtons(
       BuildContext context, data.Feature feature) {
     return <Widget>[
-      if (feature.isPoint())
-        IconButton(
-          icon: navigationTarget != null &&
-                  navigationTarget!.isSameFeature(feature)
-              ? const Icon(Icons.navigation)
-              : const Icon(Icons.navigation_outlined),
-          tooltip: navigationTarget != null &&
-                  navigationTarget!.isSameFeature(feature)
-              ? I18N.of(context).stopNavigationButton
-              : I18N.of(context).navigateToButton,
-          onPressed: currentLocation == null
-              ? null
-              : () => toggleNavigation(feature.asPoint()),
-        ),
+      IconButton(
+        icon: navigationTarget.isNotNone &&
+                navigationTarget.isSameFeature(feature)
+            ? const Icon(Icons.navigation)
+            : const Icon(Icons.navigation_outlined),
+        tooltip: navigationTarget.isNotNone &&
+                navigationTarget.isSameFeature(feature)
+            ? I18N.of(context).stopNavigationButton
+            : I18N.of(context).navigateToButton,
+        onPressed: currentLocation == null
+            ? null
+            : () async {
+                if (feature.isPoint()) {
+                  toggleNavigation(feature.center(), feature);
+                } else if (feature.isPoly()) {
+                  if (navigationTarget.isNotNone) {
+                    setState(() {
+                      navigationTarget = utils.Target.none;
+                    });
+                  } else {
+                    LatLng? coords = await getPolyCoords(feature.asPoly());
+                    if (coords != null) {
+                      toggleNavigation(coords, feature);
+                    }
+                  }
+                }
+              },
+      ),
       GestureDetector(
         child: IconButton(
             icon: const Icon(Icons.center_focus_strong),
@@ -1408,16 +1415,6 @@ class MainWidgetState extends State<MainWidget> {
     );
   }
 
-  void setLocation() {
-    location.getLocation().then((LocationData loc) {
-      developer.log('One-time location: ${loc.latitude} ${loc.longitude}');
-      setState(() {
-        currentLocation = LatLng(loc.latitude!, loc.longitude!);
-        onCurrentLocation();
-      });
-    });
-  }
-
   void onLockViewToLocation(bool zoom) {
     setState(() {
       viewLockedToLocation = !viewLockedToLocation;
@@ -1502,13 +1499,13 @@ class MainWidgetState extends State<MainWidget> {
       if (source != null) {
         editedPolySourceFeature = source.id;
         editedPoly.copyFrom(utils.EditedPoly.fresh(
-                color: source.color,
-                colorFill: source.colorFill,
-                closed: source.polygon,
-                coords: List.of(source.coords)));
+            color: source.color,
+            colorFill: source.colorFill,
+            closed: source.polygon,
+            coords: List.of(source.coords)));
       }
-      infoTarget = utils.Target.none;
-      navigationTarget = null;
+      infoTarget = null;
+      navigationTarget = utils.Target.none;
       polyEditing = true;
     });
   }
@@ -1518,12 +1515,14 @@ class MainWidgetState extends State<MainWidget> {
       utils.notifySnackbar(
           context, 'No storage!', utils.NotificationLevel.error);
     }
+    Poly? sourcePoly;
+    if (editedPolySourceFeature != null) {
+      sourcePoly = storage!.featuresMap[editedPolySourceFeature!]!.asPoly();
+    }
     var res = await Navigator.of(context).push(MaterialPageRoute(
-        builder: (context) => EditPoly(
-            editedPoly: editedPoly,
-            source: editedPolySourceFeature == null
-                ? null
-                : storage!.featuresMap[editedPolySourceFeature!]!.asPoly())));
+        builder: (context) =>
+            EditPoly(editedPoly: editedPoly, source: sourcePoly)));
+    developer.log('$res');
     if (res is utils.EditedPoly) {
       setState(() {
         editedPoly.copyFrom(res);
@@ -1539,14 +1538,53 @@ class MainWidgetState extends State<MainWidget> {
       utils.notifySnackbar(context, I18N.of(context).polyCreated,
           utils.NotificationLevel.success);
     }
-    editedPolySourceFeature = null;
-    polyEditing = false;
-    editedPoly.copyFrom(utils.EditedPoly.fresh());
-    setState(() {});
+    setState(() {
+      if (navigationTarget.isNotNone) {
+        if (sourcePoly != null && navigationTarget.isSameFeature(sourcePoly)) {
+          int idx = sourcePoly.coords.indexOf(navigationTarget.coords);
+          if (idx != -1 && poly.coords.length > idx) {
+            navigationTarget = utils.Target(poly, poly.coords[idx]);
+          } else {
+            navigationTarget = utils.Target(poly);
+          }
+        }
+      }
+      if (infoTarget == sourcePoly) {
+        infoTarget = poly;
+      }
+      editedPolySourceFeature = null;
+      polyEditing = false;
+      editedPoly.copyFrom(utils.EditedPoly.fresh());
+    });
   }
 
-  void onToggleLocationContinuous() {
+  void onToggleLocationContinuous() async {
     if (locationSubscription == null) {
+      bool serviceEnabled = await location.serviceEnabled();
+      if (!serviceEnabled) {
+        serviceEnabled = await location.requestService();
+        if (!serviceEnabled) {
+          if (context.mounted) {
+            utils.notifySnackbar(context, I18N.of(context).noLocationService,
+                utils.NotificationLevel.error);
+          }
+          return;
+        }
+      }
+      PermissionStatus permissionGranted = await location.hasPermission();
+      if (permissionGranted == PermissionStatus.denied) {
+        permissionGranted = await location.requestPermission();
+        if (permissionGranted != PermissionStatus.granted) {
+          if (context.mounted) {
+            utils.notifySnackbar(
+                context,
+                I18N.of(context).noLocationPermissions,
+                utils.NotificationLevel.error);
+          }
+          return;
+        }
+      }
+
       locationSubscription =
           location.onLocationChanged.listen((LocationData loc) {
         developer.log('Continuous location: ${loc.latitude} ${loc.longitude}');
@@ -1943,7 +1981,7 @@ class MainWidgetState extends State<MainWidget> {
       }
     }
     setState(() {
-      infoTarget = utils.Target.none;
+      infoTarget = null;
     });
   }
 
@@ -2032,7 +2070,7 @@ class MainWidgetState extends State<MainWidget> {
       return;
     }
     setState(() {
-      infoTarget = utils.Target.none;
+      infoTarget = null;
     });
 
     if (!mounted) return;
@@ -2085,12 +2123,14 @@ class MainWidgetState extends State<MainWidget> {
       return;
     }
     await storage!.upsertFeature(replacement);
-    setState(() {});
-    if (infoTarget.isSameFeature(point)) {
-      setState(() {
-        infoTarget = utils.Target.of(storage!.featuresMap[point.id]!.asPoint());
-      });
-    }
+    setState(() {
+      if (infoTarget == point) {
+        infoTarget = storage!.featuresMap[point.id]!.asPoint();
+      }
+      if (navigationTarget.isSameFeature(point)) {
+        navigationTarget = utils.Target(replacement);
+      }
+    });
   }
 
   void onMapTap(TapPosition tapPosition, LatLng coords) {
@@ -2106,14 +2146,14 @@ class MainWidgetState extends State<MainWidget> {
           continue;
         }
         if (utils.geodesy.isGeoPointInPolygon(coords, f.asPoly().coords)) {
-          infoTarget = utils.Target.of(f);
+          infoTarget = f;
           return;
         }
       }
       if (searchController != null) {
         onToggleFilterSearch();
       } else {
-        infoTarget = utils.Target.none;
+        infoTarget = null;
       }
     });
   }
@@ -2134,7 +2174,7 @@ class MainWidgetState extends State<MainWidget> {
       return;
     }
     setState(() {
-      infoTarget = utils.Target.of(selected);
+      infoTarget = selected;
     });
     if (context.mounted) {
       Navigator.of(context).pop();
@@ -2190,10 +2230,10 @@ class MainWidgetState extends State<MainWidget> {
         editedPoly.coords.add(utils.ReferencedLatLng.fromPoint(point));
         return;
       }
-      if (infoTarget.isSameFeature(point)) {
-        infoTarget = utils.Target.none;
+      if (infoTarget == point) {
+        infoTarget = null;
       } else {
-        infoTarget = utils.Target.of(point);
+        infoTarget = point;
       }
     });
   }
@@ -2201,21 +2241,21 @@ class MainWidgetState extends State<MainWidget> {
   void onPointLongPress(data.Point point) {
     developer.log('Poi ${point.name} long press.');
     if (!polyEditing) {
-      toggleNavigation(point);
+      toggleNavigation(point.coords, point);
     }
   }
 
   void onPolylineTap(data.Poly polyline) {
     developer.log('LineString ${polyline.name} (ID ${polyline.id}) tap.');
     setState(() {
-      infoTarget = utils.Target.of(polyline);
+      infoTarget = polyline;
     });
   }
 
   void onInfoDistanceTap() {
     developer.log('onInfoDistanceTap');
     setState(() {
-      infoTarget = navigationTarget!;
+      infoTarget = navigationTarget.feature;
     });
   }
 
@@ -2234,19 +2274,20 @@ class MainWidgetState extends State<MainWidget> {
       await storage!.upsertFeature(replacement);
     }
     data.Feature? r = storage!.featuresMap[toDelete.id];
-    if (infoTarget.isSameFeature(toDelete)) {
+    if (infoTarget == toDelete) {
       if (r != null) {
-        infoTarget = utils.Target.of(r);
+        infoTarget = r;
       } else {
-        infoTarget = utils.Target.none;
+        infoTarget = null;
       }
     }
-    if (navigationTarget != null && navigationTarget!.isSameFeature(toDelete)) {
+    if (navigationTarget.isNotNone &&
+        navigationTarget.isSameFeature(toDelete)) {
       if (r != null) {
         assert(r.isPoint());
-        navigationTarget = utils.Target.of(r.asPoint());
+        navigationTarget = utils.Target(r.asPoint());
       } else {
-        navigationTarget = null;
+        navigationTarget = utils.Target.none;
       }
     }
     setState(() {});
@@ -2257,14 +2298,14 @@ class MainWidgetState extends State<MainWidget> {
     replacement.deleted = false;
     await storage!.upsertFeature(replacement);
     data.Feature? r = storage!.featuresMap[toUndelete.id];
-    if (infoTarget.isSameFeature(toUndelete)) {
+    if (infoTarget == toUndelete) {
       assert(r != null);
-      infoTarget = utils.Target.of(r!);
+      infoTarget = r;
     }
-    if (navigationTarget != null &&
-        navigationTarget!.isSameFeature(toUndelete)) {
+    if (navigationTarget.isNotNone &&
+        navigationTarget.isSameFeature(toUndelete)) {
       assert(r != null && r.isPoint());
-      navigationTarget = utils.Target.of(r!.asPoint());
+      navigationTarget = utils.Target(r!.asPoint());
     }
     setState(() {});
   }
@@ -2279,10 +2320,10 @@ class MainWidgetState extends State<MainWidget> {
     //await storage!.delete
     replacement.revert();
     await storage!.upsertFeature(replacement);
-    if (infoTarget.isSameFeature(toRevert)) {
+    if (infoTarget == toRevert) {
       data.Feature? r = storage!.featuresMap[toRevert.id];
       assert(r != null);
-      infoTarget = utils.Target.of(r!);
+      infoTarget = r;
     }
     setState(() {});
   }
@@ -2303,9 +2344,9 @@ class MainWidgetState extends State<MainWidget> {
     }
     await storage!.upsertFeature(replacement);
     setState(() {});
-    if (infoTarget.isSameFeature(feature)) {
+    if (infoTarget == feature) {
       setState(() {
-        infoTarget = utils.Target.of(storage!.featuresMap[feature.id]!);
+        infoTarget = storage!.featuresMap[feature.id]!;
       });
     }
   }
@@ -2362,7 +2403,7 @@ class MainWidgetState extends State<MainWidget> {
       return;
     }
     storage = await Storage.getInstance(reset: true);
-    infoTarget = utils.Target.none;
+    infoTarget = null;
     progressValue = null;
     getIt.get<comm.AppClient>().unsetUserID();
     setState(() {});
@@ -2466,13 +2507,20 @@ class MainWidgetState extends State<MainWidget> {
             : mapController.zoom);
   }
 
-  void toggleNavigation(data.Point p) {
+  void toggleNavigation(LatLng coords, data.Feature f) {
     setState(() {
-      if (navigationTarget != null && navigationTarget!.isSameFeature(p)) {
-        navigationTarget = null;
+      if (navigationTarget.isNotNone && navigationTarget.isSameFeature(f)) {
+        navigationTarget = utils.Target.none;
       } else {
-        navigationTarget = utils.PointTarget(p);
+        navigationTarget = utils.Target(f, coords);
       }
     });
+  }
+
+  Future<LatLng?> getPolyCoords(Poly p) async {
+    LatLng? res = await showDialog<LatLng>(
+        context: context, builder: (context) => PolyNavPointChooser(poly: p));
+    developer.log('getPolyCoords = $res');
+    return res;
   }
 }

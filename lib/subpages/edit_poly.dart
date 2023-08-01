@@ -48,15 +48,17 @@ class _EditPolyState extends State<EditPoly>
       storage = value;
       points = {for (Point p in value.features.whereType<Point>()) p.id: p};
 
-      ownerId = widget.source?.ownerId ?? value.serverSettings!.id;
-      nameInputController.text = widget.source?.name ?? '';
-      color = widget.editedPoly.color;
-      colorFill = widget.editedPoly.colorFill ?? constants.palette[constants.defaultPolyFillColorIndex];
-      hasColorFill = widget.editedPoly.colorFill != null;
-      hasDeadline = widget.source?.deadline != null;
-      deadline = widget.source?.deadline;
-      closed = widget.editedPoly.closed;
-      nodes = widget.editedPoly.coords.map((e) => Tuple(e, false)).toList();
+      setState(() {
+        ownerId = widget.source?.ownerId ?? value.serverSettings!.id;
+        nameInputController.text = widget.source?.name ?? '';
+        color = widget.editedPoly.color;
+        colorFill = widget.editedPoly.colorFill ?? constants.palette[constants.defaultPolyFillColorIndex];
+        hasColorFill = widget.editedPoly.colorFill != null;
+        hasDeadline = widget.source?.deadline != null;
+        deadline = widget.source?.deadline;
+        closed = widget.editedPoly.closed;
+        nodes = widget.editedPoly.coords.map((e) => Tuple(e, false)).toList();
+      });
     });
     tabController = TabController(length: 2, vsync: this);
   }
