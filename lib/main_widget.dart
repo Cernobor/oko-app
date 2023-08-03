@@ -1863,6 +1863,7 @@ class MainWidgetState extends State<MainWidget> {
       ff.users.addAll(storage!.users.keys);
       await storage!.setFeatureFilter(FeatureFilterInst.featureList, ff);
     }
+    await storage!.setProposalsExternal(serverData.proposals);
     return true;
   }
 
@@ -1943,6 +1944,7 @@ class MainWidgetState extends State<MainWidget> {
       List<Feature> features = List.of(localFeatures);
       features.addAll(serverData.features);
       await storage!.setFeatures(features);
+      await storage!.setProposalsExternal(serverData.proposals);
 
       Map<int, int> photo2feature = Map.fromEntries(serverData.features
           .expand((f) => f.photoIDs.map((pid) => MapEntry(pid, f.id))));
@@ -2030,7 +2032,7 @@ class MainWidgetState extends State<MainWidget> {
     var deleted = storage!.features
         .where((data.Feature f) => f.deleted)
         .toList(growable: false);
-    var proposals = await storage!.getProposals();
+    var proposals = await storage!.getProposals(local: true);
     var createdPhotos = <int, List<data.FeaturePhoto>>{};
     for (var f in created) {
       if (f.photoIDs.isEmpty) {
@@ -2384,9 +2386,20 @@ class MainWidgetState extends State<MainWidget> {
   }
 
   void onProposeImprovement() async {
-    data.Proposal? proposal = await Navigator.of(context).push(
-        MaterialPageRoute<data.Proposal>(
-            builder: (context) => const CreateProposal()));
+    List<data.Proposal> externalProposals =
+        await storage!.getProposals(external: true);
+    List<data.Proposal> localProposals =
+        await storage!.getProposals(local: true);
+    if (!context.mounted) {
+      return;
+    }
+    data.Proposal? proposal =
+        await Navigator.of(context).push(MaterialPageRoute<data.Proposal>(
+            builder: (context) => CreateProposal(
+                  users: storage!.users,
+                  externalProposals: externalProposals,
+                  localProposals: localProposals,
+                )));
     if (proposal == null) {
       return;
     }

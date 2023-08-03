@@ -77,8 +77,9 @@ class ServerData {
   final Map<int, String> users;
   final List<Feature> features;
   final Map<String, PhotoMetadata> photoMetadata;
+  final List<Proposal> proposals;
 
-  ServerData._(this.users, this.features, this.photoMetadata);
+  ServerData._(this.users, this.features, this.photoMetadata, this.proposals);
 
   factory ServerData(Map<String, dynamic> data) {
     Map<int, String> users = Map.fromEntries((data['users'] as List)
@@ -100,7 +101,14 @@ class ServerData {
                       value['thumbnail_filename'] as String));
             }) ??
             {};
-    return ServerData._(users, features, photoMetadata);
+    List<Proposal> proposals = (data['proposals'] as List)
+        .cast<Map<String, dynamic>>()
+        .map((Map<String, dynamic> proposal) => Proposal(
+            proposal['owner_id'] as int,
+            proposal['description'] as String,
+            proposal['how'] as String))
+        .toList(growable: false);
+    return ServerData._(users, features, photoMetadata, proposals);
   }
 }
 
@@ -1192,6 +1200,13 @@ class Proposal {
   final String how;
 
   Proposal(this.ownerId, this.description, this.how);
+
+  factory Proposal.fromJson(Map<String, dynamic> json) {
+    int ownerId = json['owner_id'] as int;
+    String description = json['description'] as String;
+    String how = json['how'] as String;
+    return Proposal(ownerId, description, how);
+  }
 
   @mustCallSuper
   Map<String, dynamic> toJson() =>

@@ -534,6 +534,16 @@ class I18N {
         en: 'The reason for improvement must be stated'
       }[locale.languageCode]!;
 
+  String get existingProposals => {
+    cs: 'Existující návrhy',
+    en: 'Existing proposals'
+  }[locale.languageCode]!;
+
+  String get localProposal => {
+    cs: 'já (zatím neodesláno)',
+    en: 'me (not yet uploaded)'
+  }[locale.languageCode]!;
+
   String get suggestionInfo => {
         cs: 'Napište návrh, jak vylepšit aplikaci. Návrh bude odeslán při příští synchronizaci se serverem.',
         en: 'Propose an improvement of the app. The proposal will be sent with the next synchronisation with the server.'

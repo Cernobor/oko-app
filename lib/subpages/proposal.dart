@@ -3,7 +3,16 @@ import 'package:oko/data.dart';
 import 'package:oko/i18n.dart';
 
 class CreateProposal extends StatefulWidget {
-  const CreateProposal({Key? key}) : super(key: key);
+  final List<Proposal> externalProposals;
+  final List<Proposal> localProposals;
+  final Map<int, String> users;
+
+  const CreateProposal(
+      {Key? key,
+      required this.externalProposals,
+      required this.localProposals,
+      required this.users})
+      : super(key: key);
 
   @override
   State<StatefulWidget> createState() => _CreateProposalState();
@@ -48,8 +57,8 @@ class _CreateProposalState extends State<CreateProposal> {
               )
             ],
           ),
-          body: SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          body: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
             child: Column(
               mainAxisAlignment: MainAxisAlignment.start,
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -98,11 +107,50 @@ class _CreateProposalState extends State<CreateProposal> {
                     });
                   },
                 ),
+                Container(padding: const EdgeInsets.symmetric(vertical: 10)),
+                Text('${I18N.of(context).existingProposals}:',
+                    style: Theme.of(context).textTheme.headlineMedium),
+                Expanded(
+                    child: ListView(
+                  children: widget.externalProposals
+                          .map((e) => ListTile(
+                                title: Text(e.description),
+                                subtitle:
+                                    Text(widget.users[e.ownerId] ?? '???'),
+                                onTap: () => showDialog(
+                                    context: context,
+                                    builder: (context) =>
+                                        buildDetailDialog(context, e, false)),
+                              ))
+                          .toList(growable: false) +
+                      widget.localProposals
+                          .map((e) => ListTile(
+                                title: Text(e.description),
+                                subtitle: Text(I18N.of(context).localProposal),
+                                onTap: () => showDialog(
+                                    context: context,
+                                    builder: (context) =>
+                                        buildDetailDialog(context, e, true)),
+                              ))
+                          .toList(growable: false),
+                ))
               ],
             ),
           ),
         ));
   }
+
+  Widget buildDetailDialog(BuildContext context, Proposal proposal, bool local) =>
+      SimpleDialog(
+        title: Text(proposal.description),
+        children: [
+          if (local)
+            SimpleDialogOption(child: Text(I18N.of(context).localProposal, style: Theme.of(context).textTheme.bodySmall))
+          else
+            SimpleDialogOption(child: Text(widget.users[proposal.ownerId] ?? '???', style: Theme.of(context).textTheme.bodySmall)),
+          SimpleDialogOption(child: Text(proposal.how, style: Theme.of(context).textTheme.bodyLarge))
+        ],
+      );
 
   bool _isValid() {
     return descriptionInputController.text.isNotEmpty &&

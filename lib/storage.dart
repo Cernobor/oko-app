@@ -217,6 +217,8 @@ class Storage {
         'edit_state': EditState.anyState.name,
         'search_term': ''
       });
+
+      await db.execute('ALTER TABLE proposals ADD COLUMN external INTEGER');
     }
   }
 
@@ -743,16 +745,38 @@ class Storage {
     });
   }
 
+  Future<void> setProposalsExternal(Iterable<Proposal> proposals) async {
+    await _db.transaction((Transaction tx) async {
+      tx.delete('proposals', where: 'external = 1');
+      for (Proposal p in proposals) {
+        tx.insert('proposals', {
+          'owner_id': p.ownerId,
+          'description': p.description,
+          'how': p.how,
+          'external': 1
+        });
+      }
+    });
+  }
+
   Future<void> clearProposals() async {
     await _db.transaction((Transaction tx) async {
       await tx.delete('proposals');
     });
   }
 
-  Future<List<Proposal>> getProposals() async {
+  Future<List<Proposal>> getProposals({bool external = false, bool local = false}) async {
     return await _db.transaction((Transaction tx) async {
+      String? where;
+      if (external && !local) {
+        where = 'external == 1';
+      } else if (!external && local) {
+        where = 'external IS NULL OR external != 1';
+      } else if (!external && !local) {
+        return [];
+      }
       var rows = await tx
-          .query('proposals', columns: ['owner_id', 'description', 'how']);
+          .query('proposals', columns: ['owner_id', 'description', 'how'], where: where);
       return rows
           .map((e) => Proposal(e['owner_id'] as int, e['description'] as String,
               e['how'] as String))
