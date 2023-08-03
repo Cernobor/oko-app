@@ -125,6 +125,9 @@ class MainWidgetState extends State<MainWidget> {
           utils.NotificationLevel.error);
     }
     if (storage?.serverSettings?.serverAddress != null) {
+      if (storage?.serverSettings?.id != null) {
+        getIt.get<comm.AppClient>().setUserID(storage!.serverSettings!.id);
+      }
       startPinging();
     }
     if (storage?.mapState?.usingOffline ?? false) {
