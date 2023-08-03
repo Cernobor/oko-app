@@ -2372,8 +2372,8 @@ class MainWidgetState extends State<MainWidget> {
           context, 'TODO no storage', utils.NotificationLevel.error);
       return;
     }
-    data.Point? replacement = await Navigator.of(context).push(
-        MaterialPageRoute<data.Point>(
+    data.Feature? replacement = await Navigator.of(context).push(
+        MaterialPageRoute<data.Feature>(
             builder: (context) =>
                 Gallery(storage: storage!, feature: feature, editable: true)));
     if (replacement == null) {

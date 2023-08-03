@@ -51,23 +51,23 @@ class _FeatureListState extends State<FeatureList> {
         storage = value;
         switch (widget.typeRestriction) {
           case null:
-            features = storage.features;
+            features = List.of(storage.features);
             break;
           case FeatureType.point:
             features =
-                storage.features.whereType<Point>().toList(growable: false);
+                storage.features.whereType<Point>().toList();
             break;
           case FeatureType.polyline:
             features = storage.features
                 .whereType<Poly>()
                 .whereNot((e) => e.polygon)
-                .toList(growable: false);
+                .toList();
             break;
           case FeatureType.polygon:
             features = storage.features
                 .whereType<Poly>()
                 .where((e) => e.polygon)
-                .toList(growable: false);
+                .toList();
             break;
         }
         asc = storage.featureListSortDir;

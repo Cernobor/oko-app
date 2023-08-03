@@ -87,13 +87,6 @@ class ReferencedLatLng extends LatLng {
       : this(point.coords.latitude, point.coords.longitude, point.id);
 }
 
-class Tuple<A, B> {
-  A a;
-  B b;
-
-  Tuple(this.a, this.b);
-}
-
 class EditedPoly {
   List<LatLng> coords;
   bool closed;

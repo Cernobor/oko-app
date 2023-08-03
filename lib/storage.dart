@@ -208,7 +208,10 @@ class Storage {
         'filter_name': FeatureFilterInst.map.name,
         'types': jsonEncode(
             FeatureType.values.map((e) => e.name).toList(growable: false)),
-        'users': '[]',
+        'users': jsonEncode(
+            (await db.query('users', columns: ['id']))
+                .map((e) => e['id'])
+                .toList(growable: false)),
         'categories': jsonEncode(PointCategory.allCategories
             .map((e) => e.name)
             .toList(growable: false)),

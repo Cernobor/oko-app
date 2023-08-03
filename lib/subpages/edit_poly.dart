@@ -1,5 +1,6 @@
 import 'dart:developer' as developer;
 
+import 'package:collection/collection.dart';
 import 'package:flutter/material.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:oko/data.dart';
@@ -26,7 +27,7 @@ class _EditPolyState extends State<EditPoly>
   late Future<void> storageWait;
   late Storage storage;
   late Map<int, Point> points;
-  late List<Tuple<LatLng, bool>> nodes;
+  late List<_Triple> nodes;
   final TextEditingController nameInputController = TextEditingController();
   String? nameInputError;
   late int ownerId;
@@ -56,7 +57,7 @@ class _EditPolyState extends State<EditPoly>
         hasDeadline = widget.source?.deadline != null;
         deadline = widget.source?.deadline;
         closed = widget.editedPoly.closed;
-        nodes = widget.editedPoly.coords.map((e) => Tuple(e, false)).toList();
+        nodes = widget.editedPoly.coords.mapIndexed((i, e) => _Triple(e, false, i)).toList();
       });
     });
     tabController = TabController(length: 2, vsync: this);
@@ -255,7 +256,7 @@ class _EditPolyState extends State<EditPoly>
                 onPressed: onAddPoint,
                 child: const Icon(Icons.add, size: 30),
               ),
-              if (nodes.any((e) => e.b))
+              if (nodes.any((e) => e.checked))
                 FloatingActionButton(
                   heroTag: 'fab-path-remove-point',
                   onPressed: onRemovePoints,
@@ -289,7 +290,7 @@ class _EditPolyState extends State<EditPoly>
             newIndex -= 1;
           }
           setState(() {
-            final Tuple<LatLng, bool> item = nodes.removeAt(oldIndex);
+            final _Triple item = nodes.removeAt(oldIndex);
             nodes.insert(newIndex, item);
           });
         },
@@ -298,20 +299,20 @@ class _EditPolyState extends State<EditPoly>
             .toList(growable: false));
   }
 
-  Widget buildListItem(BuildContext context, Tuple<LatLng, bool> item) {
+  Widget buildListItem(BuildContext context, _Triple item) {
     Point? point;
     LatLng coords;
-    LatLng p = item.a;
+    LatLng p = item.coord;
     if (p is ReferencedLatLng && p.pointRef != null) {
       point = points[p.pointRef]!;
       coords = point.coords;
     } else {
-      coords = item.a;
+      coords = item.coord;
     }
-    bool checked = item.b;
+    bool checked = item.checked;
 
     return CheckboxListTile(
-      key: ValueKey(point?.id ?? coords),
+      key: ValueKey(item.key),
       secondary: SizedBox(
           width: 40,
           child: Stack(
@@ -375,7 +376,7 @@ class _EditPolyState extends State<EditPoly>
       value: checked,
       onChanged: (bool? value) {
         setState(() {
-          item.b = value!;
+          item.checked = value!;
         });
       },
     );
@@ -394,14 +395,15 @@ class _EditPolyState extends State<EditPoly>
       return;
     }
     setState(() {
-      nodes.addAll(selected.map(
-          (e) => Tuple<LatLng, bool>(ReferencedLatLng.fromPoint(e), false)));
+      int l = nodes.length;
+      nodes.addAll(selected.mapIndexed(
+          (i, e) => _Triple(ReferencedLatLng.fromPoint(e), false, l + i)));
     });
   }
 
   void onRemovePoints() {
     setState(() {
-      nodes.removeWhere((e) => e.b);
+      nodes.removeWhere((e) => e.checked);
     });
   }
 
@@ -441,14 +443,14 @@ class _EditPolyState extends State<EditPoly>
 
   void onBack(BuildContext context) {
     Navigator.of(context).pop(EditedPoly(
-        coords: nodes.map((e) => e.a).toList(),
+        coords: nodes.map((e) => e.coord).toList(),
         closed: closed,
         color: color,
         colorFill: colorFill));
   }
 
   void _save(BuildContext context) {
-    List<LatLng> coords = nodes.map((e) => e.a).toList(growable: false);
+    List<LatLng> coords = nodes.map((e) => e.coord).toList(growable: false);
     Poly poly;
     if (widget.source == null) {
       poly = Poly.origSame(
@@ -501,4 +503,12 @@ class _EditPolyState extends State<EditPoly>
     }
     Navigator.of(context).pop(poly);
   }
+}
+
+class _Triple {
+  LatLng coord;
+  bool checked;
+  int key;
+
+  _Triple(this.coord, this.checked, this.key);
 }
