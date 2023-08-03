@@ -344,7 +344,7 @@ class _EditPolyState extends State<EditPoly>
                       size: constants.badgeSize,
                       color: Theme.of(context).colorScheme.primary),
                 ),
-              if (point?.ownerId == 0)
+              if (point?.isLocked ?? false)
                 Align(
                   alignment: const Alignment(1, -1),
                   child: Icon(constants.pointLocked,

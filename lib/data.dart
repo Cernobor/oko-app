@@ -463,6 +463,14 @@ abstract class Feature {
 
   bool get isLocal => id < 0;
 
+  bool get isNotLocal => !isLocal;
+
+  bool get isSystem => ownerId == 0;
+
+  bool get isLocked => isNotLocal && isSystem;
+
+  bool get isNotLocked => !isLocked;
+
   @mustCallSuper
   Map<String, dynamic> toJson() => {
         'id': id,

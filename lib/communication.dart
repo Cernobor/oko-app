@@ -277,7 +277,10 @@ Future<PingResponse?> ping(String serverAddress) async {
       return PingResponse(AppVersion(data['version'], data['address']));
     }
     return null;
-  } catch (e) {
+  } on http.ClientException catch (e) {
+    developer.log('$e');
+    return null;
+  } on Exception catch(e) {
     developer.log('$e');
     return null;
   }

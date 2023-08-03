@@ -653,7 +653,7 @@ class MainWidgetState extends State<MainWidget> {
                             size: badgeSize,
                             color: Theme.of(context).colorScheme.primary),
                       ),
-                    if (point.ownerId == 0)
+                    if (point.isLocked)
                       Align(
                         alignment: const Alignment(1, -1),
                         child: Icon(Icons.lock,
@@ -848,7 +848,7 @@ class MainWidgetState extends State<MainWidget> {
             onPressed: () => onCenterView(feature, false)),
         onDoubleTap: () => onCenterView(feature, true),
       ),
-      if (feature.ownerId != 0)
+      if (feature.isNotLocked)
         if (feature.deleted)
           IconButton(
             icon: const Icon(Icons.restore_from_trash),
@@ -861,7 +861,7 @@ class MainWidgetState extends State<MainWidget> {
             tooltip: I18N.of(context).delete,
             onPressed: () => onDeleteFeature(feature),
           ),
-      if (feature.ownerId != 0)
+      if (feature.isNotLocked)
         IconButton(
             icon: const Icon(Icons.edit),
             tooltip: I18N.of(context).edit,
@@ -872,12 +872,12 @@ class MainWidgetState extends State<MainWidget> {
                 onStartPolyEdit(feature.asPoly());
               }
             }),
-      if (feature.ownerId != 0 && feature.isEdited)
+      if (feature.isNotLocked && feature.isEdited)
         IconButton(
             icon: const Icon(Icons.restore),
             tooltip: I18N.of(context).revert,
             onPressed: () => onRevertFeature(feature)),
-      if (feature.ownerId != 0)
+      if (feature.isNotLocked)
         IconButton(
           icon: const Icon(Icons.photo_library),
           tooltip: I18N.of(context).managePhotos,

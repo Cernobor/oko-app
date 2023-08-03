@@ -326,7 +326,7 @@ class _FeatureListState extends State<FeatureList> {
                     size: constants.badgeSize,
                     color: Theme.of(context).colorScheme.primary),
               ),
-            if (feature.ownerId == 0)
+            if (feature.isLocked)
               Align(
                 alignment: const Alignment(1, -1),
                 child: Icon(Icons.lock,
