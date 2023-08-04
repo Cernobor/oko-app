@@ -106,15 +106,8 @@ class EditedPoly {
             closed: closed ?? false,
             color: color ??
                 constants.palette[constants.defaultPolyStrokeColorIndex],
-            colorFill: color ??
+            colorFill: colorFill ??
                 constants.palette[constants.defaultPolyFillColorIndex]);
-
-  void copyInto(EditedPoly other) {
-    other.coords.replaceRange(0, other.coords.length, coords);
-    other.closed = closed;
-    other.color = color;
-    other.colorFill = colorFill;
-  }
 
   void copyFrom(EditedPoly other) {
     coords.replaceRange(0, coords.length, other.coords);

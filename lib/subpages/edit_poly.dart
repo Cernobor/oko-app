@@ -14,22 +14,21 @@ class EditPoly extends StatefulWidget {
   final EditedPoly editedPoly;
   final Poly? source;
 
-  const EditPoly(
-      {super.key, required this.editedPoly, this.source});
+  const EditPoly({super.key, required this.editedPoly, this.source});
 
   @override
   State createState() => _EditPolyState();
 }
 
-class _EditPolyState extends State<EditPoly>
-    with TickerProviderStateMixin {
-
+class _EditPolyState extends State<EditPoly> with TickerProviderStateMixin {
   late Future<void> storageWait;
   late Storage storage;
   late Map<int, Point> points;
   late List<_Triple> nodes;
   final TextEditingController nameInputController = TextEditingController();
   String? nameInputError;
+  final TextEditingController descriptionInputController =
+      TextEditingController();
   late int ownerId;
   late bool closed;
   late Color color;
@@ -51,13 +50,17 @@ class _EditPolyState extends State<EditPoly>
       setState(() {
         ownerId = widget.source?.ownerId ?? value.serverSettings!.id;
         nameInputController.text = widget.source?.name ?? '';
+        descriptionInputController.text = widget.source?.description ?? '';
         color = widget.editedPoly.color;
-        colorFill = widget.editedPoly.colorFill ?? constants.palette[constants.defaultPolyFillColorIndex];
+        colorFill = widget.editedPoly.colorFill ??
+            constants.palette[constants.defaultPolyFillColorIndex];
         hasColorFill = widget.editedPoly.colorFill != null;
         hasDeadline = widget.source?.deadline != null;
         deadline = widget.source?.deadline;
         closed = widget.editedPoly.closed;
-        nodes = widget.editedPoly.coords.mapIndexed((i, e) => _Triple(e, false, i)).toList();
+        nodes = widget.editedPoly.coords
+            .mapIndexed((i, e) => _Triple(e, false, i))
+            .toList();
       });
     });
     tabController = TabController(length: 2, vsync: this);
@@ -151,6 +154,16 @@ class _EditPolyState extends State<EditPoly>
                 }
               });
             },
+          ),
+        ),
+        ListTile(
+          title: TextField(
+            controller: descriptionInputController,
+            keyboardAppearance: Theme.of(context).brightness,
+            keyboardType: TextInputType.text,
+            textCapitalization: TextCapitalization.sentences,
+            decoration:
+                InputDecoration(labelText: I18N.of(context).descriptionLabel),
           ),
         ),
         ListTile(
@@ -458,7 +471,9 @@ class _EditPolyState extends State<EditPoly>
           ownerId,
           nameInputController.text,
           hasDeadline ? deadline : null,
-          null,
+          descriptionInputController.text.isEmpty
+              ? null
+              : descriptionInputController.text,
           color,
           colorFill,
           Set.identity(),
@@ -471,7 +486,9 @@ class _EditPolyState extends State<EditPoly>
           ownerId,
           nameInputController.text,
           hasDeadline ? deadline : null,
-          null,
+          descriptionInputController.text.isEmpty
+              ? null
+              : descriptionInputController.text,
           color,
           colorFill,
           widget.source!.photoIDs,
@@ -487,7 +504,9 @@ class _EditPolyState extends State<EditPoly>
           widget.source!.origName,
           hasDeadline ? deadline : null,
           widget.source!.origDeadline,
-          null,
+          descriptionInputController.text.isEmpty
+              ? null
+              : descriptionInputController.text,
           widget.source!.origDescription,
           color,
           widget.source!.origColor,

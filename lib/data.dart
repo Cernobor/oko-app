@@ -392,15 +392,18 @@ abstract class Feature {
           geometry,
           origGeometry);
     } else if (Feature.isGeojsonPoly(geometry)) {
+      int? colorFillValue = properties['color_fill'];
+      int? origColorFillValue = origProperties['color_fill'] ??
+          (origFromCurrent ? colorFillValue : null);
       Color color = colorValue == null
           ? constants.palette[constants.defaultPolyStrokeColorIndex]
           : Color(colorValue);
       Color origColor = origColorValue == null
           ? constants.palette[constants.defaultPolyStrokeColorIndex]
           : Color(origColorValue);
-      Color? colorFill = colorValue == null ? null : Color(colorValue);
+      Color? colorFill = colorFillValue == null ? null : Color(colorFillValue);
       Color? origColorFill =
-          origColorValue == null ? null : Color(origColorValue);
+          origColorFillValue == null ? null : Color(origColorFillValue);
       return Poly.fromGeojson(
           id,
           ownerId,
@@ -1056,6 +1059,12 @@ class Poly extends Feature {
   @override
   Map<String, dynamic> toJson() {
     var js = super.toJson();
+    if (colorFill != null) {
+      js['properties']['color_fill'] = colorFill!.value;
+    }
+    if (origColorFill != null) {
+      js['orig_properties']['color_fill'] = origColorFill!.value;
+    }
     js.addAll({'geometry': _geometry(), 'orig_geometry': _origGeometry()});
     return js;
   }
