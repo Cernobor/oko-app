@@ -1559,7 +1559,6 @@ class MainWidgetState extends State<MainWidget> {
     var res = await Navigator.of(context).push(MaterialPageRoute(
         builder: (context) =>
             EditPoly(editedPoly: editedPoly, source: sourcePoly)));
-    developer.log('$res');
     if (res is utils.EditedPoly) {
       setState(() {
         editedPoly.copyFrom(res);

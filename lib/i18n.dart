@@ -746,7 +746,7 @@ class I18N {
       }[locale.languageCode]!;
 
   String get centroid => {
-        cs: 'Vyberte bod pro navigaci',
+        cs: 'Střed (těžiště)',
         en: 'Centroid (average)'
       }[locale.languageCode]!;
 

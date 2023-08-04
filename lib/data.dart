@@ -468,9 +468,7 @@ abstract class Feature {
 
   bool get isNotLocal => !isLocal;
 
-  bool get isSystem => ownerId == 0;
-
-  bool get isLocked => isNotLocal && isSystem;
+  bool get isLocked => isNotLocal && ownerId == 0 && origOwnerId == 0;
 
   bool get isNotLocked => !isLocked;
 
