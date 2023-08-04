@@ -278,10 +278,10 @@ Future<PingResponse?> ping(String serverAddress) async {
     }
     return null;
   } on http.ClientException catch (e) {
-    developer.log('$e');
+    //developer.log('$e');
     return null;
   } on Exception catch(e) {
-    developer.log('$e');
+    //developer.log('$e');
     return null;
   }
 }
